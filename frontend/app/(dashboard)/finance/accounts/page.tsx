@@ -89,7 +89,7 @@ export default function AccountsPage() {
     const fetchMovements = async (accountId: string) => {
         setLoadingMovements(true);
         try {
-            const res = await api.finance.getAccountMovements(accountId, 50);
+            const res = await api.finance.getAccountMovements(accountId, { limit: 50 });
             setMovements(res);
         } catch (error) {
             console.error('Hareketler yüklenemedi:', error);

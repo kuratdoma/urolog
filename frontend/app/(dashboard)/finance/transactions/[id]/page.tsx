@@ -14,7 +14,8 @@ import {
     Ban,
     ExternalLink,
     Wallet,
-    CalendarDays
+    CalendarDays,
+    Trash2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -112,6 +113,31 @@ export default function TransactionDetailPage() {
             toast.error('İşlem iptal edilemedi');
         } finally {
             setCancelling(false);
+        }
+    };
+
+    const handleDeletePayment = async (odemeId: number) => {
+        if (!window.confirm('Bu tahsilat silinecek ve kasa bakiyesi geri alınacak. Onaylıyor musunuz?')) return;
+        try {
+            const res = await api.finance.deletePayment(islemId, odemeId);
+            setIslem(res);
+            toast.success('Tahsilat silindi');
+        } catch (error: any) {
+            toast.error(error?.message || 'Tahsilat silinemedi');
+        }
+    };
+
+    const handleToggleInstallment = async (taksitId: number, tahsilEdildi: boolean) => {
+        try {
+            if (tahsilEdildi) {
+                await api.finance.uncollectInstallment(taksitId);
+            } else {
+                await api.finance.collectInstallment(taksitId);
+            }
+            await fetchIslem();
+            toast.success(tahsilEdildi ? 'Taksit tahsilatı geri alındı' : 'Taksit tahsil edildi');
+        } catch (error: any) {
+            toast.error(error?.message || 'Taksit güncellenemedi');
         }
     };
 
@@ -371,9 +397,22 @@ export default function TransactionDetailPage() {
                                                 {(odeme.taksit_sayisi ?? 1) > 1 ? ` • ${odeme.taksit_sayisi} taksit` : ''}
                                             </p>
                                         </div>
-                                        <p className="font-semibold text-emerald-600">
-                                            {formatCurrency(odeme.tutar)}
-                                        </p>
+                                        <div className="flex items-center gap-3">
+                                            <p className="font-semibold text-emerald-600">
+                                                {formatCurrency(odeme.tutar)}
+                                            </p>
+                                            {islem.durum !== 'iptal' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-7 w-7"
+                                                    title="Tahsilatı sil"
+                                                    onClick={() => handleDeletePayment(odeme.id)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {(odeme.taksitler?.length ?? 0) > 0 && (
@@ -388,12 +427,19 @@ export default function TransactionDetailPage() {
                                                     </span>
                                                     <span className="flex items-center gap-2">
                                                         {formatCurrency(taksit.tutar)}
-                                                        <Badge
-                                                            variant={taksit.durum === 'tahsil_edildi' ? 'default' : 'secondary'}
-                                                            className="text-[10px]"
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleToggleInstallment(taksit.id, taksit.durum === 'tahsil_edildi')}
+                                                            title={taksit.durum === 'tahsil_edildi' ? 'Tahsilatı geri al' : 'Tahsil edildi olarak işaretle'}
+                                                            className="cursor-pointer"
                                                         >
-                                                            {taksit.durum}
-                                                        </Badge>
+                                                            <Badge
+                                                                variant={taksit.durum === 'tahsil_edildi' ? 'default' : 'secondary'}
+                                                                className="text-[10px] hover:opacity-75 transition-opacity"
+                                                            >
+                                                                {taksit.durum === 'tahsil_edildi' ? 'tahsil edildi' : 'bekliyor'}
+                                                            </Badge>
+                                                        </button>
                                                     </span>
                                                 </div>
                                             ))}

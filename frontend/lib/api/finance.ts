@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 import {
-    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, Firma, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
+    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
 } from './types';
 
 export const financeApi = {
@@ -33,8 +33,14 @@ export const financeApi = {
             apiFetch<FinansKasa[]>(`/api/v1/finance/accounts?aktif_only=${aktifOnly}`),
         getAccountBalance: (id: string) =>
             apiFetch<{ kasa_id: string; ad: string; bakiye: number }>(`/api/v1/finance/accounts/${id}/balance`),
-        getAccountMovements: (id: string, limit: number = 50) =>
-            apiFetch<KasaHareket[]>(`/api/v1/finance/accounts/${id}/movements?limit=${limit}`),
+        getAccountMovements: (id: string, opts: { skip?: number; limit?: number; start_date?: string; end_date?: string } = {}) => {
+            const p = new URLSearchParams();
+            p.set('skip', String(opts.skip ?? 0));
+            p.set('limit', String(opts.limit ?? 50));
+            if (opts.start_date) p.set('start_date', opts.start_date);
+            if (opts.end_date) p.set('end_date', opts.end_date);
+            return apiFetch<KasaHareket[]>(`/api/v1/finance/accounts/${id}/movements?${p.toString()}`);
+        },
         createAccount: (data: FinansKasaCreate) =>
             apiFetch<FinansKasa>('/api/v1/finance/accounts', { method: 'POST', body: JSON.stringify(data) }),
         transferBetweenAccounts: (kaynak_kasa_id: string, hedef_kasa_id: string, tutar: number, aciklama?: string) =>
@@ -89,6 +95,20 @@ export const financeApi = {
                 method: 'POST',
                 body: JSON.stringify(data)
             }),
+        deletePayment: (islemId: number, odemeId: number) =>
+            apiFetch<FinansIslem>(`/api/v1/finance/transactions/${islemId}/payments/${odemeId}`, {
+                method: 'DELETE'
+            }),
+        collectInstallment: (taksitId: number, tahsilTarihi?: string) => {
+            const q = tahsilTarihi ? `?tahsil_tarihi=${tahsilTarihi}` : '';
+            return apiFetch<FinansTaksit>(`/api/v1/finance/installments/${taksitId}/collect${q}`, {
+                method: 'POST'
+            });
+        },
+        uncollectInstallment: (taksitId: number) =>
+            apiFetch<FinansTaksit>(`/api/v1/finance/installments/${taksitId}/uncollect`, {
+                method: 'POST'
+            }),
         cancelTransaction: (id: number, iptal_nedeni: string) =>
             apiFetch<FinansIslem>(`/api/v1/finance/transactions/${id}/cancel`, {
                 method: 'POST',
@@ -102,8 +122,12 @@ export const financeApi = {
             apiFetch<FinansIslem[]>(`/api/v1/finance/patients/${hastaId}/transactions`),
         getPatientBalance: (hastaId: string) =>
             apiFetch<HastaCari>(`/api/v1/finance/patients/${hastaId}/balance`),
-        getDebtors: (minBorc: number = 0) =>
-            apiFetch<BorcluHasta[]>(`/api/v1/finance/patients/debtors?min_borc=${minBorc}`),
+        getDebtors: (minBorc: number = 0, opts: { skip?: number; limit?: number } = {}) => {
+            const p = new URLSearchParams({ min_borc: String(minBorc) });
+            p.set('skip', String(opts.skip ?? 0));
+            p.set('limit', String(opts.limit ?? 100));
+            return apiFetch<BorcluHasta[]>(`/api/v1/finance/patients/debtors?${p.toString()}`);
+        },
 
         // Vadesi Geçmiş
         getOverdueTransactions: () =>

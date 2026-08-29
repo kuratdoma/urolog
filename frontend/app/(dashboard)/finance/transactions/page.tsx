@@ -59,7 +59,13 @@ export default function TransactionsPage() {
     const [total, setTotal] = useState(0);
 
     // Filters
-    const [startDate, setStartDate] = useState('');
+    // Varsayılan son 3 ay: filtresiz açılışta tüm geçmişi sorgulamak
+    // kayıt sayısı arttıkça sayfayı ağırlaştırıyor. Kullanıcı genişletebilir.
+    const [startDate, setStartDate] = useState(() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 3);
+        return format(d, 'yyyy-MM-dd');
+    });
     const [endDate, setEndDate] = useState('');
     const [durum, setDurum] = useState('');
     const [islemTipi, setIslemTipi] = useState('');

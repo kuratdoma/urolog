@@ -36,6 +36,7 @@ from app.schemas.finance import (
     FinansIslemPaginationResponse,
     FinansIslemIptalRequest,
     FinansOdemeCreate,
+    FinansTaksitResponse,
     HastaCariResponse,
     FinansOzetResponse,
     GunlukOzetResponse,
@@ -262,12 +263,17 @@ async def get_kasa_bakiye(kasa_id: int, db: AsyncSession = Depends(deps.get_db))
 @router.get("/accounts/{kasa_id}/movements", response_model=List[KasaHareketResponse])
 async def get_kasa_hareketleri(
     kasa_id: int,
+    skip: int = Query(0, ge=0),
     limit: int = Query(50, le=200),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     db: AsyncSession = Depends(deps.get_db),
 ) -> Any:
-    """Kasa hareketlerini listele"""
+    """Kasa hareketlerini listele (tarihe göre azalan)"""
     repo = AccountsRepository(db)
-    return await repo.get_account_movements(kasa_id, limit=limit)
+    return await repo.get_account_movements(
+        kasa_id, skip=skip, limit=limit, start_date=start_date, end_date=end_date
+    )
 
 
 @router.post("/accounts", response_model=KasaResponse)
@@ -535,6 +541,94 @@ async def add_islem_odeme(
     return islem
 
 
+@router.delete(
+    "/transactions/{islem_id}/payments/{odeme_id}", response_model=FinansIslemResponse
+)
+async def delete_islem_odeme(
+    islem_id: int,
+    odeme_id: int,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Yanlış girilmiş bir tahsilatı siler.
+
+    Kasa etkisi ters hareketle geri alınır, taksit planı varsa birlikte silinir
+    ve işlem durumu yeniden hesaplanır.
+    """
+    repo = IncomeRepository(
+        db, UserContext(user_id=current_user.id, username=current_user.username)
+    )
+    try:
+        silindi = await repo.delete_payment(islem_id, odeme_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if not silindi:
+        raise HTTPException(status_code=404, detail="Ödeme bulunamadı")
+
+    await AuditService.log(
+        db=db,
+        action="finans_odeme_delete",
+        user_id=current_user.id,
+        resource_type="finans_islem",
+        resource_id=str(islem_id),
+        details={"odeme_id": odeme_id},
+    )
+    return await repo.get_transaction(islem_id)
+
+
+@router.post("/installments/{taksit_id}/collect", response_model=FinansTaksitResponse)
+async def tahsil_et_taksit(
+    taksit_id: int,
+    tahsil_tarihi: Optional[date] = Query(None, description="Boş bırakılırsa bugün"),
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Taksiti tahsil edildi olarak işaretler.
+
+    Kasa bakiyesini etkilemez — taksitli ödemede tutar, ödeme kaydı sırasında
+    kasaya zaten girmiştir. Bu uç yalnızca taksit takibini günceller.
+    """
+    repo = IncomeRepository(db)
+    taksit = await repo.collect_installment(taksit_id, tahsil_tarihi)
+    if not taksit:
+        raise HTTPException(status_code=404, detail="Taksit bulunamadı")
+
+    await AuditService.log(
+        db=db,
+        action="finans_taksit_collect",
+        user_id=current_user.id,
+        resource_type="finans_taksit",
+        resource_id=str(taksit_id),
+        details={"tutar": float(taksit.tutar), "tarih": str(taksit.tahsil_tarihi)},
+    )
+    return taksit
+
+
+@router.post("/installments/{taksit_id}/uncollect", response_model=FinansTaksitResponse)
+async def tahsilat_geri_al_taksit(
+    taksit_id: int,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """Yanlış işaretlenmiş taksit tahsilatını geri alır."""
+    repo = IncomeRepository(db)
+    taksit = await repo.uncollect_installment(taksit_id)
+    if not taksit:
+        raise HTTPException(status_code=404, detail="Taksit bulunamadı")
+
+    await AuditService.log(
+        db=db,
+        action="finans_taksit_uncollect",
+        user_id=current_user.id,
+        resource_type="finans_taksit",
+        resource_id=str(taksit_id),
+        details={"tutar": float(taksit.tutar)},
+    )
+    return taksit
+
+
 @router.put("/transactions/{islem_id}", response_model=FinansIslemResponse)
 async def update_islem(
     islem_id: int,
@@ -629,11 +723,14 @@ async def get_hasta_cari(hasta_id: str, db: AsyncSession = Depends(deps.get_db))
 
 @router.get("/patients/debtors", response_model=List[HastaCariResponse])
 async def get_borclu_hastalar(
-    min_borc: float = Query(0, ge=0), db: AsyncSession = Depends(deps.get_db)
+    min_borc: float = Query(0, ge=0),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, le=500),
+    db: AsyncSession = Depends(deps.get_db),
 ) -> Any:
-    """Borçlu hastaları listele"""
+    """Borçlu hastaları listele (bakiyeye göre azalan)"""
     repo = IncomeRepository(db)
-    return await repo.get_debtor_patients(min_borc=min_borc)
+    return await repo.get_debtor_patients(min_borc=min_borc, skip=skip, limit=limit)
 
 
 # =============================================================================

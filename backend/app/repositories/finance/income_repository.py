@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from datetime import date, datetime
-from sqlalchemy import select, func, and_, case, update
+from sqlalchemy import select, func, and_, case, update, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.finance.models import (
@@ -317,6 +317,112 @@ class IncomeRepository:
         await self.sync_transaction_status(tx_id)
         return odeme
 
+    async def delete_payment(self, tx_id: int, odeme_id: int) -> bool:
+        """
+        İşleme ait bir ödemeyi siler ve kasa etkisini geri alır.
+
+        Yanlış girilen tahsilatı düzeltmenin yolu budur; aksi hâlde tüm işlemi
+        iptal edip yeniden kurmak gerekirdi.
+        """
+        from app.repositories.finance.models import KasaHareket, FinansTaksit
+
+        tx = await self.get_transaction(tx_id)
+        if not tx:
+            raise ValueError("İşlem bulunamadı")
+        if tx.durum == "iptal":
+            raise ValueError("İptal edilmiş işlemin ödemesi düzenlenemez")
+
+        odeme = (
+            await self.session.execute(
+                select(FinansOdeme).where(
+                    and_(FinansOdeme.id == odeme_id, FinansOdeme.islem_id == tx_id)
+                )
+            )
+        ).scalar_one_or_none()
+        if not odeme:
+            return False
+
+        tutar = float(odeme.tutar or 0)
+
+        # Kasa etkisini ters çevir
+        if odeme.kasa_id:
+            kasa_res = await self.session.execute(
+                select(Kasa).where(Kasa.id == odeme.kasa_id).with_for_update()
+            )
+            kasa = kasa_res.scalar_one_or_none()
+            if kasa:
+                onceki_bakiye = float(kasa.bakiye or 0)
+                # Gelir tahsilatı geri alınırsa kasadan çıkar, gider ödemesi geri gelir
+                geri_cikis = tx.islem_tipi == "gelir"
+                kasa.bakiye = (
+                    onceki_bakiye - tutar if geri_cikis else onceki_bakiye + tutar
+                )
+                self.session.add(
+                    KasaHareket(
+                        kasa_id=kasa.id,
+                        hareket_tipi="cikis" if geri_cikis else "giris",
+                        tutar=tutar,
+                        onceki_bakiye=onceki_bakiye,
+                        sonraki_bakiye=float(kasa.bakiye),
+                        aciklama=f"Ref: {tx.referans_kodu} tahsilat iptali",
+                        islem_id=tx_id,
+                    )
+                )
+
+        # Taksit planı ödemeye bağlı, birlikte gider
+        await self.session.execute(
+            delete(FinansTaksit).where(FinansTaksit.odeme_id == odeme_id)
+        )
+        await self.session.delete(odeme)
+        await self.session.flush()
+        await self.sync_transaction_status(tx_id)
+        return True
+
+    async def collect_installment(
+        self, taksit_id: int, tahsil_tarihi: Optional[date] = None
+    ):
+        """
+        Taksiti tahsil edildi olarak işaretler.
+
+        Para hareketi oluşturmaz: taksitli ödemede tutar kasaya ödeme kaydı
+        sırasında zaten girmiştir (banka peşin öder). Bu işlem yalnızca
+        müşterinin taksit ödeme takibini tutar.
+        """
+        from app.repositories.finance.models import FinansTaksit
+
+        taksit = (
+            await self.session.execute(
+                select(FinansTaksit).where(FinansTaksit.id == taksit_id)
+            )
+        ).scalar_one_or_none()
+        if not taksit:
+            return None
+
+        if taksit.durum == "tahsil_edildi":
+            return taksit
+
+        taksit.durum = "tahsil_edildi"
+        taksit.tahsil_tarihi = tahsil_tarihi or date.today()
+        await self.session.flush()
+        return taksit
+
+    async def uncollect_installment(self, taksit_id: int):
+        """Taksit tahsilatını geri alır (yanlış işaretleme düzeltmesi)."""
+        from app.repositories.finance.models import FinansTaksit
+
+        taksit = (
+            await self.session.execute(
+                select(FinansTaksit).where(FinansTaksit.id == taksit_id)
+            )
+        ).scalar_one_or_none()
+        if not taksit:
+            return None
+
+        taksit.durum = "bekliyor"
+        taksit.tahsil_tarihi = None
+        await self.session.flush()
+        return taksit
+
     async def sync_transaction_status(self, tx_id: int) -> Optional[str]:
         """
         Tahsilat durumuna göre işlem durumunu günceller.
@@ -375,7 +481,9 @@ class IncomeRepository:
             "bakiye": borc - odeme,
         }
 
-    async def get_debtor_patients(self, min_borc: float = 0) -> List[dict]:
+    async def get_debtor_patients(
+        self, min_borc: float = 0, skip: int = 0, limit: int = 100
+    ) -> List[dict]:
         """
         Bakiyesi min_borc üzerinde olan hastaları döner.
 
@@ -458,6 +566,8 @@ class IncomeRepository:
             .outerjoin(vade_subq, Hasta.id == vade_subq.c.hasta_id)
             .where(bakiye > min_borc)
             .order_by(bakiye.desc())
+            .offset(skip)
+            .limit(limit)
         )
         result = await self.session.execute(stmt)
         return [

@@ -317,12 +317,25 @@ class AccountsRepository:
         return True
 
     async def get_account_movements(
-        self, kasa_id: int, limit: int = 50
+        self,
+        kasa_id: int,
+        skip: int = 0,
+        limit: int = 50,
+        start_date=None,
+        end_date=None,
     ) -> List[KasaHareket]:
+        """Kasa hareketlerini tarihe göre azalan sırada, sayfalı döner."""
+        filters = [KasaHareket.kasa_id == kasa_id]
+        if start_date:
+            filters.append(KasaHareket.tarih >= start_date)
+        if end_date:
+            filters.append(KasaHareket.tarih <= end_date)
+
         stmt = (
             select(KasaHareket)
-            .where(KasaHareket.kasa_id == kasa_id)
-            .order_by(KasaHareket.tarih.desc())
+            .where(and_(*filters))
+            .order_by(KasaHareket.tarih.desc(), KasaHareket.id.desc())
+            .offset(skip)
             .limit(limit)
         )
         result = await self.session.execute(stmt)

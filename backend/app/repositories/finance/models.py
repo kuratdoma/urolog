@@ -192,4 +192,5 @@ class FinansTaksit(Base):
     taksit_no = Column(Integer, nullable=False)
     tutar = Column(Numeric(12, 2), nullable=False)
     vade_tarihi = Column(Date, nullable=False)
-    durum = Column(String(20), default="bekliyor")
+    tahsil_tarihi = Column(Date, nullable=True)
+    durum = Column(String(20), default="bekliyor")  # bekliyor, tahsil_edildi
