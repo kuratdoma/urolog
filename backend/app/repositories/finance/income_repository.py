@@ -202,6 +202,121 @@ class IncomeRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_paid_total(self, tx_id: int) -> float:
+        """İşleme yapılmış toplam tahsilat."""
+        stmt = select(func.coalesce(func.sum(FinansOdeme.tutar), 0)).where(
+            FinansOdeme.islem_id == tx_id
+        )
+        return float((await self.session.execute(stmt)).scalar() or 0)
+
+    async def add_payment(self, tx_id: int, odeme_in) -> FinansOdeme:
+        """
+        Mevcut bir işleme ödeme ekler.
+
+        Kasa bakiyesini günceller, hareket kaydı üretir, taksitli ise taksit
+        planını oluşturur ve tahsilat tamamlandıysa işlem durumunu kapatır.
+        """
+        from app.repositories.finance.models import KasaHareket, FinansTaksit
+
+        tx = await self.get_transaction(tx_id)
+        if not tx:
+            raise ValueError("İşlem bulunamadı")
+        if tx.durum == "iptal":
+            raise ValueError("İptal edilmiş işleme ödeme eklenemez")
+
+        tutar = float(odeme_in.tutar)
+        if tutar <= 0:
+            raise ValueError("Ödeme tutarı sıfırdan büyük olmalıdır")
+
+        net = float(tx.net_tutar or 0)
+        onceden_odenen = await self.get_paid_total(tx_id)
+        if onceden_odenen + tutar > net + 0.01:
+            kalan = round(net - onceden_odenen, 2)
+            raise ValueError(
+                f"Ödeme tutarı kalan borcu aşıyor. Kalan: {kalan:.2f} ₺"
+            )
+
+        odeme = FinansOdeme(
+            islem_id=tx_id,
+            kasa_id=odeme_in.kasa_id,
+            odeme_yontemi=odeme_in.odeme_yontemi,
+            tutar=tutar,
+            odeme_tarihi=odeme_in.odeme_tarihi,
+            taksit_sayisi=odeme_in.taksit_sayisi or 1,
+        )
+        self.session.add(odeme)
+        await self.session.flush()
+
+        if odeme.kasa_id:
+            kasa_res = await self.session.execute(
+                select(Kasa).where(Kasa.id == odeme.kasa_id).with_for_update()
+            )
+            kasa = kasa_res.scalar_one_or_none()
+            if not kasa:
+                raise ValueError("Seçilen kasa bulunamadı")
+
+            onceki_bakiye = float(kasa.bakiye or 0)
+            # Gelir tahsilatı kasaya girer, gider ödemesi kasadan çıkar
+            giris = tx.islem_tipi == "gelir"
+            kasa.bakiye = onceki_bakiye + tutar if giris else onceki_bakiye - tutar
+
+            self.session.add(
+                KasaHareket(
+                    kasa_id=kasa.id,
+                    hareket_tipi="giris" if giris else "cikis",
+                    tutar=tutar,
+                    onceki_bakiye=onceki_bakiye,
+                    sonraki_bakiye=float(kasa.bakiye),
+                    aciklama=f"Ref: {tx.referans_kodu} ek tahsilat",
+                    islem_id=tx_id,
+                )
+            )
+
+        if odeme.taksit_sayisi and odeme.taksit_sayisi > 1:
+            from dateutil.relativedelta import relativedelta
+
+            adet = int(odeme.taksit_sayisi)
+            base = round(tutar / adet, 2)
+            son = round(tutar - base * (adet - 1), 2)
+            for i in range(1, adet + 1):
+                self.session.add(
+                    FinansTaksit(
+                        odeme_id=odeme.id,
+                        taksit_no=i,
+                        tutar=son if i == adet else base,
+                        vade_tarihi=odeme.odeme_tarihi + relativedelta(months=i),
+                        durum="bekliyor",
+                    )
+                )
+
+        await self.session.flush()
+        await self.sync_transaction_status(tx_id)
+        return odeme
+
+    async def sync_transaction_status(self, tx_id: int) -> Optional[str]:
+        """
+        Tahsilat durumuna göre işlem durumunu günceller.
+
+        Tamamı tahsil edildiyse 'tamamlandi', aksi hâlde 'bekliyor'.
+        İptal edilmiş işlemlere dokunulmaz.
+        """
+        tx = await self.get_transaction(tx_id)
+        if not tx or tx.durum == "iptal":
+            return None
+
+        net = float(tx.net_tutar or 0)
+        odenen = await self.get_paid_total(tx_id)
+        yeni_durum = "tamamlandi" if odenen >= net - 0.01 else "bekliyor"
+
+        if tx.durum != yeni_durum:
+            await self.session.execute(
+                update(FinansIslem)
+                .where(FinansIslem.id == tx_id)
+                .values(durum=yeni_durum)
+            )
+            await self.session.flush()
+        return yeni_durum
+
     async def get_patient_balance(self, patient_id: UUID) -> dict:
         """Calculates patient balance status."""
         # Debt

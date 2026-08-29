@@ -77,6 +77,18 @@ export const financeApi = {
             apiFetch<FinansIslem>('/api/v1/finance/transactions', { method: 'POST', body: JSON.stringify(data) }),
         updateTransaction: (id: number, data: Partial<FinansIslemCreate>) =>
             apiFetch<FinansIslem>(`/api/v1/finance/transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+        addPayment: (id: number, data: {
+            kasa_id?: number;
+            odeme_tarihi: string;
+            tutar: number;
+            odeme_yontemi: string;
+            taksit_sayisi?: number;
+            notlar?: string;
+        }) =>
+            apiFetch<FinansIslem>(`/api/v1/finance/transactions/${id}/payments`, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            }),
         cancelTransaction: (id: number, iptal_nedeni: string) =>
             apiFetch<FinansIslem>(`/api/v1/finance/transactions/${id}/cancel`, {
                 method: 'POST',

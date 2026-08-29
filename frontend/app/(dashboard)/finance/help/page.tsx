@@ -226,6 +226,10 @@ export default function FinanceHelpPage() {
                                 <p><span className="font-medium text-slate-900">3.</span> Hizmet kalemlerini ekleyin; tutar otomatik hesaplanır.</p>
                                 <p><span className="font-medium text-slate-900">4.</span> Tahsilat aldıysanız ödeme satırı ekleyin ve kasayı seçin.</p>
                                 <p><span className="font-medium text-slate-900">5.</span> Peşin değilse taksit sayısını girin — vade planı otomatik üretilir.</p>
+                                <p className="pt-1 text-xs text-slate-500">
+                                    Sonradan ödeme alırsanız işlemi açıp <span className="font-medium">Tahsilat Ekle</span> deyin;
+                                    borç kapanınca durum kendiliğinden <span className="font-mono">tamamlandi</span> olur.
+                                </p>
                             </CardContent>
                         </Card>
 
@@ -261,7 +265,8 @@ export default function FinanceHelpPage() {
                                             <span className="font-medium">İptal</span>, işlemi kayıtta bırakır ve nedenini saklar;
                                             ödemeler kasadan geri alınır. <span className="font-medium">Silme</span> kaydı listelerden
                                             kaldırır (veritabanından fiziksel olarak silinmez) ve yalnızca yöneticiler yapabilir.
-                                            Muhasebe izi için iptali tercih edin.
+                                            Muhasebe izi için iptali tercih edin. Aynı ilke tanımlar için de geçerlidir:
+                                            kasalar kapatılır, kullanımdaki kategori ve hizmetler silinemez.
                                         </p>
                                     </div>
                                 </div>
@@ -364,10 +369,28 @@ export default function FinanceHelpPage() {
                                 </p>
                             </div>
                             <div className="p-4">
-                                <p className="font-medium text-slate-900 text-sm">Hasta ödeme yaptı ama hâlâ borçlu görünüyor</p>
+                                <p className="font-medium text-slate-900 text-sm">Hasta sonradan ödeme yaptı, nasıl işlerim?</p>
                                 <p className="text-sm text-slate-600 mt-1">
-                                    Ödeme, işleme bağlı bir ödeme satırı olarak girilmelidir. Ayrı bir gelir işlemi
-                                    açmak borcu kapatmaz, yeni tahakkuk oluşturur. Hastanın işlemini açıp ödeme ekleyin.
+                                    İlgili işlemi açın ve <span className="font-medium">Tahsilat Ekle</span> butonunu kullanın.
+                                    Ayrı bir gelir işlemi açmayın — bu borcu kapatmaz, yeni tahakkuk oluşturur.
+                                    Tahsilat girildiğinde kasa bakiyesi artar ve borç tamamen kapandıysa işlem
+                                    otomatik olarak <span className="font-mono text-xs">tamamlandi</span> durumuna geçer.
+                                </p>
+                            </div>
+                            <div className="p-4">
+                                <p className="font-medium text-slate-900 text-sm">Kasayı silemiyorum</p>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    Kasalar silinmez, <span className="font-medium">kapatılır</span> (pasife alınır) — hareket
+                                    geçmişi muhasebe kaydı olduğu için korunur. Bakiyesi sıfır olmayan kasa kapatılamaz;
+                                    önce bakiyeyi başka bir kasaya transfer edin.
+                                </p>
+                            </div>
+                            <div className="p-4">
+                                <p className="font-medium text-slate-900 text-sm">Kategori veya hizmet silinmiyor</p>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    Geçmiş işlemlerde kullanılan kategori ve hizmetler silinemez — silinirse eski
+                                    kayıtların dökümü bozulur. Yeni işlemlerde çıkmaması için ilgili kaydı
+                                    <span className="font-medium"> pasife alın</span>.
                                 </p>
                             </div>
                             <div className="p-4">

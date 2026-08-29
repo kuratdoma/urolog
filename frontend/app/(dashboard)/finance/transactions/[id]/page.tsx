@@ -16,10 +16,23 @@ import {
     Wallet,
     CalendarDays
 } from 'lucide-react';
-import { api, FinansIslem } from '@/lib/api';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { api, FinansIslem, FinansKasa } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { toast } from 'sonner';
+
+const ODEME_YONTEMLERI = ['Nakit', 'Kredi Kartı', 'Havale/EFT', 'Çek', 'Senet'];
 
 const formatCurrency = (amount?: number) => {
     return new Intl.NumberFormat('tr-TR', {
@@ -53,6 +66,15 @@ export default function TransactionDetailPage() {
     const [islem, setIslem] = useState<FinansIslem | null>(null);
     const [cancelling, setCancelling] = useState(false);
 
+    // Tahsilat ekleme
+    const [kasalar, setKasalar] = useState<FinansKasa[]>([]);
+    const [payOpen, setPayOpen] = useState(false);
+    const [paySaving, setPaySaving] = useState(false);
+    const [payTutar, setPayTutar] = useState('');
+    const [payKasa, setPayKasa] = useState('');
+    const [payYontem, setPayYontem] = useState(ODEME_YONTEMLERI[0]);
+    const [payTarih, setPayTarih] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+
     const fetchIslem = async () => {
         if (!Number.isFinite(islemId)) {
             setLoading(false);
@@ -72,6 +94,7 @@ export default function TransactionDetailPage() {
 
     useEffect(() => {
         fetchIslem();
+        api.finance.getAccounts().then(setKasalar).catch(() => setKasalar([]));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [islemId]);
 
@@ -93,7 +116,46 @@ export default function TransactionDetailPage() {
     };
 
     const odenenToplam = (islem?.odemeler || []).reduce((sum, o) => sum + (o.tutar || 0), 0);
-    const kalan = (islem?.net_tutar || 0) - odenenToplam;
+    const kalan = Math.round(((islem?.net_tutar || 0) - odenenToplam) * 100) / 100;
+    const tahsilatYapilabilir = !!islem && islem.durum !== 'iptal' && kalan > 0;
+
+    const openPayDialog = () => {
+        setPayTutar(kalan > 0 ? String(kalan) : '');
+        setPayKasa(kasalar[0]?.id ? String(kasalar[0].id) : '');
+        setPayYontem(ODEME_YONTEMLERI[0]);
+        setPayTarih(format(new Date(), 'yyyy-MM-dd'));
+        setPayOpen(true);
+    };
+
+    const handleAddPayment = async () => {
+        const tutar = parseFloat(payTutar);
+        if (!Number.isFinite(tutar) || tutar <= 0) {
+            toast.error('Geçerli bir tutar girin');
+            return;
+        }
+        if (tutar > kalan + 0.01) {
+            toast.error(`Tutar kalan borcu aşamaz (kalan: ${formatCurrency(kalan)})`);
+            return;
+        }
+
+        setPaySaving(true);
+        try {
+            const res = await api.finance.addPayment(islemId, {
+                tutar,
+                odeme_tarihi: payTarih,
+                odeme_yontemi: payYontem,
+                kasa_id: payKasa ? Number(payKasa) : undefined,
+            });
+            setIslem(res);
+            setPayOpen(false);
+            toast.success('Tahsilat kaydedildi');
+        } catch (error: any) {
+            console.error('Tahsilat eklenemedi:', error);
+            toast.error(error?.message || 'Tahsilat eklenemedi');
+        } finally {
+            setPaySaving(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -146,6 +208,11 @@ export default function TransactionDetailPage() {
                     <Button variant="ghost" onClick={fetchIslem}>
                         <RefreshCw className="h-4 w-4 mr-2" /> Yenile
                     </Button>
+                    {tahsilatYapilabilir && (
+                        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openPayDialog}>
+                            <Wallet className="h-4 w-4 mr-2" /> Tahsilat Ekle
+                        </Button>
+                    )}
                     {islem.durum !== 'iptal' && (
                         <Button variant="outline" onClick={handleCancel} disabled={cancelling}>
                             <Ban className="h-4 w-4 mr-2" /> İptal Et
@@ -278,7 +345,19 @@ export default function TransactionDetailPage() {
                 </CardHeader>
                 <CardContent>
                     {(islem.odemeler?.length ?? 0) === 0 ? (
-                        <p className="text-sm text-slate-500 py-4 text-center">Henüz ödeme kaydı yok</p>
+                        <div className="py-6 text-center">
+                            <p className="text-sm text-slate-500">Henüz ödeme kaydı yok</p>
+                            {tahsilatYapilabilir && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-3"
+                                    onClick={openPayDialog}
+                                >
+                                    <Wallet className="h-4 w-4 mr-2" /> İlk tahsilatı ekle
+                                </Button>
+                            )}
+                        </div>
                     ) : (
                         <div className="space-y-3">
                             {islem.odemeler!.map(odeme => (
@@ -326,6 +405,95 @@ export default function TransactionDetailPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Tahsilat ekleme diyaloğu */}
+            <Dialog open={payOpen} onOpenChange={setPayOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Tahsilat Ekle</DialogTitle>
+                        <DialogDescription>
+                            {islem.referans_kodu} · Kalan borç {formatCurrency(kalan)}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div>
+                            <Label htmlFor="pay-tutar">Tutar (₺)</Label>
+                            <Input
+                                id="pay-tutar"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={payTutar}
+                                onChange={e => setPayTutar(e.target.value)}
+                                className="mt-1"
+                            />
+                            <p className="text-xs text-slate-500 mt-1">
+                                En fazla {formatCurrency(kalan)} girilebilir.
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label htmlFor="pay-tarih">Ödeme Tarihi</Label>
+                            <Input
+                                id="pay-tarih"
+                                type="date"
+                                value={payTarih}
+                                onChange={e => setPayTarih(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+
+                        <div>
+                            <Label>Ödeme Yöntemi</Label>
+                            <Select value={payYontem} onValueChange={setPayYontem}>
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {ODEME_YONTEMLERI.map(y => (
+                                        <SelectItem key={y} value={y}>{y}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div>
+                            <Label>Kasa</Label>
+                            <Select value={payKasa} onValueChange={setPayKasa}>
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue placeholder="Kasa seçin" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {kasalar.map(k => (
+                                        <SelectItem key={k.id} value={String(k.id)}>
+                                            {k.ad}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {kasalar.length === 0 && (
+                                <p className="text-xs text-amber-600 mt-1">
+                                    Tanımlı kasa yok — tahsilat kasaya işlenmeyecek.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setPayOpen(false)} disabled={paySaving}>
+                            Vazgeç
+                        </Button>
+                        <Button
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={handleAddPayment}
+                            disabled={paySaving}
+                        >
+                            {paySaving ? 'Kaydediliyor...' : 'Tahsilatı Kaydet'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

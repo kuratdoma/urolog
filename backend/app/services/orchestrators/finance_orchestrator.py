@@ -40,12 +40,26 @@ class FinanceOrchestrator:
 
     async def create_transaction_safely(self, tx_data: dict) -> Any:
         """
-        Ensures patient existence before creating a financial record.
+        İşlemi oluşturmadan önce hasta varlığını ve tutar tutarlılığını doğrular.
         """
         if tx_data.get("hasta_id"):
             patient = await self.patient_repo.get_by_id(tx_data["hasta_id"])
             if not patient:
-                raise ValueError("Referenced patient does not exist")
+                raise ValueError("Referans verilen hasta kaydı bulunamadı")
+
+        net = float(tx_data.get("net_tutar") or 0)
+        if net <= 0:
+            raise ValueError("İşlem tutarı sıfırdan büyük olmalıdır")
+
+        odemeler = tx_data.get("odemeler") or []
+        odeme_toplami = sum(float(o.get("tutar") or 0) for o in odemeler)
+        if any(float(o.get("tutar") or 0) <= 0 for o in odemeler):
+            raise ValueError("Ödeme tutarları sıfırdan büyük olmalıdır")
+        if odeme_toplami > net + 0.01:
+            raise ValueError(
+                f"Ödemeler toplamı ({odeme_toplami:.2f} ₺) "
+                f"işlem tutarını ({net:.2f} ₺) aşamaz"
+            )
 
         if tx_data.get("islem_tipi") == "gider":
             tx = await self.expense_repo.create_expense_transaction(
@@ -57,7 +71,15 @@ class FinanceOrchestrator:
             )
 
         await self.db.flush()
-        return tx
+        # Tahsilat tam ise durumu kapat
+        await self.income_repo.sync_transaction_status(tx.id)
+        return await self.income_repo.get_transaction(tx.id)
+
+    async def add_payment(self, tx_id: int, odeme_in) -> Any:
+        """Mevcut işleme ödeme ekler ve güncel işlemi döner."""
+        await self.income_repo.add_payment(tx_id, odeme_in)
+        await self.db.flush()
+        return await self.income_repo.get_transaction(tx_id)
 
     async def update_transaction(self, tx_id: int, changes: dict):
         """

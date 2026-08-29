@@ -35,6 +35,7 @@ from app.schemas.finance import (
     FinansIslemUpdate,
     FinansIslemPaginationResponse,
     FinansIslemIptalRequest,
+    FinansOdemeCreate,
     HastaCariResponse,
     FinansOzetResponse,
     GunlukOzetResponse,
@@ -133,7 +134,10 @@ async def delete_kategori(
 ) -> Any:
     """Kategori sil"""
     repo = AccountsRepository(db)
-    result = await repo.delete_category(kategori_id)
+    try:
+        result = await repo.delete_category(kategori_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     if not result:
         raise HTTPException(status_code=404, detail="Kategori bulunamadı")
     return {"success": True}
@@ -214,7 +218,10 @@ async def update_hizmet(
 async def delete_hizmet(hizmet_id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.require_role(UserRole.ADMIN))) -> Any:
     """Hizmet sil"""
     repo = AccountsRepository(db)
-    result = await repo.delete_service(hizmet_id)
+    try:
+        result = await repo.delete_service(hizmet_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     if not result:
         raise HTTPException(status_code=404, detail="Hizmet bulunamadı")
     return {"success": True}
@@ -314,11 +321,14 @@ async def update_kasa(
 
 @router.delete("/accounts/{kasa_id}")
 async def delete_kasa(kasa_id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.require_role(UserRole.ADMIN))) -> Any:
-    """Kasa sil"""
+    """Kasayı kapat (pasife al). Hareket geçmişi korunur."""
     repo = AccountsRepository(db)
-    result = await repo.delete_account(kasa_id)
+    try:
+        result = await repo.delete_account(kasa_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     if not result:
-        raise HTTPException(status_code=400, detail="Kasa silinemedi")
+        raise HTTPException(status_code=404, detail="Kasa bulunamadı")
     return {"success": True}
 
 
@@ -331,14 +341,17 @@ async def transfer_between_accounts(
 ) -> Any:
     """Kasalar arası transfer yap"""
     repo = AccountsRepository(db)
-    result = await repo.transfer_between_accounts(
-        kaynak_id=transfer_in.kaynak_kasa_id,
-        hedef_id=transfer_in.hedef_kasa_id,
-        tutar=transfer_in.tutar,
-        aciklama=transfer_in.aciklama,
-    )
+    try:
+        result = await repo.transfer_between_accounts(
+            kaynak_id=transfer_in.kaynak_kasa_id,
+            hedef_id=transfer_in.hedef_kasa_id,
+            tutar=transfer_in.tutar,
+            aciklama=transfer_in.aciklama,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     if not result:
-        raise HTTPException(status_code=400, detail="Transfer yapılamadı")
+        raise HTTPException(status_code=404, detail="Kaynak veya hedef kasa bulunamadı")
 
     await AuditService.log(
         db=db,
@@ -485,6 +498,41 @@ async def create_islem(
         raise HTTPException(
             status_code=400, detail="İşlem oluşturulurken bir doğrulama hatası oluştu"
         )
+
+
+@router.post(
+    "/transactions/{islem_id}/payments", response_model=FinansIslemResponse
+)
+async def add_islem_odeme(
+    islem_id: int,
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    odeme_in: FinansOdemeCreate,
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Mevcut işleme ödeme (tahsilat) ekler.
+
+    Kasa bakiyesi güncellenir, hareket kaydı üretilir, taksitliyse plan çıkarılır
+    ve tahsilat tamamlandığında işlem durumu 'tamamlandi' olur.
+    """
+    orchestrator = FinanceOrchestrator(
+        db, UserContext(user_id=current_user.id, username=current_user.username)
+    )
+    try:
+        islem = await orchestrator.add_payment(islem_id, odeme_in)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    await AuditService.log(
+        db=db,
+        action="finans_odeme_create",
+        user_id=current_user.id,
+        resource_type="finans_islem",
+        resource_id=str(islem_id),
+        details={"tutar": float(odeme_in.tutar), "kasa_id": odeme_in.kasa_id},
+    )
+    return islem
 
 
 @router.put("/transactions/{islem_id}", response_model=FinansIslemResponse)

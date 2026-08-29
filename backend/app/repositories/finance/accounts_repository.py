@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, delete, update, and_
+from sqlalchemy import select, delete, update, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.finance.models import (
     FinansKategori,
@@ -60,6 +60,43 @@ class AccountsRepository:
         return db_obj
 
     async def delete_category(self, kategori_id: int) -> bool:
+        """
+        Kategoriyi siler.
+
+        Kullanımdaki kategori silinirse geçmiş işlemlerin sınıflandırması kaybolur;
+        bu yüzden önce referans kontrolü yapılır.
+        """
+        kullanim = int(
+            (
+                await self.session.execute(
+                    select(func.count())
+                    .select_from(FinansIslem)
+                    .where(FinansIslem.kategori_id == kategori_id)
+                )
+            ).scalar()
+            or 0
+        )
+        if kullanim:
+            raise ValueError(
+                f"Bu kategori {kullanim} işlemde kullanılıyor, silinemez. "
+                "Kullanımdan kaldırmak için kategoriyi pasife alın."
+            )
+
+        alt_kategori = int(
+            (
+                await self.session.execute(
+                    select(func.count())
+                    .select_from(FinansKategori)
+                    .where(FinansKategori.ust_kategori_id == kategori_id)
+                )
+            ).scalar()
+            or 0
+        )
+        if alt_kategori:
+            raise ValueError(
+                f"Bu kategorinin {alt_kategori} alt kategorisi var, önce onları silin."
+            )
+
         result = await self.session.execute(
             delete(FinansKategori).where(FinansKategori.id == kategori_id)
         )
@@ -100,6 +137,29 @@ class AccountsRepository:
         return db_obj
 
     async def delete_service(self, hizmet_id: int) -> bool:
+        """
+        Hizmeti siler.
+
+        Geçmiş işlem kalemlerinde kullanılan hizmet silinemez — fatura dökümü bozulur.
+        """
+        from app.repositories.finance.models import FinansIslemSatir
+
+        kullanim = int(
+            (
+                await self.session.execute(
+                    select(func.count())
+                    .select_from(FinansIslemSatir)
+                    .where(FinansIslemSatir.hizmet_id == hizmet_id)
+                )
+            ).scalar()
+            or 0
+        )
+        if kullanim:
+            raise ValueError(
+                f"Bu hizmet {kullanim} işlem kaleminde kullanılıyor, silinemez. "
+                "Yeni işlemlerde çıkmaması için hizmeti pasife alın."
+            )
+
         result = await self.session.execute(
             delete(FinansHizmet).where(FinansHizmet.id == hizmet_id)
         )
@@ -136,32 +196,31 @@ class AccountsRepository:
         return db_obj
 
     async def delete_account(self, kasa_id: int) -> bool:
-        """Kasa siler (Bağlı hareketleri temizleyerek)"""
+        """
+        Kasayı kapatır (pasife alır).
+
+        Fiziksel silme yapılmaz: kasa hareketleri muhasebe defteridir ve
+        silinirse paranın nereden gelip nereye gittiği izlenemez hâle gelir.
+        Bakiyesi sıfır olmayan kasa kapatılamaz — önce bakiye başka kasaya
+        aktarılmalıdır.
+        """
         kasa = await self.get_account(kasa_id)
         if not kasa:
             return False
 
-        try:
-            # Update dependencies to Null
-            await self.session.execute(
-                update(FinansIslem)
-                .where(FinansIslem.kasa_id == kasa_id)
-                .values(kasa_id=None)
+        bakiye = float(kasa.bakiye or 0)
+        if abs(bakiye) >= 0.01:
+            raise ValueError(
+                f"Kasa bakiyesi {bakiye:.2f} ₺ olduğu için kapatılamaz. "
+                "Önce bakiyeyi başka bir kasaya transfer edin."
             )
-            await self.session.execute(
-                update(FinansOdeme)
-                .where(FinansOdeme.kasa_id == kasa_id)
-                .values(kasa_id=None)
-            )
-            # Delete movements
-            await self.session.execute(
-                delete(KasaHareket).where(KasaHareket.kasa_id == kasa_id)
-            )
-            await self.session.delete(kasa)
-            await self.session.flush()
+
+        if not kasa.aktif:
             return True
-        except Exception:
-            return False
+
+        kasa.aktif = False
+        await self.session.flush()
+        return True
 
     async def update_account_balance(
         self, kasa_id: int, tutar: float, hareket_tipi: str
@@ -199,9 +258,14 @@ class AccountsRepository:
         self, kaynak_id: int, hedef_id: int, tutar: float, aciklama: str = None
     ) -> bool:
         """Kasalar arası transfer yapar"""
+        if kaynak_id == hedef_id:
+            raise ValueError("Kaynak ve hedef kasa aynı olamaz.")
+        if tutar <= 0:
+            raise ValueError("Transfer tutarı sıfırdan büyük olmalıdır.")
+
         # Lock in a consistent order (smaller ID first) to prevent distributed deadlocks
         lock_order = sorted([kaynak_id, hedef_id])
-        
+
         locked_accounts = {}
         for k_id in lock_order:
             res = await self.session.execute(
@@ -214,6 +278,12 @@ class AccountsRepository:
 
         if not kaynak or not hedef:
             return False
+
+        if float(kaynak.bakiye or 0) < tutar:
+            raise ValueError(
+                f"{kaynak.ad} kasasında yeterli bakiye yok "
+                f"(mevcut: {float(kaynak.bakiye or 0):.2f} ₺)."
+            )
 
         # Source exit
         k_onceki = float(kaynak.bakiye or 0)
