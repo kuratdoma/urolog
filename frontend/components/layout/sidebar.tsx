@@ -441,7 +441,7 @@ export function Sidebar({ isCalendarPage = false }: { isCalendarPage?: boolean }
                 {!isCollapsed && (
                     <div className="pt-2 text-center transition-opacity flex flex-col items-center gap-1">
                         <p className="text-[9px] text-slate-500 font-mono font-medium tracking-wider">
-                            {process.env.NEXT_PUBLIC_GIT_SHA ? `Git #${process.env.NEXT_PUBLIC_GIT_SHA}` : 'Git: dev'}
+                            {process.env.NEXT_PUBLIC_GIT_SHA || 'dev'}
                         </p>
                         <div className="pt-1 border-t border-slate-200/60 w-full">
                             <p className="text-[9px] font-semibold text-slate-600">
