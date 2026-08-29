@@ -404,6 +404,38 @@ class AylikOzetResponse(BaseModel):
 # =============================================================================
 # FİLTRELEME
 # =============================================================================
+class AcikIslemResponse(BaseModel):
+    """Toplu tahsilat ekranında listelenecek açık borç satırı."""
+    id: int
+    referans_kodu: str
+    tarih: date
+    vade_tarihi: Optional[date] = None
+    aciklama: Optional[str] = None
+    net_tutar: float = 0
+    odenen_tutar: float = 0
+    kalan_tutar: float = 0
+
+
+class TopluTahsilatRequest(BaseModel):
+    tutar: float = Field(gt=0)
+    kasa_id: Optional[int] = None
+    odeme_yontemi: str
+    odeme_tarihi: date
+
+
+class TahsilatDagitimSatiri(BaseModel):
+    islem_id: int
+    referans_kodu: str
+    tutar: float
+    kalan_borc: float
+
+
+class TopluTahsilatResponse(BaseModel):
+    tahsil_edilen: float
+    islem_sayisi: int
+    dagitim: List[TahsilatDagitimSatiri] = []
+
+
 class KategoriKirilimResponse(BaseModel):
     kategori_id: Optional[int] = None
     kategori_adi: str

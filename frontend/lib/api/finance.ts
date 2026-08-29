@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 import {
-    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, KategoriKirilim, YaslandirmaKova, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
+    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, KategoriKirilim, YaslandirmaKova, AcikIslem, TopluTahsilatSonuc, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
 } from './types';
 
 export const financeApi = {
@@ -122,6 +122,18 @@ export const financeApi = {
             apiFetch<FinansIslem[]>(`/api/v1/finance/patients/${hastaId}/transactions`),
         getPatientBalance: (hastaId: string) =>
             apiFetch<HastaCari>(`/api/v1/finance/patients/${hastaId}/balance`),
+        getOpenTransactions: (hastaId: string) =>
+            apiFetch<AcikIslem[]>(`/api/v1/finance/patients/${hastaId}/open-transactions`),
+        collectBulk: (hastaId: string, data: {
+            tutar: number;
+            kasa_id?: number;
+            odeme_yontemi: string;
+            odeme_tarihi: string;
+        }) =>
+            apiFetch<TopluTahsilatSonuc>(`/api/v1/finance/patients/${hastaId}/collect`, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            }),
         getDebtors: (minBorc: number = 0, opts: { skip?: number; limit?: number } = {}) => {
             const p = new URLSearchParams({ min_borc: String(minBorc) });
             p.set('skip', String(opts.skip ?? 0));

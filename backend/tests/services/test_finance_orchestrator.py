@@ -187,6 +187,88 @@ async def test_sadece_kilitli_alan_gelirse_update_calistirilmaz():
 
 
 # =============================================================================
+# Toplu tahsilat dağıtımı
+# =============================================================================
+def _acik(islem_id, ref, kalan):
+    return {
+        "id": islem_id,
+        "referans_kodu": ref,
+        "tarih": "2026-01-01",
+        "vade_tarihi": None,
+        "aciklama": None,
+        "net_tutar": kalan,
+        "odenen_tutar": 0.0,
+        "kalan_tutar": kalan,
+    }
+
+
+@pytest.mark.asyncio
+async def test_toplu_tahsilat_en_eski_borctan_baslar():
+    """FIFO: liste sırası korunmalı, ilk borç tam kapanmadan ikinciye geçilmemeli."""
+    orch, _ = _orchestrator()
+    orch.income_repo.get_open_transactions.return_value = [
+        _acik(1, "GEL-1", 300.0),
+        _acik(2, "GEL-2", 500.0),
+    ]
+
+    sonuc = await orch.collect_bulk(
+        patient_id=uuid4(), tutar=400.0, kasa_id=1,
+        odeme_yontemi="Nakit", odeme_tarihi="2026-02-01",
+    )
+
+    assert sonuc["tahsil_edilen"] == 400.0
+    assert sonuc["islem_sayisi"] == 2
+    # İlk işlem tamamen, ikinci kısmen kapanmalı
+    assert sonuc["dagitim"][0] == {
+        "islem_id": 1, "referans_kodu": "GEL-1", "tutar": 300.0, "kalan_borc": 0.0,
+    }
+    assert sonuc["dagitim"][1]["tutar"] == 100.0
+    assert sonuc["dagitim"][1]["kalan_borc"] == 400.0
+
+
+@pytest.mark.asyncio
+async def test_toplu_tahsilat_toplam_borcu_asamaz():
+    orch, _ = _orchestrator()
+    orch.income_repo.get_open_transactions.return_value = [_acik(1, "GEL-1", 250.0)]
+
+    with pytest.raises(ValueError, match="toplam borcu aşıyor"):
+        await orch.collect_bulk(
+            patient_id=uuid4(), tutar=1000.0, kasa_id=1,
+            odeme_yontemi="Nakit", odeme_tarihi="2026-02-01",
+        )
+
+
+@pytest.mark.asyncio
+async def test_acik_borcu_olmayan_hastada_toplu_tahsilat_reddedilir():
+    orch, _ = _orchestrator()
+    orch.income_repo.get_open_transactions.return_value = []
+
+    with pytest.raises(ValueError, match="açık borcu yok"):
+        await orch.collect_bulk(
+            patient_id=uuid4(), tutar=100.0, kasa_id=1,
+            odeme_yontemi="Nakit", odeme_tarihi="2026-02-01",
+        )
+
+
+@pytest.mark.asyncio
+async def test_toplu_tahsilat_tam_kapatma_kurusu_birakmaz():
+    """Toplam borcun tamamı ödendiğinde artan kalmamalı."""
+    orch, _ = _orchestrator()
+    orch.income_repo.get_open_transactions.return_value = [
+        _acik(1, "GEL-1", 333.33),
+        _acik(2, "GEL-2", 666.67),
+    ]
+
+    sonuc = await orch.collect_bulk(
+        patient_id=uuid4(), tutar=1000.0, kasa_id=1,
+        odeme_yontemi="Nakit", odeme_tarihi="2026-02-01",
+    )
+
+    assert sonuc["tahsil_edilen"] == 1000.0
+    assert all(d["kalan_borc"] == 0.0 for d in sonuc["dagitim"])
+
+
+# =============================================================================
 # Taksit yuvarlaması
 # =============================================================================
 @pytest.mark.parametrize(

@@ -423,6 +423,65 @@ class IncomeRepository:
         await self.session.flush()
         return taksit
 
+    async def get_open_transactions(self, patient_id: UUID) -> List[dict]:
+        """
+        Hastanın açık (tamamı tahsil edilmemiş) gelir işlemleri — en eski vade önce.
+
+        Toplu tahsilatta dağıtım sırası budur.
+        """
+        paid_subq = (
+            select(
+                FinansOdeme.islem_id.label("islem_id"),
+                func.sum(FinansOdeme.tutar).label("total_paid"),
+            )
+            .group_by(FinansOdeme.islem_id)
+            .subquery()
+        )
+        odenen = func.coalesce(paid_subq.c.total_paid, 0)
+
+        stmt = (
+            select(
+                FinansIslem.id,
+                FinansIslem.referans_kodu,
+                FinansIslem.tarih,
+                FinansIslem.vade_tarihi,
+                FinansIslem.aciklama,
+                FinansIslem.net_tutar,
+                odenen.label("odenen"),
+            )
+            .select_from(FinansIslem)
+            .outerjoin(paid_subq, paid_subq.c.islem_id == FinansIslem.id)
+            .where(
+                and_(
+                    FinansIslem.hasta_id == patient_id,
+                    FinansIslem.is_deleted == False,
+                    FinansIslem.islem_tipi == "gelir",
+                    FinansIslem.durum != "iptal",
+                    odenen < FinansIslem.net_tutar,
+                )
+            )
+            # Vadesi olan önce, sonra işlem tarihi — en eski borç önce kapanır
+            .order_by(
+                func.coalesce(FinansIslem.vade_tarihi, FinansIslem.tarih).asc(),
+                FinansIslem.id.asc(),
+            )
+        )
+
+        rows = (await self.session.execute(stmt)).all()
+        return [
+            {
+                "id": r.id,
+                "referans_kodu": r.referans_kodu,
+                "tarih": r.tarih,
+                "vade_tarihi": r.vade_tarihi,
+                "aciklama": r.aciklama,
+                "net_tutar": float(r.net_tutar or 0),
+                "odenen_tutar": float(r.odenen or 0),
+                "kalan_tutar": round(float(r.net_tutar or 0) - float(r.odenen or 0), 2),
+            }
+            for r in rows
+        ]
+
     async def sync_transaction_status(self, tx_id: int) -> Optional[str]:
         """
         Tahsilat durumuna göre işlem durumunu günceller.

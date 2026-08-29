@@ -15,7 +15,8 @@ import {
     ExternalLink,
     Wallet,
     CalendarDays,
-    Trash2
+    Trash2,
+    Printer
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -141,6 +142,26 @@ export default function TransactionDetailPage() {
         }
     };
 
+    const handlePrintReceipt = () => {
+        if (!islem) return;
+        // /print/receipt sayfası veriyi localStorage üzerinden alır
+        // (hasta cari sayfasındaki makbuz akışıyla aynı sözleşme).
+        localStorage.setItem("print_receipt_draft", JSON.stringify({
+            patient: islem.hasta_id ? { id: islem.hasta_id, ad: islem.hasta_adi } : null,
+            transaction: {
+                id: islem.id,
+                tarih: islem.tarih,
+                aciklama: islem.aciklama,
+                borc: islem.net_tutar,
+                alacak: odenenToplam,
+                hizmet_ad: islem.satirlar?.[0]?.hizmet_adi || 'Hizmet / İşlem',
+                odeme_yontemi: islem.odemeler?.[0]?.odeme_yontemi,
+            },
+            doctor: islem.doktor,
+        }));
+        window.open("/print/receipt", "_blank", "width=800,height=900");
+    };
+
     const odenenToplam = (islem?.odemeler || []).reduce((sum, o) => sum + (o.tutar || 0), 0);
     const kalan = Math.round(((islem?.net_tutar || 0) - odenenToplam) * 100) / 100;
     const tahsilatYapilabilir = !!islem && islem.durum !== 'iptal' && kalan > 0;
@@ -233,6 +254,9 @@ export default function TransactionDetailPage() {
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" onClick={fetchIslem}>
                         <RefreshCw className="h-4 w-4 mr-2" /> Yenile
+                    </Button>
+                    <Button variant="outline" onClick={handlePrintReceipt}>
+                        <Printer className="h-4 w-4 mr-2" /> Makbuz
                     </Button>
                     {tahsilatYapilabilir && (
                         <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openPayDialog}>

@@ -38,6 +38,9 @@ from app.schemas.finance import (
     FinansOdemeCreate,
     FinansTaksitResponse,
     HastaCariResponse,
+    AcikIslemResponse,
+    TopluTahsilatRequest,
+    TopluTahsilatResponse,
     KategoriKirilimResponse,
     YaslandirmaKovaResponse,
     FinansOzetResponse,
@@ -723,6 +726,56 @@ async def get_hasta_cari(hasta_id: str, db: AsyncSession = Depends(deps.get_db))
     repo = IncomeRepository(db)
     cari = await repo.get_patient_balance(UUID(hasta_id))
     return HastaCariResponse(**cari)
+
+
+@router.get(
+    "/patients/{hasta_id}/open-transactions", response_model=List[AcikIslemResponse]
+)
+async def get_hasta_acik_islemler(
+    hasta_id: str, db: AsyncSession = Depends(deps.get_db)
+) -> Any:
+    """Hastanın tamamı tahsil edilmemiş gelir işlemleri — en eski vade önce."""
+    repo = IncomeRepository(db)
+    return await repo.get_open_transactions(UUID(hasta_id))
+
+
+@router.post("/patients/{hasta_id}/collect", response_model=TopluTahsilatResponse)
+async def toplu_tahsilat(
+    hasta_id: str,
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    tahsilat_in: TopluTahsilatRequest,
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Hastanın açık borçlarına toplu tahsilat dağıtır (en eski vadeden başlayarak).
+
+    Ön masada hasta tek tutar öderken hangi faturaya ne kadar yazılacağı
+    otomatik hesaplanır.
+    """
+    orchestrator = FinanceOrchestrator(
+        db, UserContext(user_id=current_user.id, username=current_user.username)
+    )
+    try:
+        sonuc = await orchestrator.collect_bulk(
+            patient_id=UUID(hasta_id),
+            tutar=tahsilat_in.tutar,
+            kasa_id=tahsilat_in.kasa_id,
+            odeme_yontemi=tahsilat_in.odeme_yontemi,
+            odeme_tarihi=tahsilat_in.odeme_tarihi,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    await AuditService.log(
+        db=db,
+        action="finans_toplu_tahsilat",
+        user_id=current_user.id,
+        resource_type="patient",
+        resource_id=hasta_id,
+        details=sonuc,
+    )
+    return sonuc
 
 
 @router.get("/patients/debtors", response_model=List[HastaCariResponse])

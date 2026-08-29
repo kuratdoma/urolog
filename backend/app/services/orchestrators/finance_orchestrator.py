@@ -81,6 +81,76 @@ class FinanceOrchestrator:
         await self.db.flush()
         return await self.income_repo.get_transaction(tx_id)
 
+    async def collect_bulk(
+        self,
+        patient_id: UUID,
+        tutar: float,
+        kasa_id: Optional[int],
+        odeme_yontemi: str,
+        odeme_tarihi,
+    ) -> dict:
+        """
+        Hastanın açık borçlarına toplu tahsilat dağıtır.
+
+        Dağıtım en eski vadeden başlar (FIFO): ön masada hasta tek tutar
+        öderken hangi faturaya ne kadar yazılacağını elle hesaplamak yerine
+        sistem sırayla kapatır. Artan tutar varsa işlem reddedilir — fazla
+        tahsilat hasta bakiyesini eksiye düşürür.
+        """
+        if tutar <= 0:
+            raise ValueError("Tahsilat tutarı sıfırdan büyük olmalıdır")
+
+        acik = await self.income_repo.get_open_transactions(patient_id)
+        if not acik:
+            raise ValueError("Bu hastanın açık borcu yok")
+
+        toplam_borc = round(sum(t["kalan_tutar"] for t in acik), 2)
+        if tutar > toplam_borc + 0.01:
+            raise ValueError(
+                f"Tahsilat tutarı toplam borcu aşıyor. Toplam borç: {toplam_borc:.2f} ₺"
+            )
+
+        from app.schemas.finance import FinansOdemeCreate
+
+        kalan_dagitilacak = round(tutar, 2)
+        dagitim = []
+
+        for islem in acik:
+            if kalan_dagitilacak <= 0.001:
+                break
+
+            pay = min(islem["kalan_tutar"], kalan_dagitilacak)
+            pay = round(pay, 2)
+            if pay <= 0:
+                continue
+
+            await self.income_repo.add_payment(
+                islem["id"],
+                FinansOdemeCreate(
+                    kasa_id=kasa_id,
+                    tutar=pay,
+                    odeme_tarihi=odeme_tarihi,
+                    odeme_yontemi=odeme_yontemi,
+                    taksit_sayisi=1,
+                ),
+            )
+            dagitim.append(
+                {
+                    "islem_id": islem["id"],
+                    "referans_kodu": islem["referans_kodu"],
+                    "tutar": pay,
+                    "kalan_borc": round(islem["kalan_tutar"] - pay, 2),
+                }
+            )
+            kalan_dagitilacak = round(kalan_dagitilacak - pay, 2)
+
+        await self.db.flush()
+        return {
+            "tahsil_edilen": round(tutar - kalan_dagitilacak, 2),
+            "islem_sayisi": len(dagitim),
+            "dagitim": dagitim,
+        }
+
     async def update_transaction(self, tx_id: int, changes: dict):
         """
         İşlemin üst bilgilerini günceller.

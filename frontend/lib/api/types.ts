@@ -1406,6 +1406,30 @@ export interface BorcluHasta {
     son_islem_tarihi?: string;
 }
 
+export interface AcikIslem {
+    id: number;
+    referans_kodu: string;
+    tarih: string;
+    vade_tarihi?: string | null;
+    aciklama?: string | null;
+    net_tutar: number;
+    odenen_tutar: number;
+    kalan_tutar: number;
+}
+
+export interface TahsilatDagitimSatiri {
+    islem_id: number;
+    referans_kodu: string;
+    tutar: number;
+    kalan_borc: number;
+}
+
+export interface TopluTahsilatSonuc {
+    tahsil_edilen: number;
+    islem_sayisi: number;
+    dagitim: TahsilatDagitimSatiri[];
+}
+
 export interface KategoriKirilim {
     kategori_id?: number | null;
     kategori_adi: string;

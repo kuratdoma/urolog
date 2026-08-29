@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, FinansIslem } from "@/lib/api";
+import { api, FinansIslem, FinansKasa, AcikIslem } from "@/lib/api";
 import { PatientHeader } from "@/components/clinical/patient-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
-import { Plus, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Loader2, Printer, Minus } from "lucide-react";
+import { Plus, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Loader2, Printer, Minus, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -42,8 +42,61 @@ import { ExpenseForm } from "@/components/finance/forms/ExpenseForm";
 export default function FinancePage() {
     const params = useParams();
     const patientId = String(params.id);
+
     const queryClient = useQueryClient();
     const { user } = useAuthStore();
+
+    // --- Toplu tahsilat ---
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [bulkTutar, setBulkTutar] = useState("");
+    const [bulkKasa, setBulkKasa] = useState("");
+    const [bulkYontem, setBulkYontem] = useState("Nakit");
+    const [bulkSaving, setBulkSaving] = useState(false);
+    const [acikIslemler, setAcikIslemler] = useState<AcikIslem[]>([]);
+    const [bulkKasalar, setBulkKasalar] = useState<FinansKasa[]>([]);
+
+    const acikToplam = acikIslemler.reduce((t, i) => t + i.kalan_tutar, 0);
+
+    const openBulkDialog = async () => {
+        try {
+            const [acik, kasalar] = await Promise.all([
+                api.finance.getOpenTransactions(patientId),
+                api.finance.getAccounts(),
+            ]);
+            setAcikIslemler(acik);
+            setBulkKasalar(kasalar);
+            setBulkTutar(acik.length ? String(acik.reduce((t, i) => t + i.kalan_tutar, 0).toFixed(2)) : "");
+            setBulkKasa(kasalar[0]?.id ? String(kasalar[0].id) : "");
+            setBulkYontem("Nakit");
+            setBulkOpen(true);
+        } catch {
+            toast.error("Açık borçlar yüklenemedi");
+        }
+    };
+
+    const handleBulkCollect = async () => {
+        const tutar = parseFloat(bulkTutar);
+        if (!Number.isFinite(tutar) || tutar <= 0) {
+            toast.error("Geçerli bir tutar girin");
+            return;
+        }
+        setBulkSaving(true);
+        try {
+            const sonuc = await api.finance.collectBulk(patientId, {
+                tutar,
+                kasa_id: bulkKasa ? Number(bulkKasa) : undefined,
+                odeme_yontemi: bulkYontem,
+                odeme_tarihi: format(new Date(), "yyyy-MM-dd"),
+            });
+            toast.success(`${sonuc.islem_sayisi} işleme toplam ${sonuc.tahsil_edilen.toLocaleString("tr-TR")} ₺ dağıtıldı`);
+            setBulkOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['finance_transactions', patientId] });
+        } catch (error: any) {
+            toast.error(error?.message || "Toplu tahsilat başarısız");
+        } finally {
+            setBulkSaving(false);
+        }
+    };
 
     // Modal states
     const [incomeDialogOpen, setIncomeDialogOpen] = useState(false);
@@ -215,6 +268,13 @@ export default function FinancePage() {
                 {/* Actions & List */}
                 <div className="flex justify-end gap-3">
                     <Button
+                        onClick={openBulkDialog}
+                        variant="outline"
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                        <Layers className="h-4 w-4 mr-2" /> Toplu Tahsilat
+                    </Button>
+                    <Button
                         onClick={() => setExpenseDialogOpen(true)}
                         variant="outline"
                         className="text-rose-600 border-rose-200 hover:bg-rose-50"
@@ -228,6 +288,100 @@ export default function FinancePage() {
                         <Plus className="h-4 w-4 mr-2" /> Yeni Gelir / Tahsilat
                     </Button>
                 </div>
+
+                {/* Toplu Tahsilat */}
+                <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+                    <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>Toplu Tahsilat</DialogTitle>
+                        </DialogHeader>
+
+                        {acikIslemler.length === 0 ? (
+                            <p className="py-6 text-center text-sm text-slate-500">
+                                Bu hastanın açık borcu yok.
+                            </p>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="rounded-lg bg-slate-50 p-3">
+                                    <p className="text-xs text-slate-500">Toplam açık borç</p>
+                                    <p className="text-2xl font-bold text-slate-900">
+                                        {acikToplam.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-400">
+                                        {acikIslemler.length} açık işlem — tahsilat en eski vadeden başlayarak dağıtılır
+                                    </p>
+                                </div>
+
+                                <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border p-2">
+                                    {acikIslemler.map((i) => (
+                                        <div key={i.id} className="flex justify-between text-xs">
+                                            <span className="font-mono text-slate-500">{i.referans_kodu}</span>
+                                            <span className="font-medium">
+                                                {i.kalan_tutar.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-medium text-slate-600">Tahsil edilen (₺)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={bulkTutar}
+                                            onChange={(e) => setBulkTutar(e.target.value)}
+                                            className="mt-1 h-10 w-full rounded-md border border-slate-200 px-3 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-slate-600">Ödeme yöntemi</label>
+                                        <select
+                                            value={bulkYontem}
+                                            onChange={(e) => setBulkYontem(e.target.value)}
+                                            className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                                        >
+                                            {["Nakit", "Kredi Kartı", "Havale/EFT", "Çek"].map((y) => (
+                                                <option key={y} value={y}>{y}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-medium text-slate-600">Kasa</label>
+                                    <select
+                                        value={bulkKasa}
+                                        onChange={(e) => setBulkKasa(e.target.value)}
+                                        className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                                    >
+                                        {bulkKasalar.map((k) => (
+                                            <option key={k.id} value={String(k.id)}>{k.ad}</option>
+                                        ))}
+                                    </select>
+                                    {bulkKasalar.length === 0 && (
+                                        <p className="mt-1 text-xs text-amber-600">
+                                            Tanımlı kasa yok — tahsilat kasaya işlenmeyecek.
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-2">
+                                    <Button variant="outline" onClick={() => setBulkOpen(false)} disabled={bulkSaving}>
+                                        Vazgeç
+                                    </Button>
+                                    <Button
+                                        onClick={handleBulkCollect}
+                                        disabled={bulkSaving}
+                                        className="bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        {bulkSaving ? "Dağıtılıyor..." : "Tahsilatı Dağıt"}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
 
                 <Dialog open={incomeDialogOpen} onOpenChange={setIncomeDialogOpen}>
                     <DialogContent className="max-w-[95vw] w-full lg:max-w-[85vw] xl:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
