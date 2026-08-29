@@ -164,3 +164,28 @@
             rgba(0, 0, 0, 0.02) 10px,
             rgba(0, 0, 0, 0.02) 20px);
 }
+/* ------------------------------------------------------------------ */
+/* Takvim randevu popover'ı — ekrana ortala                            */
+/* ------------------------------------------------------------------ */
+/* Radix, popover'ı tıklama noktasına göre konumlandırılmış bir
+   sarmalayıcı içinde açar. data-centered işaretli içerik için bu
+   konumlandırmayı iptal edip görünüm alanının ortasına sabitliyoruz. */
+[data-radix-popper-content-wrapper]:has([data-centered]) {
+    position: fixed !important;
+    inset: auto !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    /* Radix'in min-width/max-height hesapları ortalamayı bozmasın */
+    min-width: 0 !important;
+    max-width: calc(100vw - 2rem) !important;
+}
+
+/* Ortalanmış popover arkasına hafif bir perde — odağı içeriğe alır */
+[data-radix-popper-content-wrapper]:has([data-centered])::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: -1;
+}

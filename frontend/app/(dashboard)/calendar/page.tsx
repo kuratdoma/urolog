@@ -251,30 +251,6 @@ export default function CalendarPage() {
         },
     });
 
-    const syncGoogleMutation = useMutation({
-        mutationFn: (id: string) => api.integrations.syncToGoogle(id),
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['appointments'] });
-            toast.success(data.message || "Google Calendar'a aktarıldı");
-        },
-        onError: async (err: any) => {
-            const errorMessage = err.message || '';
-            if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('Google API') || errorMessage.includes('auth')) {
-                toast.error('Google Calendar yetkiniz zaman aşımına uğramış. Yönlendiriliyorsunuz...');
-                try {
-                    const res = await api.integrations.getGoogleAuthUrl();
-                    if (res && res.url) {
-                        window.location.href = res.url;
-                    }
-                } catch (e) {
-                    toast.error('Bağlantı URL\'i alınamadı.');
-                }
-            } else {
-                toast.error(err.message || 'Senkronizasyon hatası');
-            }
-        }
-    });
-
     const removeGoogleMutation = useMutation({
         mutationFn: (id: string) => api.integrations.removeFromGoogle(id),
         onSuccess: (data) => {
@@ -451,7 +427,6 @@ export default function CalendarPage() {
                 }}
                 onSummary={(id, name) => setSummaryDialog({ open: true, patientId: id, patientName: name })}
                 onGoToPatient={(id) => router.push(`/patients/${id}`)}
-                onSyncGoogle={(id) => syncGoogleMutation.mutate(id)}
                 onRemoveGoogle={(id) => removeGoogleMutation.mutate(id)}
                 isFocused={String(event.resource.doctor_id) === selectedDoctorId}
                 isGhosted={!!selectedDoctorId && isGhostMode && String(event.resource.doctor_id) !== selectedDoctorId}
@@ -459,7 +434,7 @@ export default function CalendarPage() {
             />
         ),
         toolbar: () => null // Handled externally
-    }), [view, selectedDoctorId, isGhostMode, router, updateAppointmentMutation, syncGoogleMutation, removeGoogleMutation, showChanges]);
+    }), [view, selectedDoctorId, isGhostMode, router, updateAppointmentMutation, removeGoogleMutation, showChanges]);
 
     // Calendar Styles
     const calendarStyles = `
