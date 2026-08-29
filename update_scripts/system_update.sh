@@ -7,7 +7,8 @@
 
 set -e # Herhangi bir hata oluşursa scripti durdur
 
-PROJECT_DIR="$(pwd)"
+ACTIVE_USER="${SUDO_USER:-${USER:-$(whoami)}}"
+PROJECT_DIR="${PROJECT_DIR:-/home/${ACTIVE_USER}/urolog_code}"
 ENV_FILE="${ENV_FILE:-.env}"
 
 # Ortam değişkenlerini .env dosyasından çek (Yedekleme ve Docker için)
@@ -27,8 +28,8 @@ SANITIZED_PROJECT_NAME=$(echo "$PROJECT_NAME" | sed 's/[^a-zA-Z0-9_-]//g' | tr '
 CONTAINER_DB_NAME="${CONTAINER_DB_NAME:-${SANITIZED_PROJECT_NAME}_db}"
 DB_NAME="${DB_NAME:-urolog}"
 DB_USER="${DB_USER:-urologadmin}"
-BACKUP_DIR="${BACKUP_DIR:-/home/alp/urolog_yedek}"
-REPO_URL="${REPO_URL:-}"
+BACKUP_DIR="${BACKUP_DIR:-/home/${ACTIVE_USER}/backup}"
+REPO_URL="${REPO_URL:-https://github.com/kuratdoma/urolog}"
 
 # DB Volume Name tespiti ve oluşturulması
 if [ -z "$DB_VOLUME_NAME" ]; then
@@ -55,6 +56,7 @@ echo "Veritabanı   : $DB_NAME (User: $DB_USER)"
 echo "DB Konteyner : $CONTAINER_DB_NAME"
 echo "DB Volume    : $DB_VOLUME_NAME"
 echo "Env Dosyası  : $ENV_FILE"
+echo "Yedek Dizini : $BACKUP_DIR"
 echo "==================================================="
 echo ""
 
@@ -83,10 +85,14 @@ fi
 
 # 2. Adım: GitHub'dan Kodları Çekme (Deploy Key)
 echo "[2/4] GitHub'dan güncel kodlar çekiliyor..."
+mkdir -p "$PROJECT_DIR"
+cd "$PROJECT_DIR"
 if [ ! -d ".git" ]; then
     echo "⚠️ Git deposu bulunamadı, init ediliyor..."
     git init
     git remote add origin "$REPO_URL" 2>/dev/null || git remote set-url origin "$REPO_URL"
+else
+    git remote set-url origin "$REPO_URL" 2>/dev/null || true
 fi
 
 echo "Remote güncellemeleri çekiliyor (SSH Deploy Key)..."

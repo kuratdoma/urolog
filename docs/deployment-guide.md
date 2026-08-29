@@ -1,54 +1,94 @@
-# Deployment Guide
+# UroLOG Deployment & Initial Setup Guide
 
-This guide details the deployment process for UroLOG, primarily targeting a Debian-based server (Hetzner).
+Bu kılavuz, UroLOG sisteminin Debian/Ubuntu tabanlı sunucularda (Hetzner, ofis sunucusu, Acemagic vb.) sıfırdan ilk kurulumunu (initial deploy) ve güncellemelerini açıklar.
 
-## Infrastructure Overview
+## Altyapı ve Standartlar
 
-- **Server:** Hetzner Cloud (Debian 12 Bookworm)
-- **Container Runtime:** Docker Engine + Docker Compose Plugin
-- **Reverse Proxy:** Nginx (running on host)
-- **SSL:** Let's Encrypt (Certbot)
+- **Hedef Repo:** `https://github.com/kuratdoma/urolog`
+- **Proje Adı (`PROJECT_NAME`):** `urolog`
+- **Proje Dizini (`PROJECT_DIR`):** `/home/<aktif_kullanici>/urolog_code`
+- **Yedek Dizini (`BACKUP_DIR`):** `/home/<aktif_kullanici>/backup`
+- **Container Runtime:** Docker Engine + Docker Compose (v2)
+- **Veritabanı:** PostgreSQL 15 (Container: `urolog_db`, Volume: `urolog_db_data`)
 
-## Prerequisites
+---
 
-- SSH access to the server.
-- `PROJECT_NAME`, `DB_PASSWORD`, `SECRET_KEY` configured in `.env` on the server.
-- Docker installed using the `deployment_debian/DEBIAN_DEPLOYMENT_GUIDE.md`.
+## 1. İlk Kurulum Adımları (Initial Deploy)
 
-## Deployment Flow
-
-1. **Local Push:**
-   Backend/Frontend code changes are pushed from the local machine to the server via `rsync`.
-   *(Script: `deployment_debian/deploy_hetzner.sh`)*
-
-2. **Remote Build:**
-   Docker images are rebuilt on the remote server to ensure architecture compatibility.
-
-3. **Database Migration:**
-   Alembic migrations are automatically applied on container startup.
-
-## How to Deploy
-
-Run the deployment script from your local machine:
-
+### Adım 1: Sunucu Gereksinimleri
+Sunucuda Docker ve Docker Compose yüklü olmalıdır:
 ```bash
-./deployment_debian/deploy_hetzner.sh
+# Docker ve Compose kurulumu (Debian/Ubuntu)
+sudo apt update && sudo apt install -y git curl docker.io docker-compose-plugin
+sudo usermod -aG docker $USER
+newgrp docker
 ```
 
-**What the script does:**
+### Adım 2: Kod Deposunu Klonlama
+Proje dizini aktif kullanıcının altında `urolog_code` olarak konumlandırılır:
+```bash
+cd ~
+git clone https://github.com/kuratdoma/urolog.git /home/$USER/urolog_code
+cd /home/$USER/urolog_code
+```
 
-1. **Backs up** the remote database.
-2. **Synchronizes** local files to the remote server (excluding `node_modules`, `venv`, etc.).
-3. **Rebuilds** the containers on the server with `--no-cache`.
-4. **Restarts** the services (`docker compose up -d`).
-5. **Performs Health Checks** on endpoints.
+### Adım 3: Ortam Değişkenleri (.env)
+Örnek yapılandırma dosyasını kopyalayın ve klinik/sunucu bilgilerinize göre düzenleyin:
+```bash
+cp backend/.env.example .env
+nano .env
+```
 
-## Server-Side Configuration
+Önemli `.env` değişkenleri:
+```env
+PROJECT_NAME=urolog
+ENVIRONMENT=production
+DB_USER=emr_admin
+DB_PASSWORD=GuvendiParolaniz_123!
+DB_NAME=urolog
+GITHUB_REPO=kuratdoma/urolog
+BACKEND_PORT_EXTERNAL=8000
+FRONTEND_PORT_EXTERNAL=3005
+NGINX_HTTP_PORT=80
+NGINX_HTTPS_PORT=443
+```
 
-- **Nginx Config:** Located at `/etc/nginx/sites-available/urolog`. Proxies port 80/443 to Docker ports 3001 (Frontend) and 8001 (Backend).
-- **Environment:** Production `.env` file should live in `/home/user/UroLog/.env`.
+### Adım 4: Docker Volume ve İlk Başlatma
+```bash
+# Harici volume oluşturulması (veri kaybını önlemek için external volume)
+docker volume create urolog_db_data
 
-## Troubleshooting
+# Servisleri derleyip başlatma
+docker compose -f docker-compose.prod.yml up -d --build
 
-- **Logs:** `docker compose logs -f backend` on the server.
-- **Database Access:** `docker exec -it urolog_v3_db psql -U emr_admin -d urolog_db`.
+# Veritabanı tablolarını migrate etme (Alembic)
+docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+
+# İlk yönetici kullanıcısını oluşturma (Seed)
+docker compose -f docker-compose.prod.yml run --rm backend python scripts/master_seed.py
+```
+
+---
+
+## 2. Güncelleme ve Dağıtım (Update & Deploy)
+
+Her sunucu tipi için `update_scripts/` altında optimize edilmiş güncelleme betikleri mevcuttur:
+
+- **Genel / Tüm Sunucular:** `bash update_scripts/main_system_update.sh`
+- **Acemagic Sunucusu:** `bash update_scripts/github_update_acemagic.sh`
+- **Hetzner Sunucusu:** `bash update_scripts/github_update_hetzner.sh`
+- **Ofis Sunucusu:** `bash update_scripts/github_update_ofis.sh`
+
+Bu scriptler:
+1. `/home/<aktif_kullanici>/backup` altına PostgreSQL yedeği alır.
+2. `https://github.com/kuratdoma/urolog` reposundan güncel kodları çeker.
+3. Docker servislerini yeniden derleyip rolling update ile devreye alır.
+4. Alembic migration'larını otomatik çalıştırır.
+
+---
+
+## 3. Sorun Giderme (Troubleshooting)
+
+- **Log Takibi:** `docker compose -f docker-compose.prod.yml logs -f backend`
+- **Veritabanı Erişimi:** `docker exec -it urolog_db psql -U emr_admin -d urolog`
+- **Konteyner Durumu:** `docker ps --filter "name=urolog"`

@@ -146,7 +146,7 @@ async def get_system_update_status(
 
     # 3. İkincil Fallback: GitHub API
     current_sha = os.getenv("GIT_SHA") or getattr(settings, "GIT_SHA", "latest")
-    repo_name = os.getenv("GITHUB_REPO", "")
+    repo_name = os.getenv("GITHUB_REPO") or getattr(settings, "GITHUB_REPO", "kuratdoma/urolog")
     github_token = os.getenv("GITHUB_TOKEN") or getattr(settings, "GITHUB_TOKEN", "")
     headers = {
         "Accept": "application/vnd.github.v3+json",
@@ -318,7 +318,9 @@ async def websocket_update_logs(websocket: WebSocket):
         return
     
     project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
-    script_path = os.path.join(project_dir, "scripts/system_update.sh")
+    script_path = os.path.join(project_dir, "update_scripts/system_update.sh")
+    if not os.path.exists(script_path):
+        script_path = os.path.join(project_dir, "scripts/system_update.sh")
     
     if not os.path.exists(script_path):
         await websocket.send_text(f"❌ HATA: Güncelleme script'i bulunamadı: {script_path}\n")

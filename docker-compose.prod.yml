@@ -60,8 +60,9 @@ services:
       - ./backend/static:/app/static
       - ./.git:/app/.git
       - ./scripts:/app/scripts
+      - ./update_scripts:/app/update_scripts
       - ./.env:/app/.env:ro
-      - ${SSH_AUTH_DIR:-/home/alp/.ssh}:/app/.ssh:ro
+      - ${SSH_AUTH_DIR:-~/.ssh}:/app/.ssh:ro
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "127.0.0.1:${BACKEND_PORT_EXTERNAL}:8000"

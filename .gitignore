@@ -75,9 +75,10 @@ deployment_debian/logs/
 urologv3.3_backup.sh*
 
 acemagic_backup.sh
-acemagic.github_guncelleme.sh
-urotip.github_guncelleme.sh
-ofis.github_guncelleme.sh
+
+# Sunucuya özel güncelleme scriptleri (yol ve dizinler makineye bağlı).
+# Jenerik olan update_scripts/system_update.sh depoda tutulur.
+update_scripts/github_update_*.sh
 nginx/ssl_managed/*.key
 nginx/ssl_managed/*.crt
 
