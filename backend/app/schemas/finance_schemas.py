@@ -262,8 +262,6 @@ class FinansIslemBase(BaseModel):
     aciklama: Optional[str] = None
 
     tutar: float
-    kdv_orani: int = 0
-    kdv_tutari: float = 0
     net_tutar: float
     para_birimi: str = "TRY"
 
@@ -287,8 +285,6 @@ class FinansIslemUpdate(BaseModel):
     kategori_id: Optional[int] = None
     aciklama: Optional[str] = None
     tutar: Optional[float] = None
-    kdv_orani: Optional[int] = None
-    kdv_tutari: Optional[float] = None
     net_tutar: Optional[float] = None
     kasa_id: Optional[int] = None
     firma_id: Optional[int] = None
@@ -408,6 +404,22 @@ class AylikOzetResponse(BaseModel):
 # =============================================================================
 # FİLTRELEME
 # =============================================================================
+class KategoriKirilimResponse(BaseModel):
+    kategori_id: Optional[int] = None
+    kategori_adi: str
+    renk: Optional[str] = None
+    toplam: float = 0
+    islem_sayisi: int = 0
+    yuzde: float = 0
+
+
+class YaslandirmaKovaResponse(BaseModel):
+    kova: str  # vadesi_gelmedi, 0_30, 31_60, 61_90, 90_plus
+    etiket: str
+    tutar: float = 0
+    islem_sayisi: int = 0
+
+
 class FinansIslemFilters(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None

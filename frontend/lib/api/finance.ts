@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 import {
-    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
+    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, KategoriKirilim, YaslandirmaKova, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
 } from './types';
 
 export const financeApi = {
@@ -13,9 +13,9 @@ export const financeApi = {
         },
         createCategory: (data: FinansKategoriCreate) =>
             apiFetch<FinansKategori>('/api/v1/finance/categories', { method: 'POST', body: JSON.stringify(data) }),
-        updateCategory: (id: string, data: Partial<FinansKategoriCreate>) =>
+        updateCategory: (id: number, data: Partial<FinansKategoriCreate>) =>
             apiFetch<FinansKategori>(`/api/v1/finance/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-        deleteCategory: (id: string) =>
+        deleteCategory: (id: number) =>
             apiFetch<void>(`/api/v1/finance/categories/${id}`, { method: 'DELETE' }),
 
         // Hizmetler (Yeni)
@@ -23,17 +23,17 @@ export const financeApi = {
             apiFetch<FinansHizmet[]>(`/api/v1/finance/services?aktif_only=${aktifOnly}`),
         createService: (data: FinansHizmetCreate) =>
             apiFetch<FinansHizmet>('/api/v1/finance/services', { method: 'POST', body: JSON.stringify(data) }),
-        updateService: (id: string, data: Partial<FinansHizmetCreate>) =>
+        updateService: (id: number, data: Partial<FinansHizmetCreate>) =>
             apiFetch<FinansHizmet>(`/api/v1/finance/services/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-        deleteService: (id: string) =>
+        deleteService: (id: number) =>
             apiFetch<void>(`/api/v1/finance/services/${id}`, { method: 'DELETE' }),
 
         // Kasalar (Yeni)
         getAccounts: (aktifOnly: boolean = true) =>
             apiFetch<FinansKasa[]>(`/api/v1/finance/accounts?aktif_only=${aktifOnly}`),
-        getAccountBalance: (id: string) =>
-            apiFetch<{ kasa_id: string; ad: string; bakiye: number }>(`/api/v1/finance/accounts/${id}/balance`),
-        getAccountMovements: (id: string, opts: { skip?: number; limit?: number; start_date?: string; end_date?: string } = {}) => {
+        getAccountBalance: (id: number) =>
+            apiFetch<{ kasa_id: number; ad: string; bakiye: number }>(`/api/v1/finance/accounts/${id}/balance`),
+        getAccountMovements: (id: number, opts: { skip?: number; limit?: number; start_date?: string; end_date?: string } = {}) => {
             const p = new URLSearchParams();
             p.set('skip', String(opts.skip ?? 0));
             p.set('limit', String(opts.limit ?? 50));
@@ -43,14 +43,14 @@ export const financeApi = {
         },
         createAccount: (data: FinansKasaCreate) =>
             apiFetch<FinansKasa>('/api/v1/finance/accounts', { method: 'POST', body: JSON.stringify(data) }),
-        transferBetweenAccounts: (kaynak_kasa_id: string, hedef_kasa_id: string, tutar: number, aciklama?: string) =>
+        transferBetweenAccounts: (kaynak_kasa_id: number, hedef_kasa_id: number, tutar: number, aciklama?: string) =>
             apiFetch<{ success: boolean }>('/api/v1/finance/accounts/transfer', {
                 method: 'POST',
                 body: JSON.stringify({ kaynak_kasa_id, hedef_kasa_id, tutar, aciklama })
             }),
-        updateAccount: (id: string, data: Partial<FinansKasaCreate>) =>
+        updateAccount: (id: number, data: Partial<FinansKasaCreate>) =>
             apiFetch<FinansKasa>(`/api/v1/finance/accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-        deleteAccount: (id: string) =>
+        deleteAccount: (id: number) =>
             apiFetch<void>(`/api/v1/finance/accounts/${id}`, { method: 'DELETE' }),
 
         // Firmalar
@@ -58,7 +58,7 @@ export const financeApi = {
         getCompanyDebts: () => apiFetch<FirmaBorcOzet[]>('/api/v1/finance/companies/debts'),
         createCompany: (data: FirmaCreate) =>
             apiFetch<Firma>('/api/v1/finance/companies', { method: 'POST', body: JSON.stringify(data) }),
-        updateCompany: (id: string, data: Partial<FirmaCreate>) =>
+        updateCompany: (id: number, data: Partial<FirmaCreate>) =>
             apiFetch<Firma>(`/api/v1/finance/companies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
         // İşlemler
@@ -144,6 +144,14 @@ export const financeApi = {
             if (tarih) params.set('tarih', tarih);
             return apiFetch<GunlukOzet>(`/api/v1/finance/summary/daily?${params.toString()}`);
         },
+        getCategoryBreakdown: (islemTipi: 'gelir' | 'gider' = 'gelir', startDate?: string, endDate?: string) => {
+            const p = new URLSearchParams({ islem_tipi: islemTipi });
+            if (startDate) p.set('start_date', startDate);
+            if (endDate) p.set('end_date', endDate);
+            return apiFetch<KategoriKirilim[]>(`/api/v1/finance/reports/category-breakdown?${p.toString()}`);
+        },
+        getAgingReport: () =>
+            apiFetch<YaslandirmaKova[]>('/api/v1/finance/reports/aging'),
         getMonthlySummary: (yil?: number) => {
             const params = new URLSearchParams();
             if (yil) params.set('yil', String(yil));

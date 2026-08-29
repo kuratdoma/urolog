@@ -61,7 +61,7 @@ export default function AccountsPage() {
 
     // Transfer Dialog
     const [showTransfer, setShowTransfer] = useState(false);
-    const [transferFrom, setTransferFrom] = useState('');
+    const [transferFrom, setTransferFrom] = useState<string>('');
     const [transferTo, setTransferTo] = useState('');
     const [transferAmount, setTransferAmount] = useState('');
     const [transferNote, setTransferNote] = useState('');
@@ -86,7 +86,7 @@ export default function AccountsPage() {
         }
     };
 
-    const fetchMovements = async (accountId: string) => {
+    const fetchMovements = async (accountId: number) => {
         setLoadingMovements(true);
         try {
             const res = await api.finance.getAccountMovements(accountId, { limit: 50 });
@@ -117,8 +117,8 @@ export default function AccountsPage() {
         setTransferring(true);
         try {
             await api.finance.transferBetweenAccounts(
-                transferFrom,
-                transferTo,
+                Number(transferFrom),
+                Number(transferTo),
                 parseFloat(transferAmount),
                 transferNote
             );

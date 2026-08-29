@@ -101,7 +101,7 @@ const modulePages = [
     { href: '/finance/debtors', icon: Users, title: 'Borçlu Hastalar', desc: 'Bakiyesi kapanmamış hastalar ve tahsilat oranları.' },
     { href: '/finance/overdue', icon: Clock, title: 'Vadesi Geçmiş', desc: 'Vadesi dolmuş, tahsilatı tamamlanmamış işlemler.' },
     { href: '/finance/companies', icon: Building2, title: 'Firmalar', desc: 'Tedarikçi kayıtları ve firma borç durumu.' },
-    { href: '/finance/reports', icon: Receipt, title: 'Raporlar', desc: 'Aylık gelir/gider grafikleri ve dönemsel özetler.' },
+    { href: '/finance/reports', icon: Receipt, title: 'Raporlar', desc: 'Aylık grafikler, kategori kırılımı ve tahsilat yaşlandırma.' },
     { href: '/finance/settings', icon: Settings, title: 'Ayarlar', desc: 'Kasa, hizmet ve kategori tanımları.' },
 ];
 

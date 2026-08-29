@@ -47,7 +47,7 @@ export default function CompaniesPage() {
 
     // New/Edit Dialog
     const [showDialog, setShowDialog] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [formData, setFormData] = useState({
         ad: '',
         vergi_no: '',
@@ -78,7 +78,7 @@ export default function CompaniesPage() {
         fetchData();
     }, []);
 
-    const getDebt = (companyId: string): number => {
+    const getDebt = (companyId: number): number => {
         const debt = debts.find(d => d.id === companyId);
         return debt?.toplam_borc || 0;
     };

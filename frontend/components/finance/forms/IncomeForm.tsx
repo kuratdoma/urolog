@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 interface ServiceLine {
     id: string;
-    hizmet_id?: string;
+    hizmet_id?: number;
     hizmet_adi: string;
     adet: number;
     birim_fiyat: number;
@@ -25,7 +25,7 @@ interface ServiceLine {
 
 interface PaymentLine {
     id: string;
-    kasa_id?: string;
+    kasa_id?: number;
     odeme_yontemi: string;
     tutar: number;
     taksit_sayisi: number;
@@ -180,7 +180,8 @@ export function IncomeForm({ patientId: initialPatientId, patientName: initialPa
     };
 
     const selectService = (lineId: string, serviceId: string) => {
-        const service = services.find(s => s.id === serviceId);
+        // Select bileşeni string döner; hizmet id'si backend'de int
+        const service = services.find(s => String(s.id) === serviceId);
         if (service) {
             setServiceLines(serviceLines.map(line => {
                 if (line.id === lineId) {
@@ -251,12 +252,10 @@ export function IncomeForm({ patientId: initialPatientId, patientName: initialPa
                 tarih,
                 islem_tipi: 'gelir',
                 durum: remainingAmount > 0 ? 'bekliyor' : 'tamamlandi',
-                kategori_id: kategoriId || undefined,
+                kategori_id: kategoriId ? Number(kategoriId) : undefined,
                 aciklama: aciklama || hastaAdi || 'Gelir',
                 tutar: totalAmount,
                 para_birimi: paraBirimi,
-                kdv_orani: 0,
-                kdv_tutari: 0,
                 net_tutar: totalAmount,
                 doktor,
                 vade_tarihi: vadeTarihi || undefined,

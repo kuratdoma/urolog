@@ -111,7 +111,7 @@ export default function FinanceSettingsPage() {
     });
 
     const deleteServiceMutation = useMutation({
-        mutationFn: (id: string) => api.finance.deleteService(id),
+        mutationFn: (id: number) => api.finance.deleteService(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['finance-services'] });
             toast.success('Hizmet silindi');
@@ -134,7 +134,7 @@ export default function FinanceSettingsPage() {
     });
 
     const deleteCategoryMutation = useMutation({
-        mutationFn: (id: string) => api.finance.deleteCategory(id),
+        mutationFn: (id: number) => api.finance.deleteCategory(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['finance-categories'] });
             toast.success('Kategori silindi');
@@ -157,7 +157,7 @@ export default function FinanceSettingsPage() {
     });
 
     const deleteAccountMutation = useMutation({
-        mutationFn: (id: string) => api.finance.deleteAccount(id),
+        mutationFn: (id: number) => api.finance.deleteAccount(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['finance-accounts'] });
             toast.success('Hesap kapatıldı');

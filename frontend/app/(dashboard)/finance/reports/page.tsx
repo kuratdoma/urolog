@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from '@tanstack/react-query';
-import { api, AylikOzet, FinansOzet } from '@/lib/api';
+import { api, AylikOzet, FinansOzet, KategoriKirilim, YaslandirmaKova } from '@/lib/api';
 import { format, subYears, startOfYear, endOfYear } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -39,6 +39,23 @@ export default function FinanceReportsPage() {
     const { data: summary, isLoading: summaryLoading } = useQuery({
         queryKey: ['finance-summary'],
         queryFn: () => api.finance.getSummary()
+    });
+
+    // Kategori kırılımı — seçili yılın tamamı
+    const [breakdownTipi, setBreakdownTipi] = useState<'gelir' | 'gider'>('gelir');
+    const { data: breakdown } = useQuery({
+        queryKey: ['finance-category-breakdown', year, breakdownTipi],
+        queryFn: () => api.finance.getCategoryBreakdown(
+            breakdownTipi,
+            `${year}-01-01`,
+            `${year}-12-31`
+        )
+    });
+
+    // Tahsilat yaşlandırma — tarih filtresi yok, anlık açık alacak durumu
+    const { data: aging } = useQuery({
+        queryKey: ['finance-aging'],
+        queryFn: () => api.finance.getAgingReport()
     });
 
     // Merge data for comparison
@@ -405,6 +422,96 @@ export default function FinanceReportsPage() {
 
             {/* Footer / Summary Action */}
             <div className="p-8 bg-blue-600 rounded-3xl text-white shadow-xl shadow-blue-100 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+            {/* Kategori Kırılımı */}
+            <Card className="border-slate-200">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Kategori Kırılımı</CardTitle>
+                        <CardDescription>{year} yılı {breakdownTipi === 'gelir' ? 'gelirlerinin' : 'giderlerinin'} kategori dağılımı</CardDescription>
+                    </div>
+                    <Select value={breakdownTipi} onValueChange={(v) => setBreakdownTipi(v as 'gelir' | 'gider')}>
+                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="gelir">Gelirler</SelectItem>
+                            <SelectItem value="gider">Giderler</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </CardHeader>
+                <CardContent>
+                    {!breakdown || breakdown.length === 0 ? (
+                        <p className="text-sm text-slate-500 py-8 text-center">Bu dönemde kayıt yok</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {breakdown.map((k) => (
+                                <div key={`${k.kategori_id ?? 'yok'}`}>
+                                    <div className="flex items-center justify-between text-sm mb-1">
+                                        <span className="font-medium text-slate-700">
+                                            {k.kategori_adi}
+                                            <span className="text-slate-400 ml-2 text-xs">{k.islem_sayisi} işlem</span>
+                                        </span>
+                                        <span className="font-bold text-slate-900">
+                                            {formatCurrency(k.toplam)}
+                                            <span className="text-slate-400 ml-2 text-xs font-normal">%{k.yuzde}</span>
+                                        </span>
+                                    </div>
+                                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div
+                                            className={cn(
+                                                "h-full rounded-full transition-all",
+                                                breakdownTipi === 'gelir' ? "bg-emerald-500" : "bg-rose-500"
+                                            )}
+                                            style={{ width: `${Math.max(k.yuzde, 1)}%`, backgroundColor: k.renk || undefined }}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Tahsilat Yaşlandırma */}
+            <Card className="border-slate-200">
+                <CardHeader>
+                    <CardTitle>Tahsilat Yaşlandırma</CardTitle>
+                    <CardDescription>
+                        Açık alacakların vade yaşına göre dağılımı — 90+ gün kovası tahsil riski taşır
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {!aging || aging.every(a => a.tutar === 0) ? (
+                        <p className="text-sm text-slate-500 py-8 text-center">Açık alacak yok</p>
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            {aging.map((kova) => {
+                                const riskli = kova.kova === '90_plus';
+                                const uyari = kova.kova === '61_90';
+                                return (
+                                    <div
+                                        key={kova.kova}
+                                        className={cn(
+                                            "p-4 rounded-xl border",
+                                            riskli && "bg-rose-50 border-rose-200",
+                                            uyari && "bg-amber-50 border-amber-200",
+                                            !riskli && !uyari && "bg-slate-50 border-slate-200"
+                                        )}
+                                    >
+                                        <p className="text-xs font-medium text-slate-500">{kova.etiket}</p>
+                                        <p className={cn(
+                                            "text-xl font-black mt-1",
+                                            riskli ? "text-rose-700" : uyari ? "text-amber-700" : "text-slate-900"
+                                        )}>
+                                            {formatCurrency(kova.tutar)}
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-0.5">{kova.islem_sayisi} işlem</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
                 <div className="absolute right-0 top-0 opacity-10">
                     <Wallet className="h-64 w-64 -mr-10 -mt-10" />
                 </div>

@@ -115,8 +115,6 @@ class ExpenseRepository:
         data["islem_tipi"] = "gider"
 
         # Remove fields that do not exist on the FinansIslem SQLAlchemy model
-        data.pop("kdv_orani", None)
-        data.pop("kdv_tutari", None)
         data.pop("notlar", None)
 
         db_tx = FinansIslem(**data)

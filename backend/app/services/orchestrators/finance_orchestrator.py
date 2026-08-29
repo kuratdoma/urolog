@@ -97,7 +97,7 @@ class FinanceOrchestrator:
 
         # SQLAlchemy modelinde bulunmayan veya bakiyeyi etkileyen alanları ayıkla
         blocked = {"tutar", "net_tutar", "kasa_id"}
-        ignored = {"kdv_orani", "kdv_tutari", "notlar"}
+        ignored = {"notlar"}
         values = {
             k: v
             for k, v in changes.items()

@@ -1162,10 +1162,10 @@ export interface MedicalReportCreate {
 }
 
 export interface FinansKategori {
-    id: string;
+    id: number;
     ad: string;
     tip: string; // 'gelir' | 'gider'
-    ust_kategori_id?: string | null;
+    ust_kategori_id?: number | null;
     renk?: string | null;
     ikon?: string | null;
     aktif: boolean;
@@ -1182,7 +1182,7 @@ export interface FinansKategoriCreate {
 }
 
 export interface FinansHizmet {
-    id: string;
+    id: number;
     ad: string;
     kod?: string;
     kategori?: string;
@@ -1204,7 +1204,7 @@ export interface FinansHizmetCreate {
 }
 
 export interface FinansKasa {
-    id: string;
+    id: number;
     ad: string;
     tip: string; // 'nakit' | 'banka' | 'pos'
     bakiye: number;
@@ -1243,7 +1243,7 @@ export interface KasaHareket {
 }
 
 export interface Firma {
-    id: string;
+    id: number;
     ad: string;
     vergi_no?: string;
     telefon?: string;
@@ -1264,7 +1264,7 @@ export interface FirmaCreate {
 }
 
 export interface FirmaBorcOzet {
-    id: string;
+    id: number;
     ad: string;
     toplam_borc: number;
     en_yakin_vade?: string;
@@ -1355,20 +1355,20 @@ export interface FinansIslemCreate {
     tarih: string;
     islem_tipi: string;
     durum?: string;
-    kategori_id?: string;
+    kategori_id?: number;
     aciklama?: string;
     tutar: number;
     kdv_orani?: number;
     kdv_tutari?: number;
     net_tutar: number;
     para_birimi?: string;
-    kasa_id?: string;
-    firma_id?: string;
+    kasa_id?: number;
+    firma_id?: number;
     doktor?: string;
     vade_tarihi?: string;
     notlar?: string;
-    satirlar?: { hizmet_id?: string; hizmet_adi: string; adet: number; birim_fiyat: number; toplam: number; doktor?: string; }[];
-    odemeler?: { kasa_id?: string; odeme_tarihi: string; tutar: number; odeme_yontemi: string; banka?: string; taksit_sayisi?: number; kapora?: boolean; notlar?: string; }[];
+    satirlar?: { hizmet_id?: number; hizmet_adi: string; adet: number; birim_fiyat: number; toplam: number; doktor?: string; }[];
+    odemeler?: { kasa_id?: number; odeme_tarihi: string; tutar: number; odeme_yontemi: string; banka?: string; taksit_sayisi?: number; kapora?: boolean; notlar?: string; }[];
 }
 
 export interface FinansIslemFilters {
@@ -1404,6 +1404,22 @@ export interface BorcluHasta {
     bakiye: number;
     vadesi_gecmis_borc?: number;
     son_islem_tarihi?: string;
+}
+
+export interface KategoriKirilim {
+    kategori_id?: number | null;
+    kategori_adi: string;
+    renk?: string | null;
+    toplam: number;
+    islem_sayisi: number;
+    yuzde: number;
+}
+
+export interface YaslandirmaKova {
+    kova: string;
+    etiket: string;
+    tutar: number;
+    islem_sayisi: number;
 }
 
 export interface FinansOzet {

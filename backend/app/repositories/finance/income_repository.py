@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from datetime import date, datetime
-from sqlalchemy import select, func, and_, case, update, delete
+from sqlalchemy import select, func, and_, case, update, delete, DateTime
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.finance.models import (
@@ -593,8 +593,6 @@ class IncomeRepository:
         data["islem_tipi"] = "gelir"
         
         # Remove fields that do not exist on the FinansIslem SQLAlchemy model
-        data.pop("kdv_orani", None)
-        data.pop("kdv_tutari", None)
         data.pop("notlar", None)
 
         db_tx = FinansIslem(**data)
@@ -716,50 +714,30 @@ class IncomeRepository:
         if end_date:
             base_filter.append(FinansIslem.tarih <= end_date)
 
-        # 2. Income/Expense Totals
+        # 2. Dönem ve bugün toplamları — koşullu toplama ile TEK sorgu
+        today = date.today()
+        bugun_kosulu = FinansIslem.tarih == today
+
+        def _toplam(tip: str, ek=None):
+            kosul = FinansIslem.islem_tipi == tip
+            if ek is not None:
+                kosul = and_(kosul, ek)
+            return func.coalesce(
+                func.sum(case((kosul, FinansIslem.net_tutar), else_=0)), 0
+            )
+
         stmt_totals = select(
-            func.sum(
-                case(
-                    (FinansIslem.islem_tipi == "gelir", FinansIslem.net_tutar), else_=0
-                )
-            ).label("total_income"),
-            func.sum(
-                case(
-                    (FinansIslem.islem_tipi == "gider", FinansIslem.net_tutar), else_=0
-                )
-            ).label("total_expense"),
+            _toplam("gelir").label("total_income"),
+            _toplam("gider").label("total_expense"),
+            _toplam("gelir", bugun_kosulu).label("today_income"),
+            _toplam("gider", bugun_kosulu).label("today_expense"),
         ).where(and_(*base_filter))
 
-        res_totals = await self.session.execute(stmt_totals)
-        totals = res_totals.fetchone()
+        totals = (await self.session.execute(stmt_totals)).fetchone()
 
-        # 3. Today's Totals
-        today = date.today()
-        stmt_today = select(
-            func.sum(
-                case(
-                    (FinansIslem.islem_tipi == "gelir", FinansIslem.net_tutar), else_=0
-                )
-            ).label("today_income"),
-            func.sum(
-                case(
-                    (FinansIslem.islem_tipi == "gider", FinansIslem.net_tutar), else_=0
-                )
-            ).label("today_expense"),
-        ).where(
-            and_(
-                FinansIslem.is_deleted == False,
-                FinansIslem.durum != "iptal",
-                FinansIslem.tarih == today,
-            )
-        )
-
-        res_today = await self.session.execute(stmt_today)
-        today_totals = res_today.fetchone()
-
-        # 4. Collection status (Odemeler)
+        # 3. Tahsil edilen toplam
         stmt_collected = (
-            select(func.sum(FinansOdeme.tutar))
+            select(func.coalesce(func.sum(FinansOdeme.tutar), 0))
             .join(FinansIslem, FinansIslem.id == FinansOdeme.islem_id)
             .where(and_(FinansIslem.is_deleted == False, FinansIslem.durum != "iptal"))
         )
@@ -781,8 +759,8 @@ class IncomeRepository:
             "net_bakiye": income - expense,
             "bekleyen_tahsilat": income - collected if income > collected else 0,
             "vadesi_gecmis_islem_sayisi": await self.count_overdue_transactions(),
-            "bugun_gelir": float(today_totals.today_income or 0),
-            "bugun_gider": float(today_totals.today_expense or 0),
+            "bugun_gelir": float(totals.today_income or 0),
+            "bugun_gider": float(totals.today_expense or 0),
         }
 
     def _overdue_filter(self):
@@ -805,6 +783,127 @@ class IncomeRepository:
             func.coalesce(paid_subq.c.total_paid, 0) < FinansIslem.net_tutar,
         )
         return paid_subq, condition
+
+    async def get_category_breakdown(
+        self,
+        islem_tipi: str = "gelir",
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+    ) -> List[dict]:
+        """
+        Kategori bazlı toplam ve işlem sayısı.
+
+        Kategorisiz kayıtlar da tek satırda toplanır; aksi hâlde rapor
+        toplamı genel toplamı tutmaz.
+        """
+        filters = [
+            FinansIslem.is_deleted == False,
+            FinansIslem.durum != "iptal",
+            FinansIslem.islem_tipi == islem_tipi,
+        ]
+        if start_date:
+            filters.append(FinansIslem.tarih >= start_date)
+        if end_date:
+            filters.append(FinansIslem.tarih <= end_date)
+
+        stmt = (
+            select(
+                FinansKategori.id.label("kategori_id"),
+                FinansKategori.ad.label("kategori_adi"),
+                FinansKategori.renk.label("renk"),
+                func.coalesce(func.sum(FinansIslem.net_tutar), 0).label("toplam"),
+                func.count(FinansIslem.id).label("islem_sayisi"),
+            )
+            .select_from(FinansIslem)
+            .outerjoin(FinansKategori, FinansKategori.id == FinansIslem.kategori_id)
+            .where(and_(*filters))
+            .group_by(FinansKategori.id, FinansKategori.ad, FinansKategori.renk)
+            .order_by(func.coalesce(func.sum(FinansIslem.net_tutar), 0).desc())
+        )
+
+        rows = (await self.session.execute(stmt)).all()
+        toplam_genel = sum(float(r.toplam or 0) for r in rows) or 1.0
+
+        return [
+            {
+                "kategori_id": r.kategori_id,
+                "kategori_adi": r.kategori_adi or "Kategorisiz",
+                "renk": r.renk,
+                "toplam": float(r.toplam or 0),
+                "islem_sayisi": int(r.islem_sayisi or 0),
+                "yuzde": round(float(r.toplam or 0) / toplam_genel * 100, 1),
+            }
+            for r in rows
+        ]
+
+    async def get_aging_report(self) -> List[dict]:
+        """
+        Tahsilat yaşlandırma: açık alacakların vade yaşına göre dağılımı.
+
+        Nakit akışı planlamasının temeli — 90+ gün kovasındaki tutar
+        tahsil edilebilirliği düşen alacağı gösterir.
+        """
+        paid_subq = (
+            select(
+                FinansOdeme.islem_id.label("islem_id"),
+                func.sum(FinansOdeme.tutar).label("total_paid"),
+            )
+            .group_by(FinansOdeme.islem_id)
+            .subquery()
+        )
+        odenen = func.coalesce(paid_subq.c.total_paid, 0)
+        kalan = FinansIslem.net_tutar - odenen
+
+        # Vadesi yoksa işlem tarihi esas alınır
+        vade = func.coalesce(FinansIslem.vade_tarihi, FinansIslem.tarih)
+        gun = func.extract("day", func.now() - func.cast(vade, DateTime))
+
+        kova = case(
+            (gun < 0, "vadesi_gelmedi"),
+            (gun <= 30, "0_30"),
+            (gun <= 60, "31_60"),
+            (gun <= 90, "61_90"),
+            else_="90_plus",
+        ).label("kova")
+
+        stmt = (
+            select(
+                kova,
+                func.coalesce(func.sum(kalan), 0).label("tutar"),
+                func.count(FinansIslem.id).label("islem_sayisi"),
+            )
+            .select_from(FinansIslem)
+            .outerjoin(paid_subq, paid_subq.c.islem_id == FinansIslem.id)
+            .where(
+                and_(
+                    FinansIslem.is_deleted == False,
+                    FinansIslem.islem_tipi == "gelir",
+                    FinansIslem.durum != "iptal",
+                    kalan > 0,
+                )
+            )
+            .group_by(kova)
+        )
+
+        rows = {r.kova: r for r in (await self.session.execute(stmt)).all()}
+
+        etiketler = [
+            ("vadesi_gelmedi", "Vadesi gelmedi"),
+            ("0_30", "0-30 gün"),
+            ("31_60", "31-60 gün"),
+            ("61_90", "61-90 gün"),
+            ("90_plus", "90+ gün"),
+        ]
+        # Boş kovalar da dönsün ki grafik ekseni sabit kalsın
+        return [
+            {
+                "kova": anahtar,
+                "etiket": etiket,
+                "tutar": float(rows[anahtar].tutar) if anahtar in rows else 0.0,
+                "islem_sayisi": int(rows[anahtar].islem_sayisi) if anahtar in rows else 0,
+            }
+            for anahtar, etiket in etiketler
+        ]
 
     async def count_overdue_transactions(self) -> int:
         """Vadesi geçmiş işlem sayısını satırları yüklemeden sayar."""

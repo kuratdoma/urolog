@@ -38,6 +38,8 @@ from app.schemas.finance import (
     FinansOdemeCreate,
     FinansTaksitResponse,
     HastaCariResponse,
+    KategoriKirilimResponse,
+    YaslandirmaKovaResponse,
     FinansOzetResponse,
     GunlukOzetResponse,
     AylikOzetResponse,
@@ -365,10 +367,12 @@ async def transfer_between_accounts(
         user_id=current_user.id,
         resource_type="finance_account",
         resource_id=f"{transfer_in.kaynak_kasa_id}->{transfer_in.hedef_kasa_id}",
-        details={"tutar": transfer_in.tutar},
+        # Sonuç bakiyeleri denetimde tutar kadar önemli: transferin gerçekten
+        # nereye ne bıraktığı ancak bu değerlerle doğrulanabilir.
+        details={**result, "aciklama": transfer_in.aciklama},
     )
 
-    return {"success": True}
+    return {"success": True, **result}
 
 
 # =============================================================================
@@ -760,6 +764,37 @@ async def get_vadesi_gecmis_islemler(
         vade_gecmis=True, skip=skip, limit=limit
     )
     return {"items": items, "total": total, "skip": skip, "limit": limit}
+
+
+@router.get(
+    "/reports/category-breakdown", response_model=List[KategoriKirilimResponse]
+)
+async def get_kategori_kirilimi(
+    islem_tipi: str = Query("gelir", description="'gelir' veya 'gider'"),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    """Kategori bazlı toplam, işlem sayısı ve yüzde dağılımı."""
+    if islem_tipi not in ("gelir", "gider"):
+        raise HTTPException(
+            status_code=422, detail="islem_tipi 'gelir' veya 'gider' olmalıdır"
+        )
+    repo = IncomeRepository(db)
+    return await repo.get_category_breakdown(
+        islem_tipi=islem_tipi, start_date=start_date, end_date=end_date
+    )
+
+
+@router.get("/reports/aging", response_model=List[YaslandirmaKovaResponse])
+async def get_yaslandirma_raporu(db: AsyncSession = Depends(deps.get_db)) -> Any:
+    """
+    Tahsilat yaşlandırma: açık alacakların vade yaşına göre dağılımı.
+
+    90+ gün kovası tahsil edilebilirliği düşen alacağı gösterir.
+    """
+    repo = IncomeRepository(db)
+    return await repo.get_aging_report()
 
 
 @router.get("/summary/daily", response_model=GunlukOzetResponse)

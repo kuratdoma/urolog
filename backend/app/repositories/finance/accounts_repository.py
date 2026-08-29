@@ -256,7 +256,7 @@ class AccountsRepository:
 
     async def transfer_between_accounts(
         self, kaynak_id: int, hedef_id: int, tutar: float, aciklama: str = None
-    ) -> bool:
+    ) -> Optional[dict]:
         """Kasalar arası transfer yapar"""
         if kaynak_id == hedef_id:
             raise ValueError("Kaynak ve hedef kasa aynı olamaz.")
@@ -277,7 +277,7 @@ class AccountsRepository:
         hedef = locked_accounts.get(hedef_id)
 
         if not kaynak or not hedef:
-            return False
+            return None
 
         if float(kaynak.bakiye or 0) < tutar:
             raise ValueError(
@@ -314,7 +314,16 @@ class AccountsRepository:
         )
 
         await self.session.flush()
-        return True
+        # Denetim kaydına yazılabilmesi için sonuç bakiyelerini de döndür
+        return {
+            "kaynak_kasa": kaynak.ad,
+            "hedef_kasa": hedef.ad,
+            "tutar": tutar,
+            "kaynak_onceki_bakiye": k_onceki,
+            "kaynak_sonraki_bakiye": float(kaynak.bakiye),
+            "hedef_onceki_bakiye": h_onceki,
+            "hedef_sonraki_bakiye": float(hedef.bakiye),
+        }
 
     async def get_account_movements(
         self,
