@@ -1,0 +1,86 @@
+# System
+.DS_Store
+Thumbs.db
+
+# Environment Variables (Secrets)
+.env
+.env.local
+.env.*.local
+*.env
+.env.ade
+.env.*
+
+
+# Data Files (Sensitive Patient Data)
+03.db_import/
+**/*.sql
+**/*.csv
+**/*.dump
+data/
+db_data/
+bmad-artifacts
+backend/static/documents/*
+!backend/static/documents/.gitkeep
+analyze_refs.py
+import/
+backend/response.json
+*.txt
+!requirements.txt
+*.log
+_bmad-output
+_bmad
+bmad-artifacts/
+.agent/
+.gemini/
+.antigravity/
+/brain/
+
+# Dependencies
+node_modules/
+backend/venv/
+backend/.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+backend/.cache/
+backend/.local/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# IDEs
+.vscode/
+.idea/
+
+# Explicitly excluded folders
+non-Git Folder/
+scripts/*.sh
+!scripts/system_update.sh
+nginx/ssl/
+backend/scripts/master_seed.py
+
+# Deploy logs
+deployment_debian/logs/
+
+# AGENTS
+.agents
+*.tar.gz
+
+# Backups
+urologv3.3_backup.sh*
+
+acemagic_backup.sh
+acemagic.github_guncelleme.sh
+urotip.github_guncelleme.sh
+ofis.github_guncelleme.sh
+nginx/ssl_managed/*.key
+nginx/ssl_managed/*.crt
+
+# Makine-özel nginx konfigürasyonları (IP içerir)
+nginx/conf.d/acemagic_*.conf
+nginx/conf.d/ofis_*.conf

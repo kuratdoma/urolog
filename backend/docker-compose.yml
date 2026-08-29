@@ -1,0 +1,80 @@
+services:
+  db:
+    container_name: ${PROJECT_NAME:-uro}_db
+    image: postgres:15-alpine
+    restart: always
+    # SEC-15: Credentials .env dosyasından okunur, fallback kullanılmaz
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      # Veri kalıcılığı (Persistence) için host makinesine mount işlemi
+      - db_data:/var/lib/postgresql/data
+      - ../03.db_import:/data_import
+
+    # Veritabanının gerçekten bağlantı kabul edip etmediğini kontrol eder
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s # Her 5 saniyede bir kontrol et
+      timeout: 5s # Cevap gelmezse 5 saniye sonra zaman aşımına uğrat
+      retries: 5 # 5 kere başarısız olursa servisi 'unhealthy' işaretle
+    ports:
+      - "${DB_PORT_EXTERNAL:-5434}:5432"
+
+  # SEC-14: Redis servisi - şifre korumalı
+  redis:
+    container_name: ${PROJECT_NAME:-uro}_redis
+    image: redis:7-alpine
+    restart: always
+    command: >
+      redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env — no insecure default allowed} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    container_name: ${PROJECT_NAME:-uro}_backend
+    build: .
+    restart: always
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    # Gunicorn Konfigürasyonu:
+    # -w 4: 4 adet Worker Process başlatır. (Formül: 2 x CPU Core + 1)
+    # -k uvicorn.workers.UvicornWorker: Asyncio desteği için Uvicorn worker sınıfı.
+    # --bind 0.0.0.0:8000: Dış dünyadan gelen istekleri dinle.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      db:
+        # Backend servisi, DB servisi "healthy" durumuna geçmeden BAŞLAMAZ.
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ../03.db_import:/data_import
+      - ../scripts:/app/scripts
+    ports:
+      - "${BACKEND_PORT_EXTERNAL:-8002}:8000"
+
+volumes:
+  db_data:
+    name: ${PROJECT_NAME:-uro}_db_data
+  redis_data:
+    name: ${PROJECT_NAME:-uro}_redis_data

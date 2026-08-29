@@ -1,0 +1,570 @@
+[
+    {
+        "id": "ekstrakorporeal-sok-dalga-tedavisi-eswt",
+        "filename": "EKSTRAKORPOREAL-SOK-DALGA-TEDAVISI-ESWT.pdf",
+        "display_name": "Ekstrakorporeal Şok Dalga Tedavisi (ESWT - LiPUS)",
+        "category": "Girişimsel & Tanısal;Androloji",
+        "usage_count": 0,
+        "order_index": 3
+    },
+    {
+        "id": "endopiyelotomi",
+        "filename": "ENDOPIYELOTOMI.pdf",
+        "display_name": "Endopiyelotomi",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 2
+    },
+    {
+        "id": "endoskopik-prostat",
+        "filename": "ENDOSKOPIK-PROSTAT.pdf",
+        "display_name": "TUIP, TURP, Holmium, Prostat",
+        "category": "Prostat",
+        "usage_count": 0,
+        "order_index": 45
+    },
+    {
+        "id": "epididim-kisti-spermatosel",
+        "filename": "EPIDIDIM-KISTI-SPERMATOSEL.pdf",
+        "display_name": "Epididim Kisti (Spermatosel)",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 1
+    },
+    {
+        "id": "epispadias",
+        "filename": "EPISPADIAS.pdf",
+        "display_name": "Epispadias",
+        "category": "Penis & Üretra",
+        "usage_count": 0,
+        "order_index": 4
+    },
+    {
+        "id": "erkek-uretra-aski-cerrahisi-male-sling",
+        "filename": "ERKEK-URETRA-ASKI-CERRAHISI-MALE-SLING.pdf",
+        "display_name": "Erkek Üretra Askı Cerrahisi (Male Sling)",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 5
+    },
+    {
+        "id": "gazli-fournier-gangren-yara-debritmani",
+        "filename": "GAZLI-FOURNIER-GANGREN-YARA-DEBRITMANI.pdf",
+        "display_name": "Gazlı Gangren (Fournier) Yara Debritmanı",
+        "category": "Girişimsel & Tanısal",
+        "usage_count": 0,
+        "order_index": 6
+    },
+    {
+        "id": "genital-sigil-kondilom",
+        "filename": "GENITAL-SIGIL-KONDILOM.pdf",
+        "display_name": "Genital Siğil (Kondilom)",
+        "category": "Genel",
+        "usage_count": 0,
+        "order_index": 7
+    },
+    {
+        "id": "ha-enjeksiyonu-ile-penis-kalinlastirma",
+        "filename": "HA-ENJEKSIYONU-ILE-PENIS-KALINLASTIRMA.pdf",
+        "display_name": "Penis Kalınlaştırma HA Hiyaluronik Asit Enjeksiyonu",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 32
+    },
+    {
+        "id": "hidroselektomi",
+        "filename": "HIDROSELEKTOMI.pdf",
+        "display_name": "Hidroselektomi",
+        "category": "Testis & Skrotal",
+        "usage_count": 0,
+        "order_index": 8
+    },
+    {
+        "id": "hipospadias-meatotomi-meatoplasti-penil-torsiyon",
+        "filename": "HIPOSPADIAS-MEATOTOMI-MEATOPLASTI-PENIL-TORSIYON.pdf",
+        "display_name": "Hipospadias – Meatotomi – Meatoplasti – Penil Torsiyon",
+        "category": "Penis & Üretra",
+        "usage_count": 0,
+        "order_index": 9
+    },
+    {
+        "id": "holmium-bipolar-prostat-enukleasyonu",
+        "filename": "HOLMIUM-BIPOLAR-PROSTAT-ENUKLEASYONU.pdf",
+        "display_name": "Holmium Lazer – Bipolar Prostat Enükleasyonu",
+        "category": "Prostat",
+        "usage_count": 0,
+        "order_index": 10
+    },
+    {
+        "id": "ileal-augmentasyon",
+        "filename": "ILEAL-AUGMENTASYON.pdf",
+        "display_name": "İleal Augmentasyon",
+        "category": "Genel",
+        "usage_count": 0,
+        "order_index": 67
+    },
+    {
+        "id": "internal-uretratomi",
+        "filename": "INTERNAL-URETRATOMI.pdf",
+        "display_name": "İnternal Üretrotomi",
+        "category": "Genel",
+        "usage_count": 0,
+        "order_index": 68
+    },
+    {
+        "id": "intrakavernozal-kok-hucre-svf",
+        "filename": "INTRAKAVERNOZAL-KOK-HUCRE-SVF.pdf",
+        "display_name": "İntrakavernozal Kök Hücre (Svf)",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 69
+    },
+    {
+        "id": "intravezikal-botulinum-toksin",
+        "filename": "INTRAVEZIKAL-BOTULINUM-TOKSIN.pdf",
+        "display_name": "İntravezikal Botulinum Toksin",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 70
+    },
+    {
+        "id": "intravezikal-ilac-bcg-kemoterapotik-ajan-hipertermi",
+        "filename": "INTRAVEZIKAL-ILAC-BCG-KEMOTERAPOTIK-AJAN-HIPERTERMI.pdf",
+        "display_name": "İntravezikal İlaç (Bcg – Kemoterapötik Ajan – Hipertermi)",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 71
+    },
+    {
+        "id": "kisirlikta-meni-kanallari-tikaniklik-cerrahisi",
+        "filename": "KISIRLIKTA-MENI-KANALLARI-TIKANIKLIK-CERRAHISI.pdf",
+        "display_name": "Kısırlıkta Meni Kanalları Tıkanıklık Cerrahisi (Vazo – Vazostomi Ve Epididimo – Vazostomi)",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 12
+    },
+    {
+        "id": "laparoskopik-renal-kist-eksizyonu",
+        "filename": "LAPAROSKOPIK-RENAL-KIST-EKSIZYONU.pdf",
+        "display_name": "Laparoskopik Renal Kist Eksizyonu Böbrek Kisti",
+        "category": "Girişimsel & Tanısal",
+        "usage_count": 0,
+        "order_index": 14
+    },
+    {
+        "id": "mes-eksizyonu-cikartilmasi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "MES-EKSIZYONU-CIKARTILMASI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Meş Eksizyonu (Çıkartılması)",
+        "category": "Genel",
+        "usage_count": 0,
+        "order_index": 18
+    },
+    {
+        "id": "mesane-ekstrofisi-onarimi",
+        "filename": "MESANE-EKSTROFISI-ONARIMI.pdf",
+        "display_name": "Mesane Ekstrofisi Onarımı",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 15
+    },
+    {
+        "id": "mesane-tasi-ameliyati",
+        "filename": "MESANE-TASI-AMELIYATI.pdf",
+        "display_name": "Mesane Taşı Ameliyatları (Sistolitotomi, Transüretal/Perkütan Sistolitotripsi)",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 16
+    },
+    {
+        "id": "nefrolitotomi-pyelolitotomi-ureterolitotomi",
+        "filename": "NEFROLITOTOMI-PYELOLITOTOMI-URETEROLITOTOMI.pdf",
+        "display_name": "Nefrolitotomi Pyelolitotomi Üreterolitotomi (Açık / Laparoskopik / Robotik)",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 21
+    },
+    {
+        "id": "nefron-koruyucu-bobrek-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "NEFRON-KORUYUCU-BOBREK-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Nefron Koruyucu Böbrek Ameliyatı - Parsiyel (Açık / Laparoskopik)",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 22
+    },
+    {
+        "id": "orsiopeksi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "ORSIOPEKSI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Orşiopeksi",
+        "category": "Testis & Skrotal",
+        "usage_count": 0,
+        "order_index": 24
+    },
+    {
+        "id": "pelvik-proplapsus-sarkma-onarimi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PELVIK-PROPLAPSUS-SARKMA-ONARIMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Pelvik Organ Proplapsusu (Sarkma) Onarımı",
+        "category": "Kadın Üroloji",
+        "usage_count": 0,
+        "order_index": 25
+    },
+    {
+        "id": "penil-doppler-papaverin-testi-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PENIL-DOPPLER-PAPAVERIN-TESTI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Penil Doppler-Papaverin Testi",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 27
+    },
+    {
+        "id": "penil-kurvatur-duzeltilmesi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PENIL-KURVATUR-DUZELTILMESI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Penil Kurvatür Düzeltilmesi",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 28
+    },
+    {
+        "id": "penil-protez-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PENIL-PROTEZ-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Penil Protez (Bükülebilir/Şişirilebilir)",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 29
+    },
+    {
+        "id": "penis-frakturu-kirilmasi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PENIS-FRAKTURU-KIRILMASI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Penis Fraktürü (Kırılması) Ameliyatı",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 30
+    },
+    {
+        "id": "perkutan-nefrolitotomi-ameliyati-icin-aydinlatilmis-riza-belgesi",
+        "filename": "PERKUTAN-NEFROLITOTOMI-AMELIYATI-ICIN-AYDINLATILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Perkütan Nefrolitotomi",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 33
+    },
+    {
+        "id": "piyeloplasti-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PIYELOPLASTI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Piyeloplasti (Açık / Laparoskopik)",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 34
+    },
+    {
+        "id": "priapizm-ameliyatlari-aspirasyon-irrigasyon-sant-ameliyatlari-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PRIAPIZM-AMELIYATLARI-Aspirasyon-irrigasyon-sant-ameliyatlari-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Priapizm Ameliyatları (Aspirasyon, İrrigasyon, Şant)",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 35
+    },
+    {
+        "id": "prostat-biyopsisi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "PROSTAT-BIYOPSISI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Prostat Biyopsisi TRUS Bx",
+        "category": "Prostat",
+        "usage_count": 0,
+        "order_index": 36
+    },
+    {
+        "id": "radikal-nefrektomi-nefroureterektomi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "RADIKAL-NEFREKTOMI-NEFROURETEREKTOMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Nefrektomi (Radikal)  – Nefroüreterektomi (Açık / Laparoskopik)",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 19
+    },
+    {
+        "id": "radikal-orsiektomi-–-testis-koruyucu-cerrahi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "RADIKAL-ORSIEKTOMI-–-TESTIS-KORUYUCU-CERRAHI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Orşiektomi  (Radikal)  – Testis Koruyucu Cerrahi",
+        "category": "Testis & Skrotal",
+        "usage_count": 0,
+        "order_index": 23
+    },
+    {
+        "id": "radikal-penektomi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "RADIKAL-PENEKTOMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Penektomi (Radikal)",
+        "category": "Onkoloji & İleri Cerrahi",
+        "usage_count": 0,
+        "order_index": 26
+    },
+    {
+        "id": "radikal-prostatektomi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "RADIKAL-PROSTATEKTOMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Prostatektomi (Radikal)  (Açık / Laparoskopik)",
+        "category": "Prostat",
+        "usage_count": 0,
+        "order_index": 37
+    },
+    {
+        "id": "radikal-sistektomi-ve-uriner-diversiyon-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "RADIKAL-SISTEKTOMI-ve-URINER-DIVERSIYON-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Sistektomi (Radikal) Ve Üriner Diversiyon (Açık / Laparoskopik)",
+        "category": "Onkoloji & İleri Cerrahi",
+        "usage_count": 0,
+        "order_index": 41
+    },
+    {
+        "id": "retrograd-intrarenal-cerrahi-fleksibl-ureterorenoskopi-tibbi-islemi-icin-aydinlatilmis-riza-belgesi",
+        "filename": "RETROGRAD-INTRARENAL-CERRAHI-FLEKSIBL-URETERORENOSKOPI-TIBBI-ISLEMI-ICIN-AYDINLATILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Retrograd İntrarenal Cerrahi (Fleksibl Üreterorenoskopi) RIRS RIRC",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 38
+    },
+    {
+        "id": "retroperitoneal-kitle-ve_veya-lenf-nodu-rezeksiyonu-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "RETROPERITONEAL-KITLE-ve_veya-LENF-NODU-REZEKSIYONU-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Retroperitoneal Kitle Ve/Veya Lenf Nodu Rezeksiyonu (Açık / Laparoskopik)",
+        "category": "Onkoloji & İleri Cerrahi",
+        "usage_count": 0,
+        "order_index": 39
+    },
+    {
+        "id": "sakral-noromodulasyon-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "SAKRAL-NOROMODULASYON-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Sakral Nöromodülasyon",
+        "category": "Onkoloji & İleri Cerrahi",
+        "usage_count": 0,
+        "order_index": 40
+    },
+    {
+        "id": "semirijid-ureteroskopi-ameliyati-icin-aydinlatilmis-riza-belgesi",
+        "filename": "SEMIRIJID-URETEROSKOPI-AMELIYATI-ICIN-AYDINLATILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üreteroskopi URS Tanısal",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 60
+    },
+    {
+        "id": "silikon-materyal-ile-penis-kalinlastirma-ameliyati",
+        "filename": "SILIKON-MATERYAL-ILE-PENIS-KALINLASTIRMA-AMELIYATI.pdf",
+        "display_name": "Penis Kalınlaştırma - Silikon Materyal İle",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 31
+    },
+    {
+        "id": "sistoskopi-tanisal-kontrol-hidrodilatasyon-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "SISTOSKOPI-TANISAL-KONTROL-HIDRODILATASYON-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Sistoskopi (Tanısal-Kontrol-Hidrodilatasyon)",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 43
+    },
+    {
+        "id": "sistoskopi",
+        "filename": "SISTOSKOPI.pdf",
+        "display_name": "Sistoskopi",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 42
+    },
+    {
+        "id": "subureterik-enjeksiyonameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "SUBURETERIK-ENJEKSIYONAMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Mesaneye Subüreterik Enjeksiyon",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 17
+    },
+    {
+        "id": "sunnet-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "SUNNET-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Sünnet",
+        "category": "Penis & Üretra",
+        "usage_count": 0,
+        "order_index": 44
+    },
+    {
+        "id": "tanisal-laparoskopi",
+        "filename": "TANISAL-LAPAROSKOPI.pdf",
+        "display_name": "Laparoskopi - Tanısal",
+        "category": "Girişimsel & Tanısal",
+        "usage_count": 0,
+        "order_index": 13
+    },
+    {
+        "id": "testis-protezi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "TESTIS-PROTEZI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Testis Protezi",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 46
+    },
+    {
+        "id": "testisten-sperm-elde-etme-ameliyati-pesa-tesa-tese-mesa-mikro-tese-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "TESTISTEN-SPERM-ELDE-ETME-AMELIYATI-PESA-TESA-TESE-MESA-Mikro-TESE-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Testisten Sperm Elde Etme Ameliyatları (Pesa, Tesa Tese, Mesa, Mikro-Tese)",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 47
+    },
+    {
+        "id": "transuretral-mesane-tumoru-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "TRANSURETRAL-MESANE-TUMORU-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Transüretral Mesane Tümörü Ameliyatı (Tur-MT)",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 49
+    },
+    {
+        "id": "transuretral-prostat-insizyonu-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "TRANSURETRAL-PROSTAT-INSIZYONU-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Transüretral Prostat İnsizyonu (Tuip)",
+        "category": "Prostat",
+        "usage_count": 0,
+        "order_index": 51
+    },
+    {
+        "id": "transuretral-prostat-rezekziyonu-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "TRANSURETRAL-PROSTAT-REZEKZIYONU-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Transüretral Prostat Rezeksiyonu (Tur-P)",
+        "category": "Prostat",
+        "usage_count": 0,
+        "order_index": 50
+    },
+    {
+        "id": "tur-ed-transuretral-ejakulator-kanal-rezeksiyonu-ameliyati-bilgilendirilmis-riza-belgesi",
+        "filename": "TUR-ED-TRANSURETRAL-EJAKULATOR-KANAL-REZEKSIYONU-AMELIYATI-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Transüretral Ejakülatör Kanal Rezeksiyonu (Tur-Ed)",
+        "category": "Prostat",
+        "usage_count": 0,
+        "order_index": 48
+    },
+    {
+        "id": "ureter-kateteri-pigtail-takma-cekme-retrograd-piyelografi-antegrad-piyelografi-cekme-ameliyatlari-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URETER-KATETERI-PIGTAIL-TAKMA-CEKME-RETROGRAD-PIYELOGRAFI-ANTEGRAD-PIYELOGRAFI-CEKME-AMELIYATLARI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üreter Kateteri (Pigtail - DJ) Takma – Çekme, Retrograd Piyelografi Antegrad Piyelografi",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 57
+    },
+    {
+        "id": "ureter-rekonsruksiyon-cerrahisi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URETER-REKONSRUKSIYON-CERRAHISI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üreter Rekonstrüksiyon Cerrahileri (Açık / Laparoskopik)",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 58
+    },
+    {
+        "id": "ureteroneosistostomi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URETERONEOSISTOSTOMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üreteroneosistostomi",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 59
+    },
+    {
+        "id": "uretra-aski-ameliyatlari-tottransobturator-tvt-tension-free-gerilimsiz-vajinal-mini-aski-pubavajinal-sling-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URETRA-ASKI-AMELIYATLARI-TOTTRANSOBTURATOR-TVT-TENSION-FREE-GERILIMSIZ-VAJINAL-MINI-ASKI-PUBAVAJINAL-SLING-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üretra Askı Ameliyatları (TOT: Transobturator, TVT: Transvaginal, Vajinal, Mini-Askı, Pubovajinal Sling)",
+        "category": "Kadın Üroloji",
+        "usage_count": 0,
+        "order_index": 61
+    },
+    {
+        "id": "uretral-karunkul-veya-divertikul-eksizyonu-cikartilmasi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URETRAL-KARUNKUL-VEYA-DIVERTIKUL-EKSIZYONU-CIKARTILMASI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üretral Karünkül veya Divertikül Eksizyonu",
+        "category": "Penis & Üretra",
+        "usage_count": 0,
+        "order_index": 62
+    },
+    {
+        "id": "uretral-kateter-sistostomi-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URETRAL-KATETER-SISTOSTOMI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üretral Kateter – Sistostomi",
+        "category": "Penis & Üretra",
+        "usage_count": 0,
+        "order_index": 63
+    },
+    {
+        "id": "uretroplasti-fistul-onarimi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URETROPLASTI-FISTUL-ONARIMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üretroplasti-Fistül Onarımı",
+        "category": "Penis & Üretra",
+        "usage_count": 0,
+        "order_index": 64
+    },
+    {
+        "id": "uriner-diversiyon-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "URINER-DIVERSIYON-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Üriner Diversiyon",
+        "category": "Onkoloji & İleri Cerrahi",
+        "usage_count": 0,
+        "order_index": 65
+    },
+    {
+        "id": "urodinami-videourodinami-tibbi-islemi-icin-aydinlatilmis-riza-belgesi",
+        "filename": "URODINAMI-VIDEOURODINAMI-TIBBI-ISLEMI-ICIN-AYDINLATILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Ürodinami – Videoürodinami Tıbbi İşlemi",
+        "category": "Girişimsel & Tanısal",
+        "usage_count": 0,
+        "order_index": 66
+    },
+    {
+        "id": "varikoselektomi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "VARIKOSELEKTOMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Varikoselektomi",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 52
+    },
+    {
+        "id": "vazektomi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "VAZEKTOMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Vazektomi",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 53
+    },
+    {
+        "id": "verici-donor-nefrektomi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "VERICI-DONOR-NEFREKTOMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Nefrektomi Donör (Böbrek nakli)",
+        "category": "Böbrek & Üreter",
+        "usage_count": 0,
+        "order_index": 20
+    },
+    {
+        "id": "vezikostomi-acilmasi-kapatilmasi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "VEZIKOSTOMI-ACILMASI-KAPATILMASI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Vezikostomi Açılması – Kapatılması",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 54
+    },
+    {
+        "id": "vezikovajinal-uriner-sistem-kadin-ureme-organlari-arasinda-fistul-onarimi-ameliyati-icin-bilgilendirilmis-riza-belgesi",
+        "filename": "VEZIKOVAJINAL-URINER-SISTEM-KADIN-UREME-ORGANLARI-ARASINDA-FISTUL-ONARIMI-AMELIYATI-ICIN-BILGILENDIRILMIS-RIZA-BELGESI.pdf",
+        "display_name": "Vezikovajinal (Üriner Sistem – Kadın Üreme Organları Arasında) Fistül Onarımı",
+        "category": "Mesane",
+        "usage_count": 0,
+        "order_index": 55
+    },
+    {
+        "id": "yag-enjeksiyonu-ile-penis-kalinlastirma",
+        "filename": "YAG-ENJEKSIYONU-ILE-PENIS-KALINLASTIRMA.pdf",
+        "display_name": "Yağ Enjeksiyonu İle Penis Kalınlaştırma",
+        "category": "Androloji",
+        "usage_count": 0,
+        "order_index": 56
+    },
+    {
+        "id": "kvkk-onam-formu",
+        "filename": "KVKK_ALP_ONAM_temmuz_2026.pdf",
+        "display_name": "KVKK Onam Formu",
+        "category": "Genel",
+        "usage_count": 1,
+        "order_index": 11
+    }
+]

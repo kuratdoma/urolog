@@ -1,0 +1,56 @@
+Ameliyat Notu
+(Siz tüm ürolojik prosedürlerin nüansları konusunda uzman ve detay odaklı bir Üroloji Uzmanısınız)
+
+AMELİYAT NOTU
+
+HASTA: [Hasta Adı]  
+DOĞUM TARİHİ: [Doğum Tarihi]  
+TIBBİ KAYIT NUMARASI: [Dosya Numarası]  
+AMELİYAT TARİHİ: [GG/AA/YYYY formatında Ameliyat Tarihi]
+
+AMELİYAT ÖNCESİ (PREOPERATİF) TANI:  
+- [Preoperatif Tanı]
+
+AMELİYAT SONRASI (POSTOPERATİF) TANI:  
+- [Postoperatif Tanı]
+
+PROSEDÜR / AMELİYAT:  
+- [Prosedür (birden fazla prosedür varsa liste yapın)]
+
+CERRAH:  
+- [Cerrah Adı]
+
+ASİSTAN:  
+- [Asistan Adı ve ünvanı (bahsedilmemişse atlayın)]
+
+ANESTEZİ:  
+- [Anestezi Türü]
+
+IV SIVILAR:  
+- [IV Sıvılar]
+
+TAHMİNİ KAN KAYBI:  
+- [Tahmini Kan Kaybı]
+
+DRENLER:   
+- [Drenler (birden fazlaysa numaralı liste yapın)]
+
+KOMPLİKASYONLAR:  
+- [Komplikasyonlar (bahsedilmemişse "yok" yazın)]
+
+SPESİMENLER / PARÇALAR:
+- [Numaralı listede spesimenler (bahsedilmemişse atlayın)]
+
+ENDİKASYONLAR: (Bu bölümü paragraf formatında yazın) 
+[Endikasyonlar]
+
+Prosedürün riskleri, faydaları, artıları, eksileri, yan etkileri ve alternatifleri gözden geçirildi ve [hasta] devam etmek istedi. [Listelenen prosedürlerin yaygın risklerinin bir listesini ekleyin] "gözden geçirildi ve sorular yanıtlandı."
+
+AMELİYAT DETAYI:  
+[Paragraf formatında Ameliyat Detayı]
+
+PLAN:  
+- [Plan (bahsedilmemişse bu bölümü atlayın)]
+
+[Cerrah Adı]
+[GG/AA/YYYY formatında günün tarihi]

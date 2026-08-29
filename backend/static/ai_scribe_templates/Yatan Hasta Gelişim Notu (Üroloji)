@@ -1,0 +1,68 @@
+Yatan Hasta Gelişim Notu (Üroloji)
+(Üroloji şef asistanı olarak vizitte, ameliyat sonrası veya cerrahi olmayan bir nedenle yatan üroloji hastalarının günlük gelişim notunu belgeleyin)
+
+GÜNLÜK GELİŞİM NOTU
+
+"Hizmet Tarihi:" [bugünün tarihi GG/AA/YYYY formatında]
+"Hasta:" [hasta tam adı]
+"Doğum Tarihi:" [hasta doğum tarihi GG/AA/YYYY formatında]
+"Protokol No:" [tire olmadan hasta protokol numarası]
+
+Ameliyat: [ameliyat adı] [tarih (GG/AA/YYYY)] tarihinde yapıldı, POG [hesaplanan postoperatif gün (ameliyat günü POG 0, ertesi gün POG 1 vb.) (ameliyat yapılmadıysa bu bölümü atlayın)]
+
+ÖZET:
+Bu [hasta yaşı ve cinsiyeti konuşma formatında] [hastanın ürolojik durumunu en fazla iki cümle ile özetleyin]
+
+ARA ÖYKÜ:
+[son gelişim notundan bu yana gece olayları detayları (önemli bir gece olayı yoksa bu bölümü atlayın)]
+
+SUBJEKTİF:
+[mümkünse veya uygunsa doğrudan alıntılar kullanarak hastanın bakış açısından subjektif bilgiler]
+
+OBJEKTİF:
+- Vital bulgular, son 24 saat: [Son 24 saatteki vital bulgular verileri (varsa ateş, nabız, kan basıncı, SpO2, SS dahil edin, mevcut olmayanları atlayın (vital bulgular mevcut değilse bölümü atlayın)]
+- Alım ve Çıkım:
+[Madde işaretli formatta A/Ç verileri (A/Ç bahsedilmemişse atlayın)]
+-Drenler: [foley kateterler, JP drenleri, internal üreteral stentler, eksternalize üreteral stentler, nefrostomi tüpleri, nefroureteral stentler, NG tüpleri ve cerrahi bakımla ilgili diğer ürolojik ve ürolojik olmayan drenler gibi şeyleri içeren mevcut drenlerin madde işaretli özeti]
+
+FİZİK MUAYENE:
+[madde işaretli fizik muayene detayları (fizik muayene bahsedilmemişse bölümü atlayın)]
+
+İLAÇLAR:
+"Programlı İlaçlar:" [programlı ilaç listesi (varsa, aksi takdirde atlayın)]
+"Sürekli İnfüzyonlar:" [sürekli infüzyon listesi (varsa, aksi takdirde atlayın)]
+"PRN İlaçlar:" [PRN ilaç listesi (varsa, aksi takdirde atlayın)]
+
+LABORATUVAR, GÖRÜNTÜLEME VE DİĞER TETKİKLER:
+"• Radyoloji: Son görüntüleme çalışmaları gözden geçirildi ve dikkat çeken bulgular" [radyoloji bulguları (varsa, aksi takdirde atlayın)]
+"• Laboratuvar: Tüm son laboratuvar sonuçları gözden geçirildi. İlgili laboratuvar sonuçları" [ilgili laboratuvar sonuçları (varsa, aksi takdirde atlayın)]
+"• Mikrobiyoloji verileri: Tüm son mikrobiyoloji sonuçları gözden geçirildi. İlgili mikrobiyoloji sonuçları" [ilgili laboratuvar sonuçları (varsa, aksi takdirde atlayın)]
+
+DEĞERLENDİRME/PLAN:
+[Hasta adı], [kayıtlı sorumlu hekimin (biliniyorsa, aksi takdirde atlayın)] hastası olarak [konuşma formatında hasta yaşı ve cinsiyeti] [hasta durumu veya tanısı, özellikle belirli bir prosedürden postoperatif ise POG (sayı)] (burada bir üroloğun bu anda bu hasta hakkında bilmek isteyeceği şeyleri tam olarak tanımlayan 1 veya maksimum 2 cümle istiyoruz)
+
+1. [Ürolojik veya cerrahi sonrası sorun 1 (varsa durum adı ve ICD-10 kodu)]
+- [Plan: Yönetim veya takip için önerilen plan. (yalnızca bahsedilmişse dahil edin, aksi takdirde boş bırakın)]
+- [Danışmanlık: Durumun açıklaması, doğal seyri veya benzeri, yalnızca tartışılmışsa. (yalnızca bahsedilmişse dahil edin, aksi takdirde boş bırakın)]
+2. [Ürolojik veya cerrahi sonrası sorun 2 (varsa durum adı ve ICD-10 kodu)]
+- [Plan: Yönetim veya takip için önerilen plan. (yalnızca bahsedilmişse dahil edin, aksi takdirde boş bırakın)]
+- [Danışmanlık: Durumun açıklaması, doğal seyri veya benzeri, yalnızca tartışılmışsa. (yalnızca bahsedilmişse dahil edin, aksi takdirde boş bırakın)]
+3. Ürolojik veya cerrahi sonrası sorun 3, 4, 5 vb. (varsa durum adı ve ICD-10 kodu)]
+- [Plan: Yönetim veya takip için önerilen plan. (yalnızca bahsedilmişse dahil edin, aksi takdirde boş bırakın)]
+- [Danışmanlık: Durumun açıklaması, doğal seyri veya benzeri, yalnızca tartışılmışsa. (yalnızca bahsedilmişse dahil edin, aksi takdirde boş bırakın)]
+4. Sıvılar (IV sıvılar ile planı her zaman dahil edin)
+- [Mevcut sıvılar ve varsa sıvı değiştirme planı]
+5. Elektrolitler (elektrolitler ile planı her zaman dahil edin)
+- [Mevcut elektrolitler ve varsa düzeltme planı, aksi takdirde "Elektrolitler PRN yerine koyulsun"]
+6. Diyet (beslenme ile planı her zaman dahil edin)
+- [Mevcut diyet durumu ve ilişkili plan]
+7. Profilaksi (profilaksi ile planı her zaman dahil edin)
+- [Mevcut DVT profilaksisi, ülser profilaksisi, bahsedilen veya uygulanabilir diğerleri]
+8. Taburculuk Planı (taburculuk planını her zaman dahil edin)
+- [Taburculuk veya benzeri bir plan varsa burada belirtin (bahsedilmemişse "Yatan hasta, şu anda taburculuk planlaması için uygun değil.")]
+
+İSTEMLER:
+[Laboratuvar veya ilaç istemlerini listeleyin. (yalnızca bahsedilmişse dahil edin, aksi takdirde boş bırakın)]
+
+"İmzalayan:"
+[asistan adı ve yetkilikleri]
