@@ -19,7 +19,8 @@ import {
     Banknote,
     PiggyBank,
     Calendar,
-    RefreshCw
+    RefreshCw,
+    BookOpen
 } from 'lucide-react';
 import { api, FinansOzet, FinansKasa, FinansIslem, AylikOzet } from '@/lib/api';
 import { format } from 'date-fns';
@@ -95,6 +96,12 @@ export default function FinanceDashboardPage() {
                     <p className="text-slate-500 mt-1">Gelir, gider ve cari takip</p>
                 </div>
                 <div className="flex gap-2">
+                    <Link href="/finance/help">
+                        <Button variant="ghost" className="text-slate-600" title="Finans modülü kullanım kılavuzu">
+                            <BookOpen className="h-4 w-4 mr-2" />
+                            Kılavuz
+                        </Button>
+                    </Link>
                     <Link href="/finance/income/new">
                         <Button className="bg-emerald-600 hover:bg-emerald-700">
                             <Plus className="h-4 w-4 mr-2" />

@@ -73,9 +73,13 @@ class ExpenseRepository:
         return float(result.scalar() or 0)
 
     async def get_firm_debt_list(self) -> List[dict]:
+        """Açık gider borcu olan firmaları, en yakın vade bilgisiyle birlikte döner."""
         stmt = (
             select(
-                Firma.id, Firma.ad, func.sum(FinansIslem.net_tutar).label("total_debt")
+                Firma.id,
+                Firma.ad,
+                func.sum(FinansIslem.net_tutar).label("toplam_borc"),
+                func.min(FinansIslem.vade_tarihi).label("en_yakin_vade"),
             )
             .join(FinansIslem, FinansIslem.firma_id == Firma.id)
             .where(
@@ -90,7 +94,12 @@ class ExpenseRepository:
         )
         result = await self.session.execute(stmt)
         return [
-            {"id": r.id, "ad": r.ad, "total_debt": float(r.total_debt or 0)}
+            {
+                "id": r.id,
+                "ad": r.ad,
+                "toplam_borc": float(r.toplam_borc or 0),
+                "en_yakin_vade": r.en_yakin_vade,
+            }
             for r in result.all()
         ]
 

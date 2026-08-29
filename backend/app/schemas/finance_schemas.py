@@ -191,7 +191,7 @@ class FinansIslemSatirCreate(FinansIslemSatirBase):
 
 class FinansIslemSatirResponse(FinansIslemSatirBase):
     id: int
-    islem_id: UUID
+    islem_id: int
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -218,7 +218,7 @@ class FinansOdemeCreate(FinansOdemeBase):
 
 class FinansOdemeResponse(FinansOdemeBase):
     id: int
-    islem_id: UUID
+    islem_id: int
     created_at: Optional[datetime] = None
     kasa_adi: Optional[str] = None  # Computed field
     taksitler: List["FinansTaksitResponse"] = []
@@ -299,7 +299,7 @@ class FinansIslemUpdate(BaseModel):
 
 
 class FinansIslemResponse(FinansIslemBase):
-    id: UUID
+    id: int
     referans_kodu: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -323,7 +323,7 @@ class FinansIslemResponse(FinansIslemBase):
 class FinansIslemListResponse(BaseModel):
     """Liste görünümü için hafif response"""
 
-    id: UUID
+    id: int
     referans_kodu: str
     hasta_id: Optional[UUID] = None
     hasta_adi: Optional[str] = None

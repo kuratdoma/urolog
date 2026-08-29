@@ -38,21 +38,6 @@ class FinanceOrchestrator:
             **stats,
         }
 
-    async def get_transactions_multi(
-        self, skip: int = 0, limit: int = 100, patient_id: Optional[UUID] = None
-    ):
-        """
-        Returns transactions from the modern schema.
-        """
-        if patient_id:
-            transactions = await self.income_repo.get_patient_transactions(patient_id)
-            total = len(transactions)
-        else:
-            transactions = []
-            total = 0
-
-        return transactions, total
-
     async def create_transaction_safely(self, tx_data: dict) -> Any:
         """
         Ensures patient existence before creating a financial record.
@@ -73,6 +58,40 @@ class FinanceOrchestrator:
 
         await self.db.flush()
         return tx
+
+    async def update_transaction(self, tx_id: int, changes: dict):
+        """
+        İşlemin üst bilgilerini günceller.
+
+        Kasa bakiyesini etkileyen alanlar (tutar, kasa_id) burada değiştirilemez —
+        bakiye tutarlılığı ancak iptal + yeniden oluşturma ile korunur.
+        """
+        tx = await self.income_repo.get_transaction(tx_id)
+        if not tx:
+            return None
+
+        if tx.durum == "iptal":
+            raise ValueError("İptal edilmiş işlem güncellenemez")
+
+        # SQLAlchemy modelinde bulunmayan veya bakiyeyi etkileyen alanları ayıkla
+        blocked = {"tutar", "net_tutar", "kasa_id"}
+        ignored = {"kdv_orani", "kdv_tutari", "notlar"}
+        values = {
+            k: v
+            for k, v in changes.items()
+            if k not in blocked and k not in ignored and hasattr(FinansIslem, k)
+        }
+
+        if not values:
+            return tx
+
+        values["updated_by"] = self.context.user_id if self.context else None
+
+        await self.db.execute(
+            update(FinansIslem).where(FinansIslem.id == tx_id).values(**values)
+        )
+        await self.db.flush()
+        return await self.income_repo.get_transaction(tx_id)
 
     async def cancel_transaction(self, tx_id: int, reason: str):
         """İşlemi iptal et ve kasa bakiyelerini geri al"""

@@ -53,7 +53,7 @@ export default function DebtorsPage() {
 
     const filteredDebtors = debtors.filter(d =>
         !searchQuery ||
-        d.hasta_adi.toLowerCase().includes(searchQuery.toLowerCase())
+        (d.hasta_adi ?? '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const totalDebt = filteredDebtors.reduce((sum, d) => sum + d.bakiye, 0);
@@ -152,7 +152,7 @@ export default function DebtorsPage() {
                                             </div>
                                             <div>
                                                 <p className="font-semibold text-slate-900 text-lg">
-                                                    {debtor.hasta_adi}
+                                                    {debtor.hasta_adi || 'İsimsiz hasta'}
                                                 </p>
                                                 <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
                                                     <span>Toplam Borç: {formatCurrency(debtor.toplam_borc)}</span>

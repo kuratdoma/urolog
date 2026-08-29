@@ -71,18 +71,18 @@ export const financeApi = {
             if (params?.limit) searchParams.set('limit', String(params.limit));
             return apiFetch<{ items: FinansIslem[]; total: number }>(`/api/v1/finance/transactions?${searchParams.toString()}`);
         },
-        getTransaction: (id: string) =>
+        getTransaction: (id: number) =>
             apiFetch<FinansIslem>(`/api/v1/finance/transactions/${id}`),
         createTransaction: (data: FinansIslemCreate) =>
             apiFetch<FinansIslem>('/api/v1/finance/transactions', { method: 'POST', body: JSON.stringify(data) }),
-        updateTransaction: (id: string, data: Partial<FinansIslemCreate>) =>
+        updateTransaction: (id: number, data: Partial<FinansIslemCreate>) =>
             apiFetch<FinansIslem>(`/api/v1/finance/transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-        cancelTransaction: (id: string, iptal_nedeni: string) =>
+        cancelTransaction: (id: number, iptal_nedeni: string) =>
             apiFetch<FinansIslem>(`/api/v1/finance/transactions/${id}/cancel`, {
                 method: 'POST',
                 body: JSON.stringify({ iptal_nedeni })
             }),
-        deleteTransaction: (id: string) =>
+        deleteTransaction: (id: number) =>
             apiFetch<void>(`/api/v1/finance/transactions/${id}`, { method: 'DELETE' }),
 
         // Hasta Cari

@@ -1271,9 +1271,9 @@ export interface FirmaBorcOzet {
 }
 
 export interface FinansIslemSatir {
-    id: string;
-    islem_id: string;
-    hizmet_id?: string;
+    id: number;
+    islem_id: number;
+    hizmet_id?: number;
     hizmet_adi: string;
     adet: number;
     birim_fiyat: number;
@@ -1281,38 +1281,51 @@ export interface FinansIslemSatir {
     doktor?: string;
 }
 
+export interface FinansTaksit {
+    id: number;
+    odeme_id: number;
+    taksit_no: number;
+    tutar: number;
+    vade_tarihi: string;
+    tahsil_tarihi?: string;
+    durum: string;
+    created_at?: string;
+}
+
 export interface FinansOdeme {
-    id: string;
-    islem_id: string;
-    kasa_id?: string;
+    id: number;
+    islem_id: number;
+    kasa_id?: number;
     odeme_tarihi: string;
     tutar: number;
     odeme_yontemi: string;
     banka?: string;
-    taksit_sayisi: number;
-    kapora: boolean;
+    taksit_sayisi?: number;
+    kapora?: boolean;
     notlar?: string;
     kasa_adi?: string;
     created_at?: string;
+    taksitler?: FinansTaksit[];
 }
 
 export interface FinansIslem {
-    id: string;
+    /** Backend'de Integer PK — UUID değil. */
+    id: number;
     referans_kodu: string;
     hasta_id?: string;
     muayene_id?: string;
     tarih: string;
     islem_tipi: string;
     durum: string;
-    kategori_id?: string;
+    kategori_id?: number;
     aciklama?: string;
     tutar: number;
-    kdv_orani: number;
-    kdv_tutari: number;
+    kdv_orani?: number;
+    kdv_tutari?: number;
     net_tutar: number;
-    para_birimi: string;
-    kasa_id?: string;
-    firma_id?: string;
+    para_birimi?: string;
+    kasa_id?: number;
+    firma_id?: number;
     doktor?: string;
     vade_tarihi?: string;
     notlar?: string;
@@ -1321,11 +1334,14 @@ export interface FinansIslem {
     iptal_nedeni?: string;
     created_at?: string;
     updated_at?: string;
-    created_by?: string;
+    created_by?: number;
     hasta_adi?: string;
     kategori_adi?: string;
     kasa_adi?: string;
     firma_adi?: string;
+    /** Liste görünümünde (GET /transactions, /overdue) hesaplanır. */
+    odenen_tutar?: number;
+    kalan_tutar?: number;
     satirlar?: FinansIslemSatir[];
     odemeler?: FinansOdeme[];
 }
@@ -1378,10 +1394,13 @@ export interface HastaCari {
 
 export interface BorcluHasta {
     hasta_id: string;
-    hasta_adi: string;
+    /** Hasta kaydı eksikse backend null döner. */
+    hasta_adi?: string;
     toplam_borc: number;
     toplam_odeme: number;
     bakiye: number;
+    vadesi_gecmis_borc?: number;
+    son_islem_tarihi?: string;
 }
 
 export interface FinansOzet {

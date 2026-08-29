@@ -6,6 +6,8 @@ import { api, FinansHizmet, FinansKategori, FinansKasa } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { BookOpen } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -204,6 +206,12 @@ export default function FinanceSettingsPage() {
                     </h1>
                     <p className="text-slate-500 mt-1">Kategori, hizmet, kasa ve sistem tanımları</p>
                 </div>
+                <Link href="/finance/help">
+                    <Button variant="outline" className="text-slate-600" title="Finans modülü kullanım kılavuzu">
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Kurulum Kılavuzu
+                    </Button>
+                </Link>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

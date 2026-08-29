@@ -8,6 +8,7 @@ from app.repositories.finance.models import (
     FinansIslem,
     FinansIslemSatir,
     FinansOdeme,
+    FinansKategori,
     Kasa,
 )
 from app.repositories.patient.models import Hasta
@@ -51,6 +52,143 @@ class IncomeRepository:
         )
         result = await self.session.execute(stmt)
         return result.scalars().all()
+
+    async def search_transactions(
+        self,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        islem_tipi: Optional[str] = None,
+        durum: Optional[str] = None,
+        kategori_id: Optional[int] = None,
+        hasta_id: Optional[UUID] = None,
+        firma_id: Optional[int] = None,
+        kasa_id: Optional[int] = None,
+        referans: Optional[str] = None,
+        vade_gecmis: Optional[bool] = None,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> tuple[List[dict], int]:
+        """
+        Finans işlemlerini filtreli ve sayfalı olarak getirir.
+
+        FinansIslemListResponse ile uyumlu sözlükler döner: hasta adı, kategori adı
+        ve ödenen/kalan tutarlar tek sorguda hesaplanır (N+1 yok).
+        """
+        # Her işlem için toplam ödenen tutar
+        paid_subq = (
+            select(
+                FinansOdeme.islem_id.label("islem_id"),
+                func.sum(FinansOdeme.tutar).label("total_paid"),
+            )
+            .group_by(FinansOdeme.islem_id)
+            .subquery()
+        )
+
+        filters = [FinansIslem.is_deleted == False]
+        if start_date:
+            filters.append(FinansIslem.tarih >= start_date)
+        if end_date:
+            filters.append(FinansIslem.tarih <= end_date)
+        if islem_tipi:
+            filters.append(FinansIslem.islem_tipi == islem_tipi)
+        if durum:
+            filters.append(FinansIslem.durum == durum)
+        if kategori_id is not None:
+            filters.append(FinansIslem.kategori_id == kategori_id)
+        if hasta_id is not None:
+            filters.append(FinansIslem.hasta_id == hasta_id)
+        if firma_id is not None:
+            filters.append(FinansIslem.firma_id == firma_id)
+        if kasa_id is not None:
+            filters.append(FinansIslem.kasa_id == kasa_id)
+        if referans:
+            filters.append(FinansIslem.referans_kodu.ilike(f"%{referans}%"))
+
+        odenen = func.coalesce(paid_subq.c.total_paid, 0)
+        if vade_gecmis:
+            # Vadesi geçmiş = vade dolmuş VE tamamı henüz tahsil edilmemiş
+            filters.extend(
+                [
+                    FinansIslem.vade_tarihi.isnot(None),
+                    FinansIslem.vade_tarihi < date.today(),
+                    FinansIslem.durum != "iptal",
+                    odenen < FinansIslem.net_tutar,
+                ]
+            )
+
+        where_clause = and_(*filters)
+
+        # Toplam kayıt sayısı (sayfalamadan bağımsız)
+        total = int(
+            (
+                await self.session.execute(
+                    select(func.count())
+                    .select_from(FinansIslem)
+                    .outerjoin(paid_subq, paid_subq.c.islem_id == FinansIslem.id)
+                    .where(where_clause)
+                )
+            ).scalar()
+            or 0
+        )
+
+        stmt = (
+            select(
+                FinansIslem.id,
+                FinansIslem.referans_kodu,
+                FinansIslem.hasta_id,
+                FinansIslem.tarih,
+                FinansIslem.islem_tipi,
+                FinansIslem.durum,
+                FinansIslem.tutar,
+                FinansIslem.net_tutar,
+                FinansIslem.doktor,
+                FinansIslem.created_at,
+                Hasta.ad.label("hasta_ad"),
+                Hasta.soyad.label("hasta_soyad"),
+                FinansKategori.ad.label("kategori_adi"),
+                odenen.label("odenen_tutar"),
+            )
+            .select_from(FinansIslem)
+            .outerjoin(Hasta, Hasta.id == FinansIslem.hasta_id)
+            .outerjoin(FinansKategori, FinansKategori.id == FinansIslem.kategori_id)
+            .outerjoin(paid_subq, paid_subq.c.islem_id == FinansIslem.id)
+            .where(where_clause)
+            .order_by(FinansIslem.tarih.desc(), FinansIslem.id.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        rows = (await self.session.execute(stmt)).all()
+
+        items: List[dict] = []
+        for r in rows:
+            net = float(r.net_tutar or 0)
+            paid = float(r.odenen_tutar or 0)
+            hasta_adi = (
+                f"{r.hasta_ad} {r.hasta_soyad}".strip()
+                if r.hasta_ad or r.hasta_soyad
+                else None
+            )
+            items.append(
+                {
+                    "id": r.id,
+                    "referans_kodu": r.referans_kodu,
+                    "hasta_id": r.hasta_id,
+                    "hasta_adi": hasta_adi,
+                    "tarih": r.tarih,
+                    "islem_tipi": r.islem_tipi,
+                    "durum": r.durum,
+                    "tutar": float(r.tutar or 0),
+                    "net_tutar": net,
+                    "kategori_adi": r.kategori_adi,
+                    "doktor": r.doktor,
+                    "odenen_tutar": paid,
+                    "kalan_tutar": round(net - paid, 2),
+                    "created_at": r.created_at,
+                }
+            )
+
+        return items, total
 
     async def get_transaction(self, tx_id: int) -> Optional[FinansIslem]:
         stmt = (
@@ -99,41 +237,99 @@ class IncomeRepository:
         }
 
     async def get_debtor_patients(self, min_borc: float = 0) -> List[dict]:
-        # Implementation similar to legacy but using sharded models
-        # Simplified for brevity here, full logic exists in legacy
-        subq = (
+        """
+        Bakiyesi min_borc üzerinde olan hastaları döner.
+
+        Bakiye = tahakkuk eden gelir - tahsil edilen ödeme. Ödemeler hesaba
+        katılmazsa liste brüt faturayı gösterir, bu yüzden ödeme toplamı da
+        aynı sorguda çıkarılır.
+        """
+        borc_subq = (
             select(
-                FinansIslem.hasta_id,
+                FinansIslem.hasta_id.label("hasta_id"),
                 func.sum(FinansIslem.net_tutar).label("total_debt"),
+                func.max(FinansIslem.tarih).label("son_islem_tarihi"),
             )
             .where(
                 and_(
                     FinansIslem.is_deleted == False,
                     FinansIslem.islem_tipi == "gelir",
                     FinansIslem.durum != "iptal",
+                    FinansIslem.hasta_id.isnot(None),
                 )
             )
             .group_by(FinansIslem.hasta_id)
             .subquery()
         )
+
+        odeme_subq = (
+            select(
+                FinansIslem.hasta_id.label("hasta_id"),
+                func.sum(FinansOdeme.tutar).label("total_paid"),
+            )
+            .select_from(FinansIslem)
+            .join(FinansOdeme, FinansOdeme.islem_id == FinansIslem.id)
+            .where(
+                and_(
+                    FinansIslem.is_deleted == False,
+                    FinansIslem.durum != "iptal",
+                    FinansIslem.hasta_id.isnot(None),
+                )
+            )
+            .group_by(FinansIslem.hasta_id)
+            .subquery()
+        )
+
+        # Vadesi geçmiş, henüz kapanmamış tahakkuklar
+        vade_subq = (
+            select(
+                FinansIslem.hasta_id.label("hasta_id"),
+                func.sum(FinansIslem.net_tutar).label("overdue_debt"),
+            )
+            .where(
+                and_(
+                    FinansIslem.is_deleted == False,
+                    FinansIslem.islem_tipi == "gelir",
+                    FinansIslem.durum != "iptal",
+                    FinansIslem.hasta_id.isnot(None),
+                    FinansIslem.vade_tarihi.isnot(None),
+                    FinansIslem.vade_tarihi < date.today(),
+                )
+            )
+            .group_by(FinansIslem.hasta_id)
+            .subquery()
+        )
+
+        odenen = func.coalesce(odeme_subq.c.total_paid, 0)
+        bakiye = borc_subq.c.total_debt - odenen
+
         stmt = (
             select(
                 Hasta.id,
                 Hasta.ad,
                 Hasta.soyad,
-                subq.c.total_debt,
+                borc_subq.c.total_debt,
+                borc_subq.c.son_islem_tarihi,
+                odenen.label("total_paid"),
+                func.coalesce(vade_subq.c.overdue_debt, 0).label("overdue_debt"),
+                bakiye.label("bakiye"),
             )
-            .join(subq, Hasta.id == subq.c.hasta_id)
-            .where(subq.c.total_debt > min_borc)
-            .order_by(subq.c.total_debt.desc())
+            .join(borc_subq, Hasta.id == borc_subq.c.hasta_id)
+            .outerjoin(odeme_subq, Hasta.id == odeme_subq.c.hasta_id)
+            .outerjoin(vade_subq, Hasta.id == vade_subq.c.hasta_id)
+            .where(bakiye > min_borc)
+            .order_by(bakiye.desc())
         )
         result = await self.session.execute(stmt)
         return [
             {
                 "hasta_id": r.id,
-                "ad": r.ad,
-                "soyad": r.soyad,
-                "bakiye": float(r.total_debt),
+                "hasta_adi": f"{r.ad or ''} {r.soyad or ''}".strip() or None,
+                "toplam_borc": float(r.total_debt or 0),
+                "toplam_odeme": float(r.total_paid or 0),
+                "bakiye": float(r.bakiye or 0),
+                "vadesi_gecmis_borc": float(r.overdue_debt or 0),
+                "son_islem_tarihi": r.son_islem_tarihi,
             }
             for r in result.all()
         ]
@@ -335,46 +531,40 @@ class IncomeRepository:
             "toplam_gider": expense,
             "net_bakiye": income - expense,
             "bekleyen_tahsilat": income - collected if income > collected else 0,
-            "vadesi_gecmis_islem_sayisi": len(await self.get_overdue_transactions(limit=1000)),
+            "vadesi_gecmis_islem_sayisi": await self.count_overdue_transactions(),
             "bugun_gelir": float(today_totals.today_income or 0),
             "bugun_gider": float(today_totals.today_expense or 0),
         }
 
-    async def get_overdue_transactions(
-        self, skip: int = 0, limit: int = 50
-    ) -> List[FinansIslem]:
-        """Vadesi geçmiş (ödenmemiş ve vadesi bugünden önce olan) işlemleri getirir"""
-        today = date.today()
-        # Subquery to check total paid for each transaction
+    def _overdue_filter(self):
+        """Vadesi geçmiş ve tamamı tahsil edilmemiş gelir işlemlerinin ortak filtresi."""
         paid_subq = (
             select(
-                FinansOdeme.islem_id,
+                FinansOdeme.islem_id.label("islem_id"),
                 func.sum(FinansOdeme.tutar).label("total_paid"),
             )
             .group_by(FinansOdeme.islem_id)
             .subquery()
         )
-
-        stmt = (
-            select(FinansIslem)
-            .outerjoin(paid_subq, FinansIslem.id == paid_subq.c.islem_id)
-            .where(
-                and_(
-                    FinansIslem.is_deleted == False,
-                    FinansIslem.islem_tipi == "gelir",
-                    FinansIslem.durum != "iptal",
-                    FinansIslem.vade_tarihi < today,
-                    # Either no payment or total paid < net amount
-                    case(
-                        (paid_subq.c.total_paid == None, True),
-                        else_=(paid_subq.c.total_paid < FinansIslem.net_tutar),
-                    ),
-                )
-            )
-            .order_by(FinansIslem.vade_tarihi.asc())
-            .offset(skip)
-            .limit(limit)
+        condition = and_(
+            FinansIslem.is_deleted == False,
+            FinansIslem.islem_tipi == "gelir",
+            FinansIslem.durum != "iptal",
+            FinansIslem.vade_tarihi.isnot(None),
+            FinansIslem.vade_tarihi < date.today(),
+            # Hiç ödeme yok ya da toplam ödeme net tutarın altında
+            func.coalesce(paid_subq.c.total_paid, 0) < FinansIslem.net_tutar,
         )
+        return paid_subq, condition
 
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
+    async def count_overdue_transactions(self) -> int:
+        """Vadesi geçmiş işlem sayısını satırları yüklemeden sayar."""
+        paid_subq, condition = self._overdue_filter()
+        stmt = (
+            select(func.count())
+            .select_from(FinansIslem)
+            .outerjoin(paid_subq, FinansIslem.id == paid_subq.c.islem_id)
+            .where(condition)
+        )
+        return int((await self.session.execute(stmt)).scalar() or 0)
+

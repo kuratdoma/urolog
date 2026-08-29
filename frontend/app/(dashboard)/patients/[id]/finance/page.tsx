@@ -105,7 +105,7 @@ export default function FinancePage() {
         const sorted = [...hareketler].sort((a: FinansIslem, b: FinansIslem) => {
             const dateA = new Date(a.tarih || '').getTime();
             const dateB = new Date(b.tarih || '').getTime();
-            if (dateA === dateB) return (a.id || '').localeCompare(b.id || '');
+            if (dateA === dateB) return (a.id || 0) - (b.id || 0);
             return dateA - dateB;
         });
 
@@ -150,7 +150,7 @@ export default function FinancePage() {
         setExpenseDialogOpen(false);
     };
 
-    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
     const patientName = patient ? `${patient.ad} ${patient.soyad}` : '';
 
     return (

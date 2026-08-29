@@ -32,6 +32,7 @@ from app.schemas.finance import (
     # İşlemler
     FinansIslemResponse,
     FinansIslemCreate,
+    FinansIslemUpdate,
     FinansIslemPaginationResponse,
     FinansIslemIptalRequest,
     HastaCariResponse,
@@ -422,18 +423,29 @@ async def get_islemler(
     limit: int = Query(50, le=200),
     db: AsyncSession = Depends(deps.get_db),
 ) -> Any:
-    """Finans işlemlerini filtreli listele"""
+    """Finans işlemlerini filtreli ve sayfalı listele"""
     repo = IncomeRepository(db)
 
-    # Filtering logic - simplified to patient lookup if hasta_id is present
-    if hasta_id:
-        islemler = await repo.get_patient_transactions(UUID(hasta_id))
-    else:
-        # Placeholder for broad transaction search
-        islemler = []
+    try:
+        hasta_uuid = UUID(hasta_id) if hasta_id else None
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Geçersiz hasta_id formatı")
 
-    total = len(islemler)
-    return {"items": islemler, "total": total, "skip": skip, "limit": limit}
+    items, total = await repo.search_transactions(
+        start_date=start_date,
+        end_date=end_date,
+        islem_tipi=islem_tipi,
+        durum=durum,
+        kategori_id=kategori_id,
+        hasta_id=hasta_uuid,
+        firma_id=firma_id,
+        kasa_id=kasa_id,
+        referans=referans,
+        vade_gecmis=vade_gecmis,
+        skip=skip,
+        limit=limit,
+    )
+    return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 
 @router.get("/transactions/{islem_id}", response_model=FinansIslemResponse)
@@ -473,6 +485,44 @@ async def create_islem(
         raise HTTPException(
             status_code=400, detail="İşlem oluşturulurken bir doğrulama hatası oluştu"
         )
+
+
+@router.put("/transactions/{islem_id}", response_model=FinansIslemResponse)
+async def update_islem(
+    islem_id: int,
+    *,
+    db: AsyncSession = Depends(deps.get_db),
+    islem_in: FinansIslemUpdate,
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    İşlemin üst bilgilerini güncelle.
+
+    Tutar/kasa değişiklikleri kasa bakiyesini etkilediğinden burada ele alınmaz;
+    bunun için işlemi iptal edip yeniden oluşturun.
+    """
+    orchestrator = FinanceOrchestrator(
+        db, UserContext(user_id=current_user.id, username=current_user.username)
+    )
+    try:
+        islem = await orchestrator.update_transaction(
+            islem_id, islem_in.model_dump(exclude_unset=True)
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if not islem:
+        raise HTTPException(status_code=404, detail="İşlem bulunamadı")
+
+    await AuditService.log(
+        db=db,
+        action="finans_islem_update",
+        user_id=current_user.id,
+        resource_type="finans_islem",
+        resource_id=str(islem_id),
+        details={"alanlar": list(islem_in.model_dump(exclude_unset=True).keys())},
+    )
+    return islem
 
 
 @router.post("/transactions/{islem_id}/cancel", response_model=FinansIslemResponse)
@@ -561,8 +611,10 @@ async def get_vadesi_gecmis_islemler(
 ) -> Any:
     """Vadesi geçmiş işlemleri listele"""
     repo = IncomeRepository(db)
-    items = await repo.get_overdue_transactions(skip=skip, limit=limit)
-    return {"items": items, "total": len(items), "skip": skip, "limit": limit}
+    items, total = await repo.search_transactions(
+        vade_gecmis=True, skip=skip, limit=limit
+    )
+    return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 
 @router.get("/summary/daily", response_model=GunlukOzetResponse)
