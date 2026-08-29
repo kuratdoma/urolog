@@ -27,6 +27,16 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+/**
+ * Kasa tipleri — hem oluşturma formunun seçenekleri hem tablo rozetleri
+ * buradan beslenir. Tek kaynak: tip eklemek/çıkarmak için sadece burayı düzenleyin.
+ */
+const KASA_TIPLERI: Record<string, { label: string; formLabel: string; badge: string }> = {
+    NAKIT: { label: 'ANA KASA', formLabel: 'Ana Kasa (Nakit)', badge: 'bg-emerald-100 text-emerald-700' },
+    POS: { label: 'POS', formLabel: 'POS Cihazı', badge: 'bg-orange-100 text-orange-700' },
+    BANKA: { label: 'BANKA', formLabel: 'Banka Hesabı', badge: 'bg-blue-100 text-blue-700' },
+};
+
 export default function FinanceSettingsPage() {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState("accounts");
@@ -41,6 +51,7 @@ export default function FinanceSettingsPage() {
     const [accountDialogOpen, setAccountDialogOpen] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState<FinansKasa | null>(null);
     const [accountType, setAccountType] = useState<string>("NAKIT");
+    const [showClosedAccounts, setShowClosedAccounts] = useState(false);
 
     // --- PAGINATION STATES ---
     const [serviceSearch, setServiceSearch] = useState("");
@@ -58,10 +69,17 @@ export default function FinanceSettingsPage() {
         queryFn: () => api.finance.getCategories()
     });
 
+    // aktif_only=false: kapalı kasalar da çekilir, filtreleme istemcide yapılır
     const { data: accounts, isLoading: accountsLoading } = useQuery({
         queryKey: ['finance-accounts'],
         queryFn: () => api.finance.getAccounts(false)
     });
+
+    // Kapalı kasalar varsayılan olarak gizli — liste sadeleşsin, geçmiş kaybolmasın
+    const kapaliSayisi = accounts?.filter(a => !a.aktif).length ?? 0;
+    const gorunenAccounts = showClosedAccounts
+        ? accounts
+        : accounts?.filter(a => a.aktif);
 
     // --- FILTERS & PAGINATION LOGIC ---
     const filteredServices = services?.filter(s => {
@@ -97,7 +115,8 @@ export default function FinanceSettingsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['finance-services'] });
             toast.success('Hizmet silindi');
-        }
+        },
+        onError: (e: Error) => toast.error(e.message || 'Hizmet silinemedi')
     });
 
     // --- MUTATIONS: CATEGORIES ---
@@ -119,7 +138,8 @@ export default function FinanceSettingsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['finance-categories'] });
             toast.success('Kategori silindi');
-        }
+        },
+        onError: (e: Error) => toast.error(e.message || 'Kategori silinemedi')
     });
 
     // --- MUTATIONS: ACCOUNTS ---
@@ -140,8 +160,9 @@ export default function FinanceSettingsPage() {
         mutationFn: (id: string) => api.finance.deleteAccount(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['finance-accounts'] });
-            toast.success('Hesap silindi');
-        }
+            toast.success('Hesap kapatıldı');
+        },
+        onError: (e: Error) => toast.error(e.message || 'Hesap kapatılamadı')
     });
 
     // --- HANDLERS ---
@@ -233,11 +254,24 @@ export default function FinanceSettingsPage() {
                         <CardHeader className="bg-white border-b border-slate-50 flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle className="text-lg">Kasa ve Hesap Tanımları</CardTitle>
-                                <CardDescription>Nakit kasalar, banka hesapları, POS cihazları ve diğer ödeme yöntemleri</CardDescription>
+                                <CardDescription>Nakit kasalar, banka hesapları ve POS cihazları</CardDescription>
                             </div>
-                            <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => { setSelectedAccount(null); setAccountType("NAKIT"); setAccountDialogOpen(true); }}>
-                                <Plus className="h-4 w-4 mr-2" /> Yeni Hesap
-                            </Button>
+                            <div className="flex items-center gap-3">
+                                {kapaliSayisi > 0 && (
+                                    <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={showClosedAccounts}
+                                            onChange={(e) => setShowClosedAccounts(e.target.checked)}
+                                            className="rounded border-slate-300"
+                                        />
+                                        Kapalıları göster ({kapaliSayisi})
+                                    </label>
+                                )}
+                                <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => { setSelectedAccount(null); setAccountType("NAKIT"); setAccountDialogOpen(true); }}>
+                                    <Plus className="h-4 w-4 mr-2" /> Yeni Hesap
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table>
@@ -252,23 +286,28 @@ export default function FinanceSettingsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {accounts?.map((acc) => (
-                                        <TableRow key={acc.id} className="hover:bg-slate-50 transition-colors">
-                                            <TableCell className="font-bold text-slate-800">{acc.ad}</TableCell>
+                                    {gorunenAccounts?.map((acc) => (
+                                        <TableRow
+                                            key={acc.id}
+                                            className={cn(
+                                                "hover:bg-slate-50 transition-colors",
+                                                !acc.aktif && "opacity-50"
+                                            )}
+                                        >
+                                            <TableCell className="font-bold text-slate-800">
+                                                {acc.ad}
+                                                {!acc.aktif && (
+                                                    <span className="ml-2 px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 text-[10px] font-medium uppercase">
+                                                        Kapalı
+                                                    </span>
+                                                )}
+                                            </TableCell>
                                             <TableCell>
                                                 <span className={cn(
                                                     "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
-                                                    acc.tip === 'NAKIT' && "bg-emerald-100 text-emerald-700",
-                                                    acc.tip === 'BANKA' && "bg-blue-100 text-blue-700",
-                                                    acc.tip === 'POS' && "bg-orange-100 text-orange-700",
-                                                    (acc.tip !== 'NAKIT' && acc.tip !== 'BANKA' && acc.tip !== 'POS') && "bg-slate-100 text-slate-700"
+                                                    KASA_TIPLERI[acc.tip]?.badge ?? "bg-slate-100 text-slate-700"
                                                 )}>
-                                                    {acc.tip === 'NAKIT' && 'ANA KASA'}
-                                                    {acc.tip === 'BANKA' && 'BANKA'}
-                                                    {acc.tip === 'POS' && 'POS'}
-                                                    {acc.tip === 'OZEL_SIGORTA' && 'ÖZEL SİGORTA'}
-                                                    {acc.tip === 'ACIK_HESAP' && 'AÇIK HESAP'}
-                                                    {acc.tip === 'DIGER' && 'DİĞER'}
+                                                    {KASA_TIPLERI[acc.tip]?.label ?? acc.tip}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-sm text-slate-600">
@@ -624,12 +663,9 @@ export default function FinanceSettingsPage() {
                                     onChange={(e) => setAccountType(e.target.value)}
                                     className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    <option value="NAKIT">Ana Kasa (Nakit)</option>
-                                    <option value="POS">POS Cihazı</option>
-                                    <option value="BANKA">Banka Hesabı</option>
-                                    <option value="OZEL_SIGORTA">Özel Sigorta</option>
-                                    <option value="ACIK_HESAP">Açık Hesap</option>
-                                    <option value="DIGER">Diğer</option>
+                                    {Object.entries(KASA_TIPLERI).map(([value, meta]) => (
+                                        <option key={value} value={value}>{meta.formLabel}</option>
+                                    ))}
                                 </select>
                             </div>
 

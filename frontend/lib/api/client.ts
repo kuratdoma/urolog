@@ -39,6 +39,31 @@ async function tryRefreshToken(): Promise<boolean> {
     }
 }
 
+/**
+ * FastAPI hata gövdesinden okunabilir mesajı çıkarır.
+ * Metin detail'i doğrudan, doğrulama hatası dizisini birleştirerek döner;
+ * gövde JSON değilse veya detail yoksa null.
+ */
+function extractErrorDetail(body: string): string | null {
+    if (!body) return null;
+    try {
+        const detail = JSON.parse(body)?.detail;
+        if (typeof detail === 'string' && detail.trim()) {
+            return detail;
+        }
+        if (Array.isArray(detail)) {
+            const msg = detail
+                .map((d: { msg?: string }) => d?.msg)
+                .filter(Boolean)
+                .join(', ');
+            return msg || null;
+        }
+    } catch {
+        // Gövde JSON değil — çağıran genel mesaja düşer
+    }
+    return null;
+}
+
 export async function apiFetch<T>(
     endpoint: string,
     options: FetchOptions = {}
@@ -113,7 +138,11 @@ export async function apiFetch<T>(
             }
         }
         const error = await response.text();
-        throw new Error(`API Error: ${response.status} - ${error}`);
+
+        // FastAPI hataları {"detail": "..."} biçiminde gelir. Ham JSON'u kullanıcıya
+        // göstermemek için okunabilir mesajı çıkar; çıkaramazsak genel mesaja düş.
+        const detailMessage = extractErrorDetail(error);
+        throw new Error(detailMessage ?? `API Error: ${response.status} - ${error}`);
     }
 
     return response.json();

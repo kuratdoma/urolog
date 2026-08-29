@@ -1342,6 +1342,9 @@ export interface FinansIslem {
     /** Liste görünümünde (GET /transactions, /overdue) hesaplanır. */
     odenen_tutar?: number;
     kalan_tutar?: number;
+    odeme_sayisi?: number;
+    /** Tek ödeme varsa yöntemi; çoklu ödemede null döner. */
+    odeme_yontemi?: string;
     satirlar?: FinansIslemSatir[];
     odemeler?: FinansOdeme[];
 }

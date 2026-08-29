@@ -39,9 +39,11 @@ const setupSteps = [
         whereLabel: 'Ayarlar › Kasalar',
         body: 'Para giriş/çıkışının izleneceği her kanal bir kasadır: Ana Kasa (nakit), POS cihazı, banka hesabı. Ödeme alırken hangi kasaya işleneceği seçilir; kasa tanımlı değilse ödeme kaydedilemez.',
         tips: [
-            'Nakit için en az bir "Ana Kasa" tanımlayın.',
+            'Üç tip vardır: Ana Kasa (nakit), POS Cihazı, Banka Hesabı.',
+            'Sistem hazır kasa ile gelmez — ilk kasayı siz oluşturursunuz.',
             'Banka hesabı eklerken banka adı ve IBAN alanlarını doldurun.',
             'Açılış bakiyesini kasa oluştururken girin — sonradan işlemle düzeltmek gerekir.',
+            'Kapatılan kasalar listede gizlenir; "Kapalıları göster" ile görünür.',
         ],
     },
     {

@@ -38,6 +38,22 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 };
 
+/** Liste yanıtı ödemeleri özet olarak taşır: tek ödemede yöntem, çoklu ödemede sayı. */
+const ODEME_YONTEMI_ETIKET: Record<string, string> = {
+    nakit: 'Nakit',
+    kredi_karti: 'Kredi Kartı',
+    havale: 'Havale/EFT',
+};
+
+const formatOdemeYontemi = (tx: FinansIslem) => {
+    const sayi = tx.odeme_sayisi ?? 0;
+    if (sayi === 0) return '-';
+    if (sayi > 1) return 'Çoklu Ödeme';
+    const yontem = tx.odeme_yontemi;
+    if (!yontem) return '-';
+    return ODEME_YONTEMI_ETIKET[yontem] ?? yontem;
+};
+
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     tamamlandi: { label: 'Tamamlandı', color: 'bg-emerald-100 text-emerald-700' },
     bekliyor: { label: 'Bekliyor', color: 'bg-amber-100 text-amber-700' },
@@ -296,18 +312,10 @@ export default function IncomeListPage() {
                                                 </div>
                                             </td>
                                             <td className="p-4 text-sm text-slate-600">
-                                                {tx.odemeler && tx.odemeler.length > 0
-                                                    ? (tx.odemeler.length > 1 ? 'Çoklu Ödeme' :
-                                                        (tx.odemeler[0].odeme_yontemi === 'nakit' ? 'Nakit' :
-                                                            tx.odemeler[0].odeme_yontemi === 'kredi_karti' ? 'Kredi Kartı' :
-                                                                tx.odemeler[0].odeme_yontemi === 'havale' ? 'Havale/EFT' :
-                                                                    tx.odemeler[0].odeme_yontemi))
-                                                    : '-'}
+                                                {formatOdemeYontemi(tx)}
                                             </td>
                                             <td className="p-4 text-sm text-slate-600">
-                                                {tx.odemeler && tx.odemeler.length > 0
-                                                    ? (tx.odemeler.length > 1 ? 'Çeşitli' : (tx.odemeler[0].banka || tx.odemeler[0].kasa_adi || '-'))
-                                                    : (tx.kasa_adi || '-')}
+                                                {(tx.odeme_sayisi ?? 0) > 1 ? 'Çeşitli' : (tx.kasa_adi || '-')}
                                             </td>
                                             <td className="p-4">
                                                 <DropdownMenu>

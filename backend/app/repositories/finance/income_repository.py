@@ -10,6 +10,7 @@ from app.repositories.finance.models import (
     FinansOdeme,
     FinansKategori,
     Kasa,
+    Firma,
 )
 from app.repositories.patient.models import Hasta
 from app.schemas.finance import FinansIslemCreate
@@ -74,11 +75,14 @@ class IncomeRepository:
         FinansIslemListResponse ile uyumlu sözlükler döner: hasta adı, kategori adı
         ve ödenen/kalan tutarlar tek sorguda hesaplanır (N+1 yok).
         """
-        # Her işlem için toplam ödenen tutar
+        # Her işlem için ödeme özeti: toplam tutar, adet, yöntem ve kasa
         paid_subq = (
             select(
                 FinansOdeme.islem_id.label("islem_id"),
                 func.sum(FinansOdeme.tutar).label("total_paid"),
+                func.count(FinansOdeme.id).label("odeme_sayisi"),
+                func.min(FinansOdeme.odeme_yontemi).label("ilk_yontem"),
+                func.min(FinansOdeme.kasa_id).label("odeme_kasa_id"),
             )
             .group_by(FinansOdeme.islem_id)
             .subquery()
@@ -141,17 +145,29 @@ class IncomeRepository:
                 FinansIslem.durum,
                 FinansIslem.tutar,
                 FinansIslem.net_tutar,
+                FinansIslem.aciklama,
+                FinansIslem.vade_tarihi,
                 FinansIslem.doktor,
                 FinansIslem.created_at,
                 Hasta.ad.label("hasta_ad"),
                 Hasta.soyad.label("hasta_soyad"),
                 FinansKategori.ad.label("kategori_adi"),
+                Kasa.ad.label("kasa_adi"),
+                Firma.ad.label("firma_adi"),
                 odenen.label("odenen_tutar"),
+                func.coalesce(paid_subq.c.odeme_sayisi, 0).label("odeme_sayisi"),
+                paid_subq.c.ilk_yontem.label("ilk_yontem"),
             )
             .select_from(FinansIslem)
             .outerjoin(Hasta, Hasta.id == FinansIslem.hasta_id)
             .outerjoin(FinansKategori, FinansKategori.id == FinansIslem.kategori_id)
             .outerjoin(paid_subq, paid_subq.c.islem_id == FinansIslem.id)
+            # Kasa adı: ödemenin kasası varsa o, yoksa işlemin kasası
+            .outerjoin(
+                Kasa,
+                Kasa.id == func.coalesce(paid_subq.c.odeme_kasa_id, FinansIslem.kasa_id),
+            )
+            .outerjoin(Firma, Firma.id == FinansIslem.firma_id)
             .where(where_clause)
             .order_by(FinansIslem.tarih.desc(), FinansIslem.id.desc())
             .offset(skip)
@@ -169,6 +185,7 @@ class IncomeRepository:
                 if r.hasta_ad or r.hasta_soyad
                 else None
             )
+            odeme_sayisi = int(r.odeme_sayisi or 0)
             items.append(
                 {
                     "id": r.id,
@@ -180,10 +197,17 @@ class IncomeRepository:
                     "durum": r.durum,
                     "tutar": float(r.tutar or 0),
                     "net_tutar": net,
+                    "aciklama": r.aciklama,
+                    "vade_tarihi": r.vade_tarihi,
                     "kategori_adi": r.kategori_adi,
+                    "kasa_adi": r.kasa_adi,
+                    "firma_adi": r.firma_adi,
                     "doktor": r.doktor,
                     "odenen_tutar": paid,
                     "kalan_tutar": round(net - paid, 2),
+                    "odeme_sayisi": odeme_sayisi,
+                    # Tek ödeme varsa yöntemi göster; çoklu ödemede belirsiz
+                    "odeme_yontemi": r.ilk_yontem if odeme_sayisi == 1 else None,
                     "created_at": r.created_at,
                 }
             )

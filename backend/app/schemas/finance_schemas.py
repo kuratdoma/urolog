@@ -332,10 +332,17 @@ class FinansIslemListResponse(BaseModel):
     durum: str
     tutar: float
     net_tutar: float
+    aciklama: Optional[str] = None
+    vade_tarihi: Optional[date] = None
     kategori_adi: Optional[str] = None
+    kasa_adi: Optional[str] = None
+    firma_adi: Optional[str] = None
     doktor: Optional[str] = None
     odenen_tutar: float = 0
     kalan_tutar: float = 0
+    # Ödeme özeti — liste görünümünde odemeler ilişkisini yüklemeden
+    odeme_sayisi: int = 0
+    odeme_yontemi: Optional[str] = None  # Tek ödeme varsa yöntemi, çoklu ise None
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
