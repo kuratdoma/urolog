@@ -11,6 +11,7 @@ from app.models.stock import StokUrun, StokAlim, StokHareket
 from app.repositories.patient.models import Hasta
 from app.repositories.clinical.models import Muayene, Operasyon, TetkikSonuc, TelefonGorusmesi
 from app.repositories.finance.models import (
+    DuzenliGider,
     FinansKategori,
     FinansHizmet,
     Kasa,

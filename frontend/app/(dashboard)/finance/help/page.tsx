@@ -20,6 +20,7 @@ import {
     AlertTriangle,
     Info,
     Ban,
+    Repeat,
     ArrowRight,
     CheckCircle2,
     CreditCard
@@ -101,6 +102,7 @@ const modulePages = [
     { href: '/finance/debtors', icon: Users, title: 'Borçlu Hastalar', desc: 'Bakiyesi kapanmamış hastalar ve tahsilat oranları.' },
     { href: '/finance/overdue', icon: Clock, title: 'Vadesi Geçmiş', desc: 'Vadesi dolmuş, tahsilatı tamamlanmamış işlemler.' },
     { href: '/finance/companies', icon: Building2, title: 'Firmalar', desc: 'Tedarikçi kayıtları ve firma borç durumu.' },
+    { href: '/finance/recurring', icon: Repeat, title: 'Düzenli Giderler', desc: 'Kira, maaş, abonelik şablonları ve dönemsel gider üretimi.' },
     { href: '/finance/reports', icon: Receipt, title: 'Raporlar', desc: 'Aylık grafikler, kategori kırılımı ve tahsilat yaşlandırma.' },
     { href: '/finance/settings', icon: Settings, title: 'Ayarlar', desc: 'Kasa, hizmet ve kategori tanımları.' },
 ];
@@ -387,6 +389,15 @@ export default function FinanceHelpPage() {
                                     Ayrı bir gelir işlemi açmayın — bu borcu kapatmaz, yeni tahakkuk oluşturur.
                                     Tahsilat girildiğinde kasa bakiyesi artar ve borç tamamen kapandıysa işlem
                                     otomatik olarak <span className="font-mono text-xs">tamamlandi</span> durumuna geçer.
+                                </p>
+                            </div>
+                            <div className="p-4">
+                                <p className="font-medium text-slate-900 text-sm">Kira/maaş gibi giderleri her ay elle giriyorum</p>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    <span className="font-medium">Düzenli Giderler</span> sayfasından şablon tanımlayın.
+                                    Bekleyen dönemler sayfada listelenir; <span className="font-medium">Bekleyenleri Oluştur</span> ile
+                                    tek tıkla gider kaydına dönüşür. Üretim otomatik değildir — siz tetiklersiniz;
+                                    aynı dönem iki kez oluşturulmaz.
                                 </p>
                             </div>
                             <div className="p-4">

@@ -404,6 +404,71 @@ class AylikOzetResponse(BaseModel):
 # =============================================================================
 # FİLTRELEME
 # =============================================================================
+class DuzenliGiderBase(BaseModel):
+    ad: str
+    tutar: float = Field(gt=0)
+    periyot: str = "aylik"  # 'aylik' | 'yillik'
+    ayin_gunu: int = Field(default=1, ge=1, le=31)
+    baslangic_tarihi: date
+    bitis_tarihi: Optional[date] = None
+    kategori_id: Optional[int] = None
+    firma_id: Optional[int] = None
+    kasa_id: Optional[int] = None
+    aciklama: Optional[str] = None
+    aktif: bool = True
+
+
+class DuzenliGiderCreate(DuzenliGiderBase):
+    pass
+
+
+class DuzenliGiderUpdate(BaseModel):
+    ad: Optional[str] = None
+    tutar: Optional[float] = None
+    periyot: Optional[str] = None
+    ayin_gunu: Optional[int] = Field(default=None, ge=1, le=31)
+    baslangic_tarihi: Optional[date] = None
+    bitis_tarihi: Optional[date] = None
+    kategori_id: Optional[int] = None
+    firma_id: Optional[int] = None
+    kasa_id: Optional[int] = None
+    aciklama: Optional[str] = None
+    aktif: Optional[bool] = None
+
+
+class DuzenliGiderResponse(DuzenliGiderBase):
+    id: int
+    son_uretilen_donem: Optional[date] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BekleyenUretimResponse(BaseModel):
+    """Üretilmeyi bekleyen dönemlerin şablon bazlı önizlemesi."""
+    sablon_id: int
+    ad: str
+    tutar: float
+    donemler: List[date] = []
+    adet: int = 0
+    toplam_tutar: float = 0
+
+
+class UretilenIslemSatiri(BaseModel):
+    sablon_id: int
+    sablon_adi: str
+    islem_id: int
+    referans_kodu: str
+    tarih: date
+    tutar: float
+
+
+class UretimSonucResponse(BaseModel):
+    adet: int = 0
+    toplam_tutar: float = 0
+    islemler: List[UretilenIslemSatiri] = []
+
+
 class EkstreSatiriResponse(BaseModel):
     tarih: date
     referans_kodu: str

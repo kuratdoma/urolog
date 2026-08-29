@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 import {
-    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, KategoriKirilim, YaslandirmaKova, AcikIslem, TopluTahsilatSonuc, HastaEkstre, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
+    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, KategoriKirilim, YaslandirmaKova, AcikIslem, TopluTahsilatSonuc, HastaEkstre, DuzenliGider, DuzenliGiderCreate, BekleyenUretim, UretimSonuc, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
 } from './types';
 
 export const financeApi = {
@@ -151,6 +151,20 @@ export const financeApi = {
         // Vadesi Geçmiş
         getOverdueTransactions: () =>
             apiFetch<{ items: FinansIslem[]; total: number }>('/api/v1/finance/overdue'),
+
+        // Düzenli giderler
+        getRecurringExpenses: (aktifOnly: boolean = false) =>
+            apiFetch<DuzenliGider[]>(`/api/v1/finance/recurring-expenses?aktif_only=${aktifOnly}`),
+        createRecurringExpense: (data: DuzenliGiderCreate) =>
+            apiFetch<DuzenliGider>('/api/v1/finance/recurring-expenses', { method: 'POST', body: JSON.stringify(data) }),
+        updateRecurringExpense: (id: number, data: Partial<DuzenliGiderCreate>) =>
+            apiFetch<DuzenliGider>(`/api/v1/finance/recurring-expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+        deleteRecurringExpense: (id: number) =>
+            apiFetch<{ success: boolean }>(`/api/v1/finance/recurring-expenses/${id}`, { method: 'DELETE' }),
+        getPendingRecurring: () =>
+            apiFetch<BekleyenUretim[]>('/api/v1/finance/recurring-expenses/pending'),
+        generateRecurring: () =>
+            apiFetch<UretimSonuc>('/api/v1/finance/recurring-expenses/generate', { method: 'POST' }),
 
         getSummary: (startDate?: string, endDate?: string) => {
             const params = new URLSearchParams();

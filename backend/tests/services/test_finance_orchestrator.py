@@ -8,11 +8,16 @@ import pytest
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+from datetime import date
 
 # app.db.base tüm modelleri sırayla kayda alır; finans modellerini doğrudan
 # import eden ilk modül olmak dairesel import hatasına yol açıyor.
 import app.db.base  # noqa: F401
 from app.services.orchestrators.finance_orchestrator import FinanceOrchestrator
+from app.repositories.finance.recurring_repository import (
+    hesapla_bekleyen_donemler,
+    MAX_DONEM_PER_SABLON,
+)
 from app.core.user_context import UserContext
 
 
@@ -296,3 +301,92 @@ def test_taksit_toplami_odeme_tutarina_esit(tutar, adet):
     assert toplam == pytest.approx(tutar, abs=0.005)
     assert len(taksitler) == adet
     assert all(t > 0 for t in taksitler), "Taksit tutarı sıfır veya negatif olamaz"
+
+
+# =============================================================================
+# Düzenli gider dönem hesabı
+# =============================================================================
+def _sablon(**kw):
+    """Takvim mantığını test etmek için minimal şablon nesnesi."""
+    varsayilan = dict(
+        aktif=True,
+        periyot="aylik",
+        ayin_gunu=1,
+        baslangic_tarihi=date(2026, 1, 1),
+        bitis_tarihi=None,
+        son_uretilen_donem=None,
+    )
+    varsayilan.update(kw)
+    return MagicMock(**varsayilan)
+
+
+def test_ilk_uretimde_baslangictan_bugune_tum_donemler():
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(baslangic_tarihi=date(2026, 1, 1)), bugun=date(2026, 4, 15)
+    )
+    assert donemler == [date(2026, 1, 1), date(2026, 2, 1), date(2026, 3, 1), date(2026, 4, 1)]
+
+
+def test_son_uretilen_donemden_sonrasi_uretilir():
+    """Zaten üretilmiş dönem tekrar gelmemeli — mükerrer gider oluşmaz."""
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(son_uretilen_donem=date(2026, 2, 1)), bugun=date(2026, 4, 15)
+    )
+    assert donemler == [date(2026, 3, 1), date(2026, 4, 1)]
+
+
+def test_ayin_31i_kisa_aylarda_son_gune_kirpilir():
+    """31'inde tekrarlayan gider şubatta 28'ine düşmeli, atlanmamalı."""
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(ayin_gunu=31, baslangic_tarihi=date(2026, 1, 31)),
+        bugun=date(2026, 4, 30),
+    )
+    assert donemler == [
+        date(2026, 1, 31),
+        date(2026, 2, 28),
+        date(2026, 3, 31),
+        date(2026, 4, 30),
+    ]
+
+
+def test_bitis_tarihinden_sonrasi_uretilmez():
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(bitis_tarihi=date(2026, 2, 28)), bugun=date(2026, 6, 1)
+    )
+    assert donemler == [date(2026, 1, 1), date(2026, 2, 1)]
+
+
+def test_pasif_sablon_uretmez():
+    assert hesapla_bekleyen_donemler(_sablon(aktif=False), bugun=date(2026, 6, 1)) == []
+
+
+def test_gelecek_baslangicli_sablon_uretmez():
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(baslangic_tarihi=date(2027, 1, 1)), bugun=date(2026, 6, 1)
+    )
+    assert donemler == []
+
+
+def test_yillik_periyot():
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(periyot="yillik", baslangic_tarihi=date(2024, 3, 1), ayin_gunu=1),
+        bugun=date(2026, 6, 1),
+    )
+    assert donemler == [date(2024, 3, 1), date(2025, 3, 1), date(2026, 3, 1)]
+
+
+def test_uzun_sure_calistirilmamis_sablon_sinirlanir():
+    """Yıllarca çalıştırılmamış şablon tek seferde yüzlerce kayıt üretmemeli."""
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(baslangic_tarihi=date(2015, 1, 1)), bugun=date(2026, 6, 1)
+    )
+    assert len(donemler) == MAX_DONEM_PER_SABLON
+
+
+def test_ayin_gunu_baslangictan_once_ise_sonraki_doneme_kayar():
+    """Başlangıç ayın 15'i ama şablon 1'inde tekrarlıyorsa ocak atlanır."""
+    donemler = hesapla_bekleyen_donemler(
+        _sablon(baslangic_tarihi=date(2026, 1, 15), ayin_gunu=1),
+        bugun=date(2026, 3, 10),
+    )
+    assert donemler == [date(2026, 2, 1), date(2026, 3, 1)]

@@ -1406,6 +1406,59 @@ export interface BorcluHasta {
     son_islem_tarihi?: string;
 }
 
+export interface DuzenliGider {
+    id: number;
+    ad: string;
+    tutar: number;
+    periyot: string;
+    ayin_gunu: number;
+    baslangic_tarihi: string;
+    bitis_tarihi?: string | null;
+    son_uretilen_donem?: string | null;
+    kategori_id?: number | null;
+    firma_id?: number | null;
+    kasa_id?: number | null;
+    aciklama?: string | null;
+    aktif: boolean;
+    created_at?: string;
+}
+
+export interface DuzenliGiderCreate {
+    ad: string;
+    tutar: number;
+    periyot?: string;
+    ayin_gunu?: number;
+    baslangic_tarihi: string;
+    bitis_tarihi?: string | null;
+    kategori_id?: number | null;
+    firma_id?: number | null;
+    kasa_id?: number | null;
+    aciklama?: string | null;
+    aktif?: boolean;
+}
+
+export interface BekleyenUretim {
+    sablon_id: number;
+    ad: string;
+    tutar: number;
+    donemler: string[];
+    adet: number;
+    toplam_tutar: number;
+}
+
+export interface UretimSonuc {
+    adet: number;
+    toplam_tutar: number;
+    islemler: {
+        sablon_id: number;
+        sablon_adi: string;
+        islem_id: number;
+        referans_kodu: string;
+        tarih: string;
+        tutar: number;
+    }[];
+}
+
 export interface EkstreSatiri {
     tarih: string;
     referans_kodu: string;

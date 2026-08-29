@@ -183,6 +183,34 @@ class FinansOdeme(Base):
     taksitler = relationship("FinansTaksit", backref=backref("odeme", lazy="selectin"), cascade="all, delete-orphan", lazy="raise")
 
 
+class DuzenliGider(Base):
+    """
+    Tekrar eden gider şablonu (kira, maaş, abonelik).
+
+    Şablonun kendisi bir gider DEĞİLDİR; ondan dönem dönem FinansIslem üretilir.
+    son_uretilen_donem, aynı dönemin iki kez üretilmesini engeller.
+    """
+
+    __tablename__ = "duzenli_giderler"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True)
+    ad = Column(String(200), nullable=False)
+    tutar = Column(Numeric(12, 2), nullable=False)
+    periyot = Column(String(20), nullable=False, default="aylik")  # aylik, yillik
+    ayin_gunu = Column(Integer, nullable=False, default=1)  # 1-28 arası önerilir
+    baslangic_tarihi = Column(Date, nullable=False)
+    bitis_tarihi = Column(Date, nullable=True)
+    son_uretilen_donem = Column(Date, nullable=True)
+    kategori_id = Column(Integer, ForeignKey("finans_kategoriler.id"), nullable=True)
+    firma_id = Column(Integer, ForeignKey("firmalar.id"), nullable=True)
+    kasa_id = Column(Integer, ForeignKey("kasalar.id"), nullable=True)
+    aciklama = Column(Text, nullable=True)
+    aktif = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
 class FinansTaksit(Base):
     __tablename__ = "finans_taksitler"
     __table_args__ = {"extend_existing": True}
