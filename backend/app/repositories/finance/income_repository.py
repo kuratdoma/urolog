@@ -482,6 +482,87 @@ class IncomeRepository:
             for r in rows
         ]
 
+    async def get_patient_statement(
+        self,
+        patient_id: UUID,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+    ) -> dict:
+        """
+        Hasta cari ekstresi: tarih sıralı hareket dökümü ve yürüyen bakiye.
+
+        Her tahakkuk borç, her tahsilat alacak satırı olarak ayrı yazılır —
+        hastaya verilebilir bir hesap özeti bu ayrımı gerektirir.
+        """
+        filters = [
+            FinansIslem.hasta_id == patient_id,
+            FinansIslem.is_deleted == False,
+            FinansIslem.durum != "iptal",
+        ]
+        if start_date:
+            filters.append(FinansIslem.tarih >= start_date)
+        if end_date:
+            filters.append(FinansIslem.tarih <= end_date)
+
+        islemler = (
+            (
+                await self.session.execute(
+                    select(FinansIslem)
+                    .options(selectinload(FinansIslem.odemeler))
+                    .where(and_(*filters))
+                    .order_by(FinansIslem.tarih.asc(), FinansIslem.id.asc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        satirlar = []
+        for tx in islemler:
+            isaret = 1 if tx.islem_tipi == "gelir" else -1
+            satirlar.append(
+                {
+                    "tarih": tx.tarih,
+                    "referans_kodu": tx.referans_kodu,
+                    "aciklama": tx.aciklama or ("Hizmet bedeli" if isaret > 0 else "Gider/İade"),
+                    "tip": "borc",
+                    "borc": float(tx.net_tutar or 0) * isaret,
+                    "alacak": 0.0,
+                }
+            )
+            for odeme in tx.odemeler:
+                satirlar.append(
+                    {
+                        "tarih": odeme.odeme_tarihi,
+                        "referans_kodu": tx.referans_kodu,
+                        "aciklama": f"Tahsilat — {odeme.odeme_yontemi}",
+                        "tip": "alacak",
+                        "borc": 0.0,
+                        "alacak": float(odeme.tutar or 0) * isaret,
+                    }
+                )
+
+        # Tahsilat, tahakkuktan farklı tarihte olabilir; ekstre tarihe göre sıralanır
+        satirlar.sort(key=lambda r: (r["tarih"], r["tip"] == "alacak"))
+
+        yuruyen = 0.0
+        for r in satirlar:
+            yuruyen = round(yuruyen + r["borc"] - r["alacak"], 2)
+            r["bakiye"] = yuruyen
+
+        toplam_borc = round(sum(r["borc"] for r in satirlar), 2)
+        toplam_alacak = round(sum(r["alacak"] for r in satirlar), 2)
+
+        return {
+            "hasta_id": patient_id,
+            "baslangic": start_date,
+            "bitis": end_date,
+            "toplam_borc": toplam_borc,
+            "toplam_alacak": toplam_alacak,
+            "bakiye": round(toplam_borc - toplam_alacak, 2),
+            "satirlar": satirlar,
+        }
+
     async def sync_transaction_status(self, tx_id: int) -> Optional[str]:
         """
         Tahsilat durumuna göre işlem durumunu günceller.

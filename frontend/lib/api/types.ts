@@ -1406,6 +1406,26 @@ export interface BorcluHasta {
     son_islem_tarihi?: string;
 }
 
+export interface EkstreSatiri {
+    tarih: string;
+    referans_kodu: string;
+    aciklama: string;
+    tip: 'borc' | 'alacak';
+    borc: number;
+    alacak: number;
+    bakiye: number;
+}
+
+export interface HastaEkstre {
+    hasta_id: string;
+    baslangic?: string | null;
+    bitis?: string | null;
+    toplam_borc: number;
+    toplam_alacak: number;
+    bakiye: number;
+    satirlar: EkstreSatiri[];
+}
+
 export interface AcikIslem {
     id: number;
     referans_kodu: string;

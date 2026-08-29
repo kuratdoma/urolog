@@ -371,6 +371,16 @@ export default function FinanceHelpPage() {
                                 </p>
                             </div>
                             <div className="p-4">
+                                <p className="font-medium text-slate-900 text-sm">Hasta birden fazla borcunu tek seferde ödüyor</p>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    Hasta cari sayfasında <span className="font-medium">Toplu Tahsilat</span> kullanın.
+                                    Girdiğiniz tutar açık borçlara <span className="font-medium">en eski vadeden başlayarak</span> otomatik
+                                    dağıtılır; hangi faturaya ne yazılacağını elle hesaplamanız gerekmez.
+                                    Aynı sayfadaki <span className="font-medium">Ekstre</span> butonu hastaya verilebilir
+                                    hesap dökümü üretir.
+                                </p>
+                            </div>
+                            <div className="p-4">
                                 <p className="font-medium text-slate-900 text-sm">Hasta sonradan ödeme yaptı, nasıl işlerim?</p>
                                 <p className="text-sm text-slate-600 mt-1">
                                     İlgili işlemi açın ve <span className="font-medium">Tahsilat Ekle</span> butonunu kullanın.

@@ -39,6 +39,7 @@ from app.schemas.finance import (
     FinansTaksitResponse,
     HastaCariResponse,
     AcikIslemResponse,
+    HastaEkstreResponse,
     TopluTahsilatRequest,
     TopluTahsilatResponse,
     KategoriKirilimResponse,
@@ -726,6 +727,24 @@ async def get_hasta_cari(hasta_id: str, db: AsyncSession = Depends(deps.get_db))
     repo = IncomeRepository(db)
     cari = await repo.get_patient_balance(UUID(hasta_id))
     return HastaCariResponse(**cari)
+
+
+@router.get("/patients/{hasta_id}/statement", response_model=HastaEkstreResponse)
+async def get_hasta_ekstre(
+    hasta_id: str,
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    db: AsyncSession = Depends(deps.get_db),
+) -> Any:
+    """
+    Hasta cari ekstresi — tarih sıralı borç/alacak dökümü ve yürüyen bakiye.
+
+    Hastaya verilebilir hesap özeti; her tahakkuk ve her tahsilat ayrı satır.
+    """
+    repo = IncomeRepository(db)
+    return await repo.get_patient_statement(
+        UUID(hasta_id), start_date=start_date, end_date=end_date
+    )
 
 
 @router.get(

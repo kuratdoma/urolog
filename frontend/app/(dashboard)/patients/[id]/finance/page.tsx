@@ -22,7 +22,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
-import { Plus, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Loader2, Printer, Minus, Layers } from "lucide-react";
+import { Plus, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Loader2, Printer, Minus, Layers, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -267,6 +267,12 @@ export default function FinancePage() {
 
                 {/* Actions & List */}
                 <div className="flex justify-end gap-3">
+                    <Button
+                        onClick={() => window.open(`/print/statement?patient=${patientId}`, "_blank")}
+                        variant="outline"
+                    >
+                        <FileText className="h-4 w-4 mr-2" /> Ekstre
+                    </Button>
                     <Button
                         onClick={openBulkDialog}
                         variant="outline"

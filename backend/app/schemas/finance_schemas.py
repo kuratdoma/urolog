@@ -404,6 +404,26 @@ class AylikOzetResponse(BaseModel):
 # =============================================================================
 # FİLTRELEME
 # =============================================================================
+class EkstreSatiriResponse(BaseModel):
+    tarih: date
+    referans_kodu: str
+    aciklama: str
+    tip: str  # 'borc' | 'alacak'
+    borc: float = 0
+    alacak: float = 0
+    bakiye: float = 0
+
+
+class HastaEkstreResponse(BaseModel):
+    hasta_id: UUID
+    baslangic: Optional[date] = None
+    bitis: Optional[date] = None
+    toplam_borc: float = 0
+    toplam_alacak: float = 0
+    bakiye: float = 0
+    satirlar: List[EkstreSatiriResponse] = []
+
+
 class AcikIslemResponse(BaseModel):
     """Toplu tahsilat ekranında listelenecek açık borç satırı."""
     id: int

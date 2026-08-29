@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 import {
-    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, KategoriKirilim, YaslandirmaKova, AcikIslem, TopluTahsilatSonuc, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
+    AylikOzet, BorcluHasta, FinansHizmet, FinansHizmetCreate, FinansIslem, FinansIslemCreate, FinansIslemFilters, FinansKasa, FinansKasaCreate, FinansKategori, FinansKategoriCreate, FinansOzet, FinansTaksit, Firma, KategoriKirilim, YaslandirmaKova, AcikIslem, TopluTahsilatSonuc, HastaEkstre, FirmaBorcOzet, FirmaCreate, GunlukOzet, HastaCari, KasaHareket
 } from './types';
 
 export const financeApi = {
@@ -122,6 +122,13 @@ export const financeApi = {
             apiFetch<FinansIslem[]>(`/api/v1/finance/patients/${hastaId}/transactions`),
         getPatientBalance: (hastaId: string) =>
             apiFetch<HastaCari>(`/api/v1/finance/patients/${hastaId}/balance`),
+        getPatientStatement: (hastaId: string, startDate?: string, endDate?: string) => {
+            const p = new URLSearchParams();
+            if (startDate) p.set('start_date', startDate);
+            if (endDate) p.set('end_date', endDate);
+            const q = p.toString();
+            return apiFetch<HastaEkstre>(`/api/v1/finance/patients/${hastaId}/statement${q ? `?${q}` : ''}`);
+        },
         getOpenTransactions: (hastaId: string) =>
             apiFetch<AcikIslem[]>(`/api/v1/finance/patients/${hastaId}/open-transactions`),
         collectBulk: (hastaId: string, data: {
