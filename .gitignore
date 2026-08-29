@@ -9,6 +9,10 @@ Thumbs.db
 *.env
 .env.ade
 .env.*
+# Şablon depoda tutulur: hangi değişkenlerin tanımlanması gerektiğini gösterir.
+# Tüm hassas alanları boş/placeholder olmalı — gerçek değer asla girilmez.
+!.env.example
+!backend/.env.example
 
 
 # Data Files (Sensitive Patient Data)
