@@ -12,6 +12,7 @@ import {
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -27,21 +28,36 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { StockProduct } from "@/lib/api";
+import { StockMovementCreate, StockProduct } from "@/lib/api";
 
-const formSchema = z.object({
-    hareket_tipi: z.enum(["GIRIS", "CIKIS", "DUZELTME"]),
-    miktar: z.coerce.number().min(1, "Miktar en az 1 olmalıdır"),
-    kaynak: z.string().optional(),
-    notlar: z.string().optional(),
-});
+const formSchema = z
+    .object({
+        hareket_tipi: z.enum(["GIRIS", "CIKIS", "DUZELTME"]),
+        // DUZELTME'de miktar "sayımda bulunan gerçek stok"tur ve 0 olabilir.
+        miktar: z.coerce.number().int("Miktar tam sayı olmalıdır").min(0),
+        kaynak: z.string().optional(),
+        notlar: z.string().optional(),
+    })
+    .refine((v) => v.hareket_tipi === "DUZELTME" || v.miktar >= 1, {
+        message: "Giriş ve çıkış için miktar en az 1 olmalıdır",
+        path: ["miktar"],
+    });
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface MovementDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     product: StockProduct | null;
-    onSubmit: (values: any) => Promise<void>;
+    onSubmit: (values: StockMovementCreate) => Promise<void>;
 }
+
+const DEFAULTS: FormValues = {
+    hareket_tipi: "CIKIS",
+    miktar: 1,
+    kaynak: "Manuel",
+    notlar: "",
+};
 
 export function MovementDialog({
     open,
@@ -49,37 +65,32 @@ export function MovementDialog({
     product,
     onSubmit,
 }: MovementDialogProps) {
-    const form = useForm<z.infer<typeof formSchema>>({
+    const form = useForm<FormValues>({
         resolver: zodResolver(formSchema) as any,
-        defaultValues: {
-            hareket_tipi: "CIKIS",
-            miktar: 1,
-            kaynak: "Manuel",
-            notlar: "",
-        },
+        defaultValues: DEFAULTS,
     });
 
     useEffect(() => {
-        if (open) {
-            form.reset({
-                hareket_tipi: "CIKIS",
-                miktar: 1,
-                kaynak: "Manuel",
-                notlar: "",
-            });
-        }
+        if (open) form.reset(DEFAULTS);
     }, [open, form]);
 
-    const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-        if (!product) return;
+    const hareketTipi = form.watch("hareket_tipi");
+    const miktar = Number(form.watch("miktar")) || 0;
+    const mevcut = product?.mevcut_stok ?? 0;
 
-        // API şemasına uygun hale getir
-        const payload = {
-            urun_id: product.id,
-            ...values
-        };
+    // Kaydedildiğinde stok ne olacak? Kullanıcı göndermeden önce görsün.
+    const sonucStok =
+        hareketTipi === "DUZELTME"
+            ? miktar
+            : hareketTipi === "CIKIS"
+                ? mevcut - miktar
+                : mevcut + miktar;
 
-        await onSubmit(payload);
+    const yetersizStok = hareketTipi === "CIKIS" && sonucStok < 0;
+
+    const handleSubmit = async (values: FormValues) => {
+        if (!product || yetersizStok) return;
+        await onSubmit({ urun_id: product.id, ...values });
         onOpenChange(false);
     };
 
@@ -93,10 +104,20 @@ export function MovementDialog({
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                        <div className="p-4 bg-muted rounded-md mb-4 text-sm">
+                        <div className="p-4 bg-muted rounded-md mb-4 text-sm space-y-1">
                             <div className="flex justify-between">
                                 <span>Mevcut Stok:</span>
-                                <span className="font-bold">{product.mevcut_stok} {product.birim}</span>
+                                <span className="font-bold">
+                                    {mevcut} {product.birim}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>İşlem Sonrası:</span>
+                                <span
+                                    className={`font-bold ${yetersizStok ? "text-red-500" : "text-green-600"}`}
+                                >
+                                    {sonucStok} {product.birim}
+                                </span>
                             </div>
                         </div>
 
@@ -133,10 +154,21 @@ export function MovementDialog({
                                 name="miktar"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Miktar</FormLabel>
+                                        <FormLabel>
+                                            {hareketTipi === "DUZELTME" ? "Sayılan Stok" : "Miktar"}
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="number" min="1" {...field} />
+                                            <Input
+                                                type="number"
+                                                min={hareketTipi === "DUZELTME" ? 0 : 1}
+                                                {...field}
+                                            />
                                         </FormControl>
+                                        {hareketTipi === "DUZELTME" && (
+                                            <FormDescription>
+                                                Sayımda bulunan gerçek adet. Fark otomatik hesaplanır.
+                                            </FormDescription>
+                                        )}
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -186,8 +218,16 @@ export function MovementDialog({
                             )}
                         />
 
+                        {yetersizStok && (
+                            <p className="text-sm text-red-500">
+                                Yetersiz stok: en fazla {mevcut} {product.birim} çıkış yapılabilir.
+                            </p>
+                        )}
+
                         <DialogFooter>
-                            <Button type="submit">Kaydet</Button>
+                            <Button type="submit" disabled={yetersizStok}>
+                                Kaydet
+                            </Button>
                         </DialogFooter>
                     </form>
                 </Form>

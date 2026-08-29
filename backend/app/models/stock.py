@@ -29,20 +29,26 @@ class StokUrun(Base):
     marka = Column(String(100), nullable=True, index=True)
     urun_tipi = Column(String(50), nullable=True)  # Malzeme, İlaç, Sarf
     birim = Column(String(20), nullable=True)  # Adet, Kutu, Paket
-    birim_fiyat = Column(Numeric(10, 2), default=0)
+    birim_fiyat = Column(Numeric(10, 2), default=0)  # Son alış / liste fiyatı
+    # Ağırlıklı ortalama maliyet — envanter değerlemesi bunun üzerinden yapılır.
+    # Her alımda yeniden hesaplanır; son alış fiyatıyla değerleme yapmak
+    # fiyat dalgalanmasında stok değerini yanıltıcı gösterir.
+    ortalama_maliyet = Column(Numeric(12, 4), default=0)
     mevcut_stok = Column(Integer, default=0)
     min_stok = Column(Integer, default=5)
-    barkod = Column(String(50), nullable=True, index=True)
+    barkod = Column(String(50), nullable=True, index=True, unique=True)
     aktif = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # İlişkiler
+    # lazy="select": ürün listeleme sorguları her ürünün tüm alım/hareket
+    # geçmişini çekmesin. Gerektiğinde selectinload() ile açıkça yüklenir.
     alimlar = relationship(
-        "StokAlim", back_populates="urun", cascade="all, delete-orphan", lazy="selectin"
+        "StokAlim", back_populates="urun", cascade="all, delete-orphan", lazy="select"
     )
     hareketler = relationship(
-        "StokHareket", back_populates="urun", cascade="all, delete-orphan", lazy="selectin"
+        "StokHareket", back_populates="urun", cascade="all, delete-orphan", lazy="select"
     )
 
 
@@ -61,7 +67,7 @@ class StokAlim(Base):
     notlar = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    urun = relationship("StokUrun", back_populates="alimlar", lazy="selectin")
+    urun = relationship("StokUrun", back_populates="alimlar", lazy="select")
 
 
 class StokHareket(Base):
@@ -81,4 +87,4 @@ class StokHareket(Base):
     kullanici_id = Column(Integer, nullable=True)  # İşlemi yapan
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    urun = relationship("StokUrun", back_populates="hareketler", lazy="selectin")
+    urun = relationship("StokUrun", back_populates="hareketler", lazy="select")

@@ -339,13 +339,18 @@ export interface AuditLog {
 }
 
 // API methods
+export type StockMovementType = 'GIRIS' | 'CIKIS' | 'DUZELTME';
+
 export interface StockProduct {
     id: number;
     urun_adi: string;
     marka?: string;
     urun_tipi?: string;
     birim?: string;
+    /** Son alış / liste fiyatı */
     birim_fiyat?: number;
+    /** Ağırlıklı ortalama maliyet — envanter değerlemesi bunu kullanır */
+    ortalama_maliyet?: number;
     mevcut_stok: number;
     min_stok?: number;
     barkod?: string;
@@ -366,7 +371,8 @@ export interface StockMovement {
     id: number;
     urun_id: number;
     hasta_id?: string;
-    hareket_tipi: string;
+    hareket_tipi: StockMovementType;
+    /** Kayıtlı ledger farkı: çıkışlarda negatif, girişlerde pozitif */
     miktar: number;
     islem_tarihi?: string;
     kaynak?: string;
@@ -377,6 +383,17 @@ export interface StockMovement {
     hasta_adi?: string;
 }
 
+export interface StockMovementCreate {
+    urun_id: number;
+    hareket_tipi: StockMovementType;
+    /** GIRIS/CIKIS: değişim miktarı. DUZELTME: sayımda bulunan gerçek stok. */
+    miktar: number;
+    hasta_id?: string;
+    kaynak?: string;
+    kaynak_ref?: string;
+    notlar?: string;
+}
+
 export interface StockPurchase {
     id: number;
     urun_id: number;
@@ -385,6 +402,18 @@ export interface StockPurchase {
     miktar: number;
     birim_fiyat: number;
     toplam_tutar: number;
+    fatura_no?: string;
+    notlar?: string;
+    urun_adi?: string;
+}
+
+export interface StockPurchaseCreate {
+    urun_id: number;
+    miktar: number;
+    birim_fiyat: number;
+    firma_id?: number;
+    alim_tarihi?: string;
+    toplam_tutar?: number;
     fatura_no?: string;
     notlar?: string;
 }

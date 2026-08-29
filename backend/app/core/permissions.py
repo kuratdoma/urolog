@@ -104,10 +104,12 @@ PERMISSION_MATRIX: Dict[str, Dict[UserRole, FrozenSet[Action]]] = {
         UserRole.FRONTDESK: _NONE,
         UserRole.TECHNICIAN: _NONE,
     },
+    # DOCTOR/NURSE: sarf kaydı (stok hareketi) girebilmeleri gerektiği için
+    # CREATE yetkisi var; ürün kartını düzenleme ve silme ADMIN'e özel.
     "stock": {
         UserRole.ADMIN: _CRUD,
-        UserRole.DOCTOR: _R_ONLY,
-        UserRole.NURSE: _R_ONLY,
+        UserRole.DOCTOR: _CR,
+        UserRole.NURSE: _CR,
         UserRole.FRONTDESK: _NONE,
         UserRole.TECHNICIAN: _NONE,
     },
