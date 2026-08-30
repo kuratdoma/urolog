@@ -30,6 +30,9 @@ import/
 backend/response.json
 *.txt
 !requirements.txt
+!requirements-dev.txt
+!**/requirements.txt
+!**/requirements-dev.txt
 *.log
 _bmad-output
 _bmad

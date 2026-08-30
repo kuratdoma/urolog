@@ -5,8 +5,9 @@ import path from "path";
 export default defineConfig({
     plugins: [react()],
     test: {
-        environment: "jsdom",
+        environment: "happy-dom",
         globals: true,
+        pool: "threads",
         setupFiles: ["./vitest.setup.ts"],
         // Şimdilik yalnızca açıkça test yazılmış alanlar. Kapsam genişledikçe
         // bu desen gevşetilebilir.
