@@ -393,7 +393,7 @@ from pydantic import BaseModel as _BM
 from app.schemas.clinical import MuayeneResponse
 from app.schemas.appointment import RandevuResponse
 from app.repositories.appointment_repository import AppointmentRepository
-from app.controllers.legacy_adapters.clinical_adapter import ClinicalAdapter
+from app.controllers.legacy_adapters.clinical_adapter import ClinicalLegacyAdapter
 
 
 class PatientBootstrapResponse(_BM):
@@ -433,7 +433,7 @@ async def get_patient_bootstrap(
         ip_address=request.client.host,
     )
     controller = PatientController(db, context)
-    adapter = ClinicalAdapter(db)
+    adapter = ClinicalLegacyAdapter(db)
     apt_repo = AppointmentRepository(db)
     str_id = str(id)
 

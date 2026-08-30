@@ -25,8 +25,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 _BTREE_INDEXES = [
     # (index_name, table, columns, where)
-    ("ix_randevular_patient_timeline", "randevular", "hasta_id, start DESC", "is_deleted = FALSE"),
-    ("ix_randevu_tarihce_patient", "randevu_tarihcesi", "hasta_id, created_at DESC", None),
+    ("ix_randevular_patient_timeline", "randevular", "hasta_id, start DESC", "is_deleted = 0"),
+    ("ix_randevu_tarihce_patient", "randevu_tarihce", "hasta_id, created_at DESC", None),
     ("ix_dosyalar_patient_timeline", "sharded_clinical_dosyalar", "hasta_id, created_at DESC", "is_deleted = FALSE"),
 ]
 
