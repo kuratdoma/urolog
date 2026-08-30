@@ -9,7 +9,7 @@
  * kilitleniyor.
  */
 import React from "react";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { DebouncedTextarea, DebouncedInput } from "./DebouncedText";
@@ -59,6 +59,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    vi.clearAllTimers();
     vi.useRealTimers();
 });
 
@@ -66,13 +67,13 @@ describe("DebouncedTextarea", () => {
     it("yazılan metni anında gösterir ama üst bileşene hemen bildirmez", () => {
         const onChange = vi.fn();
         render(<Harness onValueChange={onChange} />);
-        const box = screen.getByLabelText("sikayet");
+        const box = screen.getByLabelText("sikayet") as HTMLTextAreaElement;
 
-        type(box, "bas agrisi");
+        type(box, "hematuri");
 
-        // Ekrana anında yansımalı — sorunun kaynağı buydu.
-        expect(box).toHaveValue("bas agrisi");
-        // Üst bileşen henüz haberdar olmamalı.
+        // Yerel input DOM'unda anında görünür...
+        expect(box.value).toBe("hematuri");
+        // ...ama henüz delay dolmadığı için üst bileşen haberdar değildir.
         expect(onChange).not.toHaveBeenCalled();
     });
 
@@ -97,7 +98,7 @@ describe("DebouncedTextarea", () => {
 
         type(box, "hematuri");
         act(() => {
-            box.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+            fireEvent.blur(box);
         });
 
         // Kaydet butonuna basmadan önce blur olur; metin kaybolmamalı.

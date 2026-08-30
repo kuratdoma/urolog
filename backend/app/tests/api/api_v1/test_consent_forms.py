@@ -97,6 +97,8 @@ def test_preview_consent_form(mock_list_forms, mock_generate, monkeypatch):
         ozgecmis = None
         kullandigi_ilaclar = None
         aliskanliklar = None
+        allerjiler = None
+        sonuc = None
 
     async def mock_execute(query):
         query_str = str(query)

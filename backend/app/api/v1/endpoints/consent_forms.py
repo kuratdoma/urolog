@@ -186,12 +186,12 @@ async def preview_consent_form(
         doktor_adi_soyadi=doktor_adi,
         tarih=tarih,
         saat=saat,
-        sikayet=son_muayene.sikayet if son_muayene else None,
-        ozgecmis=son_muayene.ozgecmis if son_muayene else None,
-        ilaclar=son_muayene.kullandigi_ilaclar if son_muayene else None,
-        allerjiler=son_muayene.allerjiler if son_muayene else None,
-        sigara_durumu=format_aliskanliklar(son_muayene.aliskanliklar) if son_muayene else None,
-        karar=son_muayene.sonuc if son_muayene else None,
+        sikayet=getattr(son_muayene, "sikayet", None) if son_muayene else None,
+        ozgecmis=getattr(son_muayene, "ozgecmis", None) if son_muayene else None,
+        ilaclar=getattr(son_muayene, "kullandigi_ilaclar", None) if son_muayene else None,
+        allerjiler=getattr(son_muayene, "allerjiler", None) if son_muayene else None,
+        sigara_durumu=format_aliskanliklar(getattr(son_muayene, "aliskanliklar", None)) if son_muayene else None,
+        karar=getattr(son_muayene, "sonuc", None) if son_muayene else None,
     )
 
     try:
