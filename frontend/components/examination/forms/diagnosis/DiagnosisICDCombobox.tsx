@@ -6,7 +6,10 @@ import { searchStaticICD, lookupICDName } from "@/lib/icd-codes";
 import { ICDTani } from "@/lib/api";
 
 // Otomatik tamamlama isteklerinin bekleme süresi (ms).
-const SEARCH_DEBOUNCE_MS = 300;
+// Sunucu tarafı artık sorgu başına önbelleğe alındığından (bkz. icd-search
+// endpoint'i), daha kısa bir gecikme fazladan yük getirmeden daha anlık
+// hissettiriyor.
+const SEARCH_DEBOUNCE_MS = 150;
 
 interface DiagnosisICDComboboxProps {
     label: string;

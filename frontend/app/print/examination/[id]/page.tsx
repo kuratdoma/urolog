@@ -30,12 +30,8 @@ function PrintPageContent() {
     const [allLabs, setAllLabs] = useState<any[]>([]);
     const [allImagings, setAllImagings] = useState<any[]>([]);
 
-    const [selectedLabIds, setSelectedLabIds] = useState<string[]>(
-        labParam ? labParam.split(",").filter(Boolean) : []
-    );
-    const [selectedImagingIds, setSelectedImagingIds] = useState<string[]>(
-        imagingParam ? imagingParam.split(",").filter(Boolean) : []
-    );
+    const [selectedLabIds, setSelectedLabIds] = useState<string[]>([]);
+    const [selectedImagingIds, setSelectedImagingIds] = useState<string[]>([]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -60,12 +56,57 @@ function PrintPageContent() {
                     setAllLabs(labsData || []);
                     setAllImagings(imagingsData || []);
 
-                    // If URL parameters were provided, update selection state
-                    if (labParam !== null) {
-                        setSelectedLabIds(labParam ? labParam.split(",").filter(Boolean) : []);
+                    // Read cached selection from localStorage if available
+                    let storedSelection: { labs?: string[]; imaging?: string[] } | null = null;
+                    try {
+                        const rawStored = localStorage.getItem(`urolog_print_exam_${id}`);
+                        if (rawStored) {
+                            storedSelection = JSON.parse(rawStored);
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse cached print selection", e);
                     }
-                    if (imagingParam !== null) {
-                        setSelectedImagingIds(imagingParam ? imagingParam.split(",").filter(Boolean) : []);
+
+                    // Resolve selectedLabIds
+                    if (labParam === "all") {
+                        setSelectedLabIds((labsData || []).map((l: any) => l.id));
+                    } else if (labParam === "none") {
+                        setSelectedLabIds([]);
+                    } else if (labParam === "storage" || labParam === "custom") {
+                        if (storedSelection && Array.isArray(storedSelection.labs)) {
+                            setSelectedLabIds(storedSelection.labs);
+                        } else {
+                            setSelectedLabIds((labsData || []).map((l: any) => l.id));
+                        }
+                    } else if (labParam) {
+                        setSelectedLabIds(labParam.split(",").filter(Boolean));
+                    } else {
+                        if (storedSelection && Array.isArray(storedSelection.labs)) {
+                            setSelectedLabIds(storedSelection.labs);
+                        } else {
+                            setSelectedLabIds((labsData || []).map((l: any) => l.id));
+                        }
+                    }
+
+                    // Resolve selectedImagingIds
+                    if (imagingParam === "all") {
+                        setSelectedImagingIds((imagingsData || []).map((i: any) => i.id));
+                    } else if (imagingParam === "none") {
+                        setSelectedImagingIds([]);
+                    } else if (imagingParam === "storage" || imagingParam === "custom") {
+                        if (storedSelection && Array.isArray(storedSelection.imaging)) {
+                            setSelectedImagingIds(storedSelection.imaging);
+                        } else {
+                            setSelectedImagingIds((imagingsData || []).map((i: any) => i.id));
+                        }
+                    } else if (imagingParam) {
+                        setSelectedImagingIds(imagingParam.split(",").filter(Boolean));
+                    } else {
+                        if (storedSelection && Array.isArray(storedSelection.imaging)) {
+                            setSelectedImagingIds(storedSelection.imaging);
+                        } else {
+                            setSelectedImagingIds((imagingsData || []).map((i: any) => i.id));
+                        }
                     }
                 }
             } catch (error) {

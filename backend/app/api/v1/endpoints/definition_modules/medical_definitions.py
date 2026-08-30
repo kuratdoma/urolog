@@ -218,7 +218,39 @@ async def get_icd_codes(
     db: AsyncSession = Depends(deps.get_db)
 ):
     repo = SystemRepository(db)
-    return await repo.get_icd_codes(search=q, limit=limit)
+    return await repo.search_icd(query=q, limit=limit)
+
+
+@router.get("/icd-search")
+@cache(expire=3600, namespace=CacheNS.ICD)
+async def search_icd_codes(
+    q: str = Query(..., description="Arama terimi (kod veya başlık)"),
+    limit: int = Query(20, description="Döndürülecek maksimum kayıt sayısı", le=100),
+    db: AsyncSession = Depends(deps.get_db)
+):
+    repo = SystemRepository(db)
+    return await repo.search_icd_ranked(q, limit=limit)
+
+
+@router.get("/icd-lookup")
+@cache(expire=3600, namespace=CacheNS.ICD)
+async def lookup_icd_code(
+    code: str = Query(..., description="Aranacak ICD kodu"),
+    db: AsyncSession = Depends(deps.get_db)
+):
+    repo = SystemRepository(db)
+    names = await repo.lookup_icd_names([code])
+    name = names.get(code.strip().upper())
+    return {"code": code, "name": name, "found": name is not None}
+
+
+@router.post("/icd-lookup-batch")
+async def lookup_icd_codes_batch(
+    codes: List[str],
+    db: AsyncSession = Depends(deps.get_db)
+):
+    repo = SystemRepository(db)
+    return await repo.lookup_icd_names(codes)
 
 
 @router.get("/icd/{kod}")

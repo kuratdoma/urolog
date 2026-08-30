@@ -4,6 +4,7 @@ server {
 
     # Max body size
     client_max_body_size 100M;
+    large_client_header_buffers 4 32k;
 
     # Frontend
     location / {
@@ -45,6 +46,7 @@ server {
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
 
     client_max_body_size 100M;
+    large_client_header_buffers 4 32k;
 
     # Frontend
     location / {

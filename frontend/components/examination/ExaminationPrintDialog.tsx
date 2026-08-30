@@ -215,10 +215,42 @@ export function ExaminationPrintDialog({
         const queryParams = new URLSearchParams();
 
         if (includeLabs && selectedLabIds.length > 0) {
-            queryParams.set("labs", selectedLabIds.join(","));
+            if (selectedLabIds.length === labs.length) {
+                queryParams.set("labs", "all");
+            } else if (selectedLabIds.length <= 20) {
+                queryParams.set("labs", selectedLabIds.join(","));
+            } else {
+                queryParams.set("labs", "storage");
+            }
+        } else {
+            queryParams.set("labs", "none");
         }
+
         if (includeImaging && selectedImagingIds.length > 0) {
-            queryParams.set("imaging", selectedImagingIds.join(","));
+            if (selectedImagingIds.length === imagings.length) {
+                queryParams.set("imaging", "all");
+            } else if (selectedImagingIds.length <= 20) {
+                queryParams.set("imaging", selectedImagingIds.join(","));
+            } else {
+                queryParams.set("imaging", "storage");
+            }
+        } else {
+            queryParams.set("imaging", "none");
+        }
+
+        try {
+            localStorage.setItem(
+                `urolog_print_exam_${examId}`,
+                JSON.stringify({
+                    labs: selectedLabIds,
+                    imaging: selectedImagingIds,
+                    includeLabs,
+                    includeImaging,
+                    timestamp: Date.now()
+                })
+            );
+        } catch (e) {
+            console.error("Failed to cache print selection to localStorage", e);
         }
 
         const queryString = queryParams.toString();
