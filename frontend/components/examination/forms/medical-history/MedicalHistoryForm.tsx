@@ -1,7 +1,8 @@
 import React from "react";
+import { propsEqualWithShallowValue } from "@/components/examination/shared/memoValue";
 import { MedicalHistoryData } from "./schema";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { DebouncedTextarea } from "@/components/examination/shared/DebouncedText";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SystemQueryCombobox } from "@/components/ui/system-query-combobox";
@@ -15,12 +16,12 @@ interface MedicalHistoryFormProps {
 }
 
 // Separate section for Özgeçmiş (used standalone in ClinicalCard)
-export const PastHistorySection: React.FC<MedicalHistoryFormProps> = ({ value, onChange, readOnly }) => (
+const PastHistorySectionBase: React.FC<MedicalHistoryFormProps> = ({ value, onChange, readOnly }) => (
     <div className="p-1">
-        <Textarea
+        <DebouncedTextarea
             value={value.ozgecmis}
             disabled={readOnly}
-            onChange={(e) => onChange({ ...value, ozgecmis: e.target.value })}
+            onValueChange={(v) => onChange({ ...value, ozgecmis: v })}
             className="min-h-[120px] bg-transparent border-0 resize-y text-sm font-mono p-0 focus-visible:ring-0 placeholder:text-slate-300"
             placeholder="Hastalıklar, ameliyatlar..."
         />
@@ -28,7 +29,7 @@ export const PastHistorySection: React.FC<MedicalHistoryFormProps> = ({ value, o
 );
 
 // Main Tıbbi Geçmiş section with integrated habits (per design mockup)
-export const MedicalHistorySection: React.FC<MedicalHistoryFormProps> = ({ value, onChange, readOnly, onCopyLastDrugs }) => (
+const MedicalHistorySectionBase: React.FC<MedicalHistoryFormProps> = ({ value, onChange, readOnly, onCopyLastDrugs }) => (
     <div className="space-y-6">
         {/* Kullandığı İlaçlar */}
         <div className="space-y-3">
@@ -58,10 +59,10 @@ export const MedicalHistorySection: React.FC<MedicalHistoryFormProps> = ({ value
                     <label htmlFor="kan-sulandirici-main" className={cn("text-[10px] font-black px-2.5 py-1 rounded shadow-sm cursor-pointer uppercase transition-all", value.kan_sulandirici ? "bg-yellow-400 text-slate-900" : "bg-slate-200 text-slate-500")}>Kan Sulandırıcı (+)</label>
                 </div>
             </div>
-            <Textarea
+            <DebouncedTextarea
                 value={value.kullandigi_ilaclar}
                 disabled={readOnly}
-                onChange={(e) => onChange({ ...value, kullandigi_ilaclar: e.target.value })}
+                onValueChange={(v) => onChange({ ...value, kullandigi_ilaclar: v })}
                 className="min-h-[100px] bg-slate-50 border-slate-200 resize-y font-mono text-sm"
                 placeholder="İlaç listesi..."
             />
@@ -71,10 +72,10 @@ export const MedicalHistorySection: React.FC<MedicalHistoryFormProps> = ({ value
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
                 <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">Aile Hikayesi</Label>
-                <Textarea
+                <DebouncedTextarea
                     value={value.soygecmis}
                     disabled={readOnly}
-                    onChange={(e) => onChange({ ...value, soygecmis: e.target.value })}
+                    onValueChange={(v) => onChange({ ...value, soygecmis: v })}
                     className="bg-slate-50 border-slate-200 min-h-[80px] resize-y font-mono text-sm"
                     placeholder="DM, HT, PCa vs..."
                 />
@@ -82,10 +83,10 @@ export const MedicalHistorySection: React.FC<MedicalHistoryFormProps> = ({ value
 
             <div className="space-y-2">
                 <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">Allerjiler</Label>
-                <Textarea
+                <DebouncedTextarea
                     value={value.allerjiler || ""}
                     disabled={readOnly}
-                    onChange={(e) => onChange({ ...value, allerjiler: e.target.value })}
+                    onValueChange={(v) => onChange({ ...value, allerjiler: v })}
                     className={cn(
                         "bg-blue-50 border-blue-200 min-h-[80px] resize-y font-mono text-sm transition-colors",
                         value.allerjiler ? "text-red-600 font-bold" : "text-slate-600"
@@ -120,7 +121,8 @@ export const MedicalHistorySection: React.FC<MedicalHistoryFormProps> = ({ value
     </div>
 );
 
-// Backward compat export (not used in page.tsx anymore)
-export const MedicalHistoryForm: React.FC<MedicalHistoryFormProps> = (props) => (
-    <MedicalHistorySection {...props} />
-);
+export const PastHistorySection = React.memo(PastHistorySectionBase, propsEqualWithShallowValue);
+PastHistorySection.displayName = "PastHistorySection";
+
+export const MedicalHistorySection = React.memo(MedicalHistorySectionBase, propsEqualWithShallowValue);
+MedicalHistorySection.displayName = "MedicalHistorySection";

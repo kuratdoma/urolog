@@ -1,4 +1,3 @@
-import { z } from 'zod';
 
 /**
  * Standard Operation Interface for Controlled Components
@@ -35,7 +34,3 @@ export interface Ops<T> {
     error?: string | null;
 }
 
-/**
- * Base status for Finite State Machines
- */
-export type FormStatus = 'idle' | 'validating' | 'saving' | 'saved' | 'error';

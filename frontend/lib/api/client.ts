@@ -8,35 +8,61 @@ export interface FetchOptions extends RequestInit {
 }
 
 /**
+ * SEC-CRIT: Backend refresh token rotasyonu tek-kullanımlıktır — aynı refresh
+ * cookie'siyle eşzamanlı iki /auth/refresh isteği gidip ikincisi "kullanılmış
+ * token tekrar geldi" (replay) tespiti yaparsa kullanıcının TÜM oturumu iptal
+ * edilir (bkz. backend auth.py refresh_token). Sayfa yenilendiğinde onlarca
+ * sorgu paralel 401 alıp her biri kendi refresh çağrısını yaparsa bu senaryo
+ * tetiklenir. Bu modül-seviyesi promise, eşzamanlı tüm çağrıları TEK gerçek
+ * ağ isteğine indirger; herkes aynı sonucu bekler.
+ */
+let inFlightRefresh: Promise<{ access_token: string; token_type: string } | null> | null = null;
+
+export async function refreshAccessToken(): Promise<{ access_token: string; token_type: string } | null> {
+    if (inFlightRefresh) return inFlightRefresh;
+
+    inFlightRefresh = (async () => {
+        // SEC: refresh token artık httpOnly cookie'de (backend tarafından
+        // yönetiliyor) — burada okunmuyor/gönderilmiyor, tarayıcı otomatik
+        // ekliyor (credentials: 'include').
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                // Refresh failed — token expired or revoked
+                return null;
+            }
+
+            const data = await response.json() as {
+                access_token: string;
+                token_type: string;
+            };
+
+            useAuthStore.getState().setAuth(data.access_token);
+            return data;
+        } catch {
+            return null;
+        }
+    })();
+
+    try {
+        return await inFlightRefresh;
+    } finally {
+        inFlightRefresh = null;
+    }
+}
+
+/**
  * Attempt to refresh the access token using the stored refresh token.
  * Returns true if successful, false otherwise.
  */
 async function tryRefreshToken(): Promise<boolean> {
-    // SEC: refresh token artık httpOnly cookie'de (backend tarafından
-    // yönetiliyor) — burada okunmuyor/gönderilmiyor, tarayıcı otomatik
-    // ekliyor (credentials: 'include').
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-        });
-
-        if (!response.ok) {
-            // Refresh failed — token expired or revoked
-            return false;
-        }
-
-        const data = await response.json() as {
-            access_token: string;
-            token_type: string;
-        };
-
-        useAuthStore.getState().setAuth(data.access_token);
-        return true;
-    } catch {
-        return false;
-    }
+    const data = await refreshAccessToken();
+    return data !== null;
 }
 
 /**

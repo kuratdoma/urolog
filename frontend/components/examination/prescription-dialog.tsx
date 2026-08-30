@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, FileSignature, Save, Check, History, Printer } from "lucide-react";
+import { Plus, Trash2, FileSignature, Save, Check, History, Printer } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 // Command imports removed as we switched to a custom div list for focus stability
 
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 
 interface DrugItem {
@@ -53,7 +52,6 @@ interface PrescriptionDialogProps {
     patient: any;
     doctors: any[];
     templates: any[];
-    drugs?: any[];
     onCommit: (text: string) => void;
     onSaveTemplate: (name: string, drugs: any[]) => void;
     pastPrescriptions?: { date: string; content: string; doctorName?: string }[];
@@ -69,8 +67,7 @@ export function PrescriptionDialog({
     onCommit,
     onSaveTemplate,
     initialDoctorName,
-    pastPrescriptions = [],
-    drugs = []
+    pastPrescriptions = []
 }: PrescriptionDialogProps) {
     // Form State
     const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
@@ -187,8 +184,6 @@ export function PrescriptionDialog({
         setSaveAsTemplate(false);
         setNewTemplateName("");
     };
-
-    const activeDoctor = selectedDoctorId ? JSON.parse(selectedDoctorId) : {};
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -509,7 +504,6 @@ export function PrescriptionDialog({
                                     rec={rec}
                                     patient={patient}
                                     selectedDoctorId={selectedDoctorId}
-                                    setPrescriptionNote={setPrescriptionNote}
                                     onLoadToForm={(date, content) => {
                                         // Set date
                                         setReceteTarihi(date);
@@ -552,11 +546,10 @@ export function PrescriptionDialog({
     );
 }
 
-function PastPrescriptionItem({ rec, patient, selectedDoctorId, setPrescriptionNote, onLoadToForm }: {
+function PastPrescriptionItem({ rec, patient, selectedDoctorId, onLoadToForm }: {
     rec: any,
     patient: any,
     selectedDoctorId: string,
-    setPrescriptionNote: React.Dispatch<React.SetStateAction<string>>,
     onLoadToForm?: (date: string, content: string) => void
 }) {
     const [overrideDate, setOverrideDate] = useState(rec.date.split('.').reverse().join('-'));

@@ -1,17 +1,14 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { api } from "@/lib/api";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { LipusIIEFForm } from "./LipusIIEFForm";
-import { Activity, Stethoscope, Beaker, FileText, AlertTriangle, Save, Loader2, Calendar, Target, Clock } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Activity, Stethoscope, Beaker, FileText, AlertTriangle, Save, Loader2, Calendar, Clock } from "lucide-react";
 import { formatLabDecimal } from "@/lib/lab-utils";
 import { format, subDays, addDays } from "date-fns";
 import { PEQuestion } from "@/components/examination/shared/PEQuestion";
@@ -20,7 +17,7 @@ import {
     DialogContent,
     DialogFooter,
     DialogHeader,
-    DialogTitle,
+    DialogTitle
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IIEFForm } from "@/components/examination/forms/iief";

@@ -143,4 +143,3 @@ export function useIIEFExport(
     };
 }
 
-export type UseIIEFExportReturn = ReturnType<typeof useIIEFExport>;

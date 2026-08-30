@@ -2,22 +2,18 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, Muayene } from '@/lib/api';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Stethoscope, Activity, FlaskConical, FileText, CreditCard, History, FileSignature, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, History, FileSignature, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { CreateOperationDialog } from '@/components/clinical/create-operation-dialog';
 import { useParams, useRouter } from 'next/navigation';
 import { PatientForm } from '@/components/patients/patient-form';
 import { PatientTimeline } from '@/components/patients/patient-timeline';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { DeletePatientDialog } from '@/components/patients/delete-patient-dialog';
 import { usePatientStore } from '@/stores/patient-store';
 import { useSettingsStore } from '@/stores/settings-store';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { ConsentFormDialog } from '@/components/patients/consent-form-dialog';
 import { HPVBriefingPanel } from '@/components/clinical/HPVBriefingPanel';
 
@@ -48,6 +44,7 @@ export default function PatientDetailPage() {
     const { data: patient, isLoading: patientLoading } = useQuery({
         queryKey: ['patient', patientId],
         queryFn: () => api.patients.get(patientId),
+        staleTime: 30 * 1000,
     });
 
     useEffect(() => {
@@ -59,11 +56,13 @@ export default function PatientDetailPage() {
     const { data: muayeneler, isLoading: muayeneLoading } = useQuery({
         queryKey: ['muayeneler', patientId],
         queryFn: () => api.clinical.getMuayeneler(patientId),
+        staleTime: 30 * 1000,
     });
 
     const { data: operations, isLoading: opLoading } = useQuery({
         queryKey: ['operations', patientId],
         queryFn: () => api.clinical.getOperations(patientId),
+        staleTime: 30 * 1000,
     });
 
     const deleteMutation = useMutation({

@@ -35,6 +35,12 @@ interface AuthState {
     clearSessionExpired: () => void;
     _hasHydrated: boolean;
     setHasHydrated: (state: boolean) => void;
+    // PERF/UX: AuthBootstrap refresh denemesinin tamamlandığını işaretler.
+    // AuthGuard bu flag olmadan redirect kararı vermez — refresh denemesinin
+    // sonuçlanmasını bekler. Bu sayede sayfa yenilemesinde "token yok → login"
+    // yanlış yönlendirmesi ortadan kalkar.
+    refreshAttempted: boolean;
+    setRefreshAttempted: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -121,6 +127,8 @@ export const useAuthStore = create<AuthState>()(
             clearSessionExpired: () => set({ isSessionExpired: false }),
             _hasHydrated: false,
             setHasHydrated: (state: boolean) => set({ _hasHydrated: state }),
+            refreshAttempted: false,
+            setRefreshAttempted: () => set({ refreshAttempted: true }),
         }),
         {
             name: 'urolog-auth',

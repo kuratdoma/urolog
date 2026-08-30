@@ -43,6 +43,3 @@ export const IPSS_ANSWER_SCALES = {
         { value: '6', label: "Berbat" }
     ]
 } as const;
-
-export const IPSS_OPTIONS = IPSS_ANSWER_SCALES.frequency.map(x => x.value);
-export const QOL_OPTIONS = IPSS_ANSWER_SCALES.qol.map(x => x.value);

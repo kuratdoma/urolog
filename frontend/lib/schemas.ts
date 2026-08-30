@@ -8,7 +8,6 @@ export const PatientSchema = z.object({
     tc_kimlik: z.string().optional().nullable(),
 }).passthrough();
 
-export type PatientValidated = z.infer<typeof PatientSchema>;
 
 // Core Muayene Validation Schema
 export const MuayeneSchema = z.object({
@@ -18,7 +17,6 @@ export const MuayeneSchema = z.object({
     doktor_id: z.union([z.number(), z.string()]).optional().nullable(),
 }).passthrough();
 
-export type MuayeneValidated = z.infer<typeof MuayeneSchema>;
 
 // API Response Validation Helper
 export function validateResponse<T extends z.ZodTypeAny>(data: unknown, schema: T, endpointName: string): z.infer<T> {

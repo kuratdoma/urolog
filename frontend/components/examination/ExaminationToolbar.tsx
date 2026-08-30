@@ -1,13 +1,7 @@
 "use client";
 
 import React from "react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import {
-    Calendar as CalendarIcon, Save,
-    Printer, Trash2, Loader2, CheckCircle2, Edit,
-    User, Mic
-} from "lucide-react";
+import { Save, Printer, Edit, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { parseISO } from "date-fns";
@@ -19,7 +13,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import { ExaminationFormData } from "@/hooks/useExaminationPageLogic";
 
 import { ExaminationPrintDialog } from "./ExaminationPrintDialog";
@@ -31,11 +24,9 @@ interface ExaminationToolbarProps {
     setFormData: React.Dispatch<React.SetStateAction<ExaminationFormData>>;
     isEditing: boolean;
     setIsEditing: (val: boolean) => void;
-    isAutoSaving: boolean;
     selectedExamId: string | null;
     doctors: string[];
     onSave: () => void;
-    onDelete: (e: any, id: string) => void;
     patientId?: string;
     patientName?: string;
 }
@@ -45,11 +36,9 @@ export function ExaminationToolbar({
     setFormData,
     isEditing,
     setIsEditing,
-    isAutoSaving,
     selectedExamId,
     doctors,
     onSave,
-    onDelete,
     patientId,
     patientName
 }: ExaminationToolbarProps) {

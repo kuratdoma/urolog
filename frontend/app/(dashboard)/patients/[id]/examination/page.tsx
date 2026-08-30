@@ -5,13 +5,13 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useSettingsStore } from "@/stores/settings-store";
-import { Activity, MessageCircle, Zap, ClipboardList, History, Eye, Tag, Pill, FileText, Asterisk, Dna, Loader2, AlertTriangle } from "lucide-react";
+import { Activity, MessageCircle, ClipboardList, History, Eye, Pill, FileText, Asterisk, Dna, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { DebouncedTextarea } from "@/components/examination/shared/DebouncedText";
 import { toast } from "sonner";
 import { systemQueryAdapter, SystemQueryForm } from "@/components/examination/forms/system-query";
-import { medicalHistoryAdapter, MedicalHistoryForm, PastHistorySection, MedicalHistorySection } from "@/components/examination/forms/medical-history";
+import { medicalHistoryAdapter, PastHistorySection, MedicalHistorySection } from "@/components/examination/forms/medical-history";
 import { diagnosisAdapter, DiagnosisForm } from "@/components/examination/forms/diagnosis";
 import { physicalExamAdapter, PhysicalExamForm } from "@/components/examination/forms/physical-exam";
 import { PastExaminationsSidebar } from "@/components/examination/sidebar/PastExaminationsSidebar";
@@ -28,6 +28,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { HPVBriefingPanel } from "@/components/clinical/HPVBriefingPanel";
 import { Muayene } from "@/lib/api";
 
+const HPV_KEYWORDS = ['kondilom', 'hpv', 'siğil', 'sigil', 'condyloma', 'b07', 'a63'];
 
 export default function ExaminationPage() {
     const params = useParams();
@@ -70,7 +71,6 @@ export default function ExaminationPage() {
         definitions,
         ipssTotal, iiefTotal,
         iiefAnswers, setIiefAnswers,
-        isAutoSaving,
         handlers,
         dialogs
     } = useExaminationPageLogic(patientId);
@@ -87,19 +87,21 @@ export default function ExaminationPage() {
     }, [formData.pollakiuri, formData.urgency, formData.nokturi]);
 
     // --- HPV Diagnosis Check ---
-    const hasHPV = useMemo(() => {
-        const hpvKeywords = ['kondilom', 'hpv', 'siğil', 'sigil', 'condyloma', 'b07', 'a63'];
-        // Check past examinations
-        const hasInPast = pastExaminations.some((m: Muayene) => {
+    // Geçmiş muayene taraması sadece liste değiştiğinde, güncel form taraması ise
+    // sadece ilgili alanlar değiştiğinde çalışır (her tuş vuruşunda değil).
+    const hasHPVInPast = useMemo(() => {
+        return pastExaminations.some((m: Muayene) => {
             const fields = [m.tani1, m.tani2, m.tani3, m.tani4, m.tani5, m.tani1_kodu, m.tani2_kodu, m.tani3_kodu, m.sikayet, m.tedavi].filter(Boolean);
-            return fields.some((f: string) => hpvKeywords.some(k => f.toLowerCase().includes(k)));
+            return fields.some((f: string) => HPV_KEYWORDS.some(k => f.toLowerCase().includes(k)));
         });
-        // Check current formData
-        const currentFields = [formData.tani1, formData.tani2, formData.tani3, formData.tani4, formData.tani5, formData.tani1_kodu, formData.tani2_kodu, formData.tani3_kodu, formData.sikayet, formData.tedavi].filter(Boolean);
-        const hasInCurrent = currentFields.some((f: string) => hpvKeywords.some(k => f.toLowerCase().includes(k)));
+    }, [pastExaminations]);
 
-        return hasInPast || hasInCurrent;
-    }, [pastExaminations, formData]);
+    const hasHPVInCurrent = useMemo(() => {
+        const currentFields = [formData.tani1, formData.tani2, formData.tani3, formData.tani4, formData.tani5, formData.tani1_kodu, formData.tani2_kodu, formData.tani3_kodu, formData.sikayet, formData.tedavi].filter(Boolean);
+        return currentFields.some((f: string) => HPV_KEYWORDS.some(k => f.toLowerCase().includes(k)));
+    }, [formData.tani1, formData.tani2, formData.tani3, formData.tani4, formData.tani5, formData.tani1_kodu, formData.tani2_kodu, formData.tani3_kodu, formData.sikayet, formData.tedavi]);
+
+    const hasHPV = hasHPVInPast || hasHPVInCurrent;
 
     // --- Extracted Form Hooks ---
     const appendToStory = useCallback((narrative: string) => {
@@ -148,6 +150,42 @@ export default function ExaminationPage() {
         peClinical.handleExport();
     }, [peClinical]);
 
+    // --- Stabil onChange handler'ları ---
+    // Bu fonksiyonlar her render'da yeniden oluşturulursa memo'lu form bölümleri
+    // her tuş vuruşunda yeniden render olur.
+    const handleSikayetChange = useCallback((val: string) => {
+        setFormData((prev: ExaminationFormData) => ({ ...prev, sikayet: val }));
+    }, [setFormData]);
+
+    const handleOykuChange = useCallback((val: string) => {
+        setFormData((prev: ExaminationFormData) => ({ ...prev, oyku: val }));
+    }, [setFormData]);
+
+    const handleSystemQueryChange = useCallback((newData: any) => {
+        setFormData((prev: any) => ({ ...prev, ...systemQueryAdapter.toLegacy(newData) }));
+    }, [setFormData]);
+
+    const handleMedicalHistoryChange = useCallback((d: any) => {
+        setFormData((prev: any) => ({ ...prev, ...medicalHistoryAdapter.toLegacy(d) }));
+    }, [setFormData]);
+
+    const handlePhysicalExamChange = useCallback((d: any) => {
+        setFormData((prev: any) => ({ ...prev, ...physicalExamAdapter.toLegacy(d) }));
+    }, [setFormData]);
+
+    const handleDiagnosisChange = useCallback((d: any) => {
+        setFormData((prev: any) => ({ ...prev, ...diagnosisAdapter.toLegacy(d) }));
+    }, [setFormData]);
+
+    const handleOpenEDDrugs = useCallback(() => dialogs.setIsEDDrugsOpen(true), [dialogs.setIsEDDrugsOpen]);
+    const handleOpenPEForm = useCallback(() => dialogs.setIsPEFormOpen(true), [dialogs.setIsPEFormOpen]);
+    const handleOpenPrescription = useCallback(() => dialogs.setPrescriptionPopoverOpen(true), [dialogs.setPrescriptionPopoverOpen]);
+
+    const systemQueryValue = useMemo(() => systemQueryAdapter.toNew(formData), [formData]);
+    const medicalHistoryValue = useMemo(() => medicalHistoryAdapter.toNew(formData), [formData]);
+    const physicalExamValue = useMemo(() => physicalExamAdapter.toNew(formData), [formData]);
+    const diagnosisValue = useMemo(() => diagnosisAdapter.toNew(formData), [formData]);
+
     const handleCopyLastDrugs = useCallback(() => {
         const latestExamWithDrugs = pastExaminations.find(e => e.kullandigi_ilaclar && e.kullandigi_ilaclar.trim() !== "");
         if (latestExamWithDrugs && latestExamWithDrugs.kullandigi_ilaclar) {
@@ -170,20 +208,19 @@ export default function ExaminationPage() {
                     <ExaminationToolbar
                         formData={formData} setFormData={setFormData}
                         isEditing={isEditing} setIsEditing={setIsEditing}
-                        isAutoSaving={isAutoSaving} selectedExamId={selectedExamId}
+                        selectedExamId={selectedExamId}
                         doctors={definitions.doctors}
                         onSave={() => handlers.handleSave()}
-                        onDelete={handlers.handleDeleteExamination}
 
                     />
 
                     <div className="space-y-6">
                         {/* Şikayet */}
                         <ClinicalCard title="Şikayet" icon={MessageCircle} iconClassName="text-orange-500">
-                            <Textarea
+                            <DebouncedTextarea
                                 value={formData.sikayet || ""}
                                 disabled={!isEditing}
-                                onChange={(e) => setFormData((prev: ExaminationFormData) => ({ ...prev, sikayet: e.target.value }))}
+                                onValueChange={handleSikayetChange}
                                 rows={3}
                                 className="min-h-[80px] border-0 focus-visible:ring-0 resize-none text-sm font-mono text-slate-700 p-0 bg-transparent placeholder:text-slate-300"
                                 placeholder="Hastanın şikayetleri..."
@@ -214,10 +251,10 @@ export default function ExaminationPage() {
                                 </div>
                             }
                         >
-                            <Textarea
+                            <DebouncedTextarea
                                 value={formData.oyku || ""}
                                 disabled={!isEditing}
-                                onChange={(e) => setFormData((prev: ExaminationFormData) => ({ ...prev, oyku: e.target.value }))}
+                                onValueChange={handleOykuChange}
                                 rows={16}
                                 className="min-h-[400px] border-0 focus-visible:ring-0 resize-none font-mono text-sm leading-relaxed p-0 bg-transparent placeholder:text-slate-300"
                                 placeholder="Hikayesi..."
@@ -261,12 +298,12 @@ export default function ExaminationPage() {
                                 </div>
                             }
                         >
-                            <SystemQueryForm value={systemQueryAdapter.toNew(formData)} onChange={(newData) => setFormData((prev: any) => ({ ...prev, ...systemQueryAdapter.toLegacy(newData) }))} readOnly={!isEditing} />
+                            <SystemQueryForm value={systemQueryValue} onChange={handleSystemQueryChange} readOnly={!isEditing} />
                         </ClinicalCard>
 
                         {/* Özgeçmiş */}
                         <ClinicalCard title="Özgeçmiş" icon={ClipboardList} iconClassName="text-indigo-500">
-                            <PastHistorySection value={medicalHistoryAdapter.toNew(formData)} onChange={(d) => setFormData((prev: any) => ({ ...prev, ...medicalHistoryAdapter.toLegacy(d) }))} readOnly={!isEditing} onOpenEDDrugs={() => dialogs.setIsEDDrugsOpen(true)} />
+                            <PastHistorySection value={medicalHistoryValue} onChange={handleMedicalHistoryChange} readOnly={!isEditing} onOpenEDDrugs={handleOpenEDDrugs} />
                         </ClinicalCard>
 
                         {/* Tıbbi Geçmiş & Muayene Bulguları - Side by Side per Design */}
@@ -280,7 +317,7 @@ export default function ExaminationPage() {
                                     <Button variant="outline" size="sm" onClick={() => dialogs.setIsEDDrugsOpen(true)} className="h-7 px-2 text-[10px] font-bold text-blue-700 border-blue-200 hover:bg-blue-50 flex items-center gap-1.5 uppercase transition-all shadow-sm bg-white"><Pill className="w-3.5 h-3.5" /> ED DRUGS</Button>
                                 }
                             >
-                                <MedicalHistorySection value={medicalHistoryAdapter.toNew(formData)} onChange={(d) => setFormData((prev: any) => ({ ...prev, ...medicalHistoryAdapter.toLegacy(d) }))} readOnly={!isEditing} onCopyLastDrugs={handleCopyLastDrugs} />
+                                <MedicalHistorySection value={medicalHistoryValue} onChange={handleMedicalHistoryChange} readOnly={!isEditing} onCopyLastDrugs={handleCopyLastDrugs} />
                             </ClinicalCard>
 
                             <ClinicalCard
@@ -288,17 +325,17 @@ export default function ExaminationPage() {
                                 icon={Eye}
                                 iconClassName="text-teal-600"
                             >
-                                <PhysicalExamForm value={physicalExamAdapter.toNew(formData)} onChange={(d) => setFormData((prev: any) => ({ ...prev, ...physicalExamAdapter.toLegacy(d) }))} readOnly={!isEditing} onOpenPEForm={examinationModules.peModule ? () => dialogs.setIsPEFormOpen(true) : undefined} />
+                                <PhysicalExamForm value={physicalExamValue} onChange={handlePhysicalExamChange} readOnly={!isEditing} onOpenPEForm={examinationModules.peModule ? handleOpenPEForm : undefined} />
                             </ClinicalCard>
                         </div>
 
                         {/* Tanı ve Sonuç - DiagnosisForm handles its own layout */}
                         <DiagnosisForm
-                            value={diagnosisAdapter.toNew(formData)}
-                            onChange={(d) => setFormData((prev: any) => ({ ...prev, ...diagnosisAdapter.toLegacy(d) }))}
+                            value={diagnosisValue}
+                            onChange={handleDiagnosisChange}
                             readOnly={!isEditing}
                             patientId={patientId}
-                            onOpenPrescription={() => dialogs.setPrescriptionPopoverOpen(true)}
+                            onOpenPrescription={handleOpenPrescription}
                         />
 
                         {/* Save Bar - Non-sticky */}

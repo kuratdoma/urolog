@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { api, RestReport } from "@/lib/api";
 import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
 import {
     Plus,
     Save,
@@ -30,7 +29,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
+    AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";

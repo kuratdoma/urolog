@@ -8,15 +8,13 @@ import {
     Command,
     CommandEmpty,
     CommandGroup,
-    CommandInput,
     CommandItem,
-    CommandList,
+    CommandList
 } from '@/components/ui/command';
 import {
     Popover,
     PopoverContent,
-    PopoverTrigger,
-    PopoverAnchor,
+    PopoverAnchor
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 

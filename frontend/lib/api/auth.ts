@@ -5,11 +5,35 @@ import {
 
 const API_BASE_URL = '';
 
+/**
+ * FastAPI hata gövdesinden okunabilir bir mesaj çıkarır.
+ *
+ * `detail` bir string olabilir; 422 doğrulama hatalarında [{ msg, loc }] dizisi,
+ * bazı handler'larda da düz bir nesne döner. Bunları doğrudan `new Error()`e
+ * vermek kullanıcıya "[object Object]" gösterir — bu yüzden yalnızca string'i
+ * geçiriyor, diziyi birleştiriyor, geri kalanında genel mesaja düşüyoruz.
+ */
+function extractErrorDetail(text: string, status: number): string {
+    try {
+        const detail = JSON.parse(text)?.detail;
+        if (typeof detail === 'string' && detail.trim()) return detail;
+        if (Array.isArray(detail)) {
+            const messages = detail
+                .map((item) => (typeof item === 'string' ? item : item?.msg))
+                .filter((msg): msg is string => typeof msg === 'string' && !!msg.trim());
+            if (messages.length) return messages.join(', ');
+        }
+    } catch {
+        // JSON değilse aşağıdaki düz metin / genel mesaja düşülür.
+    }
+    return text.trim() || `Giriş başarısız (HTTP ${status}).`;
+}
+
 export const authApi = {
 
         login: async (username: string, password: string) => {
             const formData = new URLSearchParams();
-            formData.append('username', username);
+            formData.append('username', username.trim());
             formData.append('password', password);
 
             // SEC: refresh token artık response body'de dönmüyor, backend
@@ -23,8 +47,7 @@ export const authApi = {
             });
 
             if (!response.ok) {
-                const text = await response.text();
-                throw new Error(`Login Error: ${response.status} - ${text}`);
+                throw new Error(extractErrorDetail(await response.text(), response.status));
             }
             return response.json() as Promise<{ access_token: string; token_type: string }>;
         },
@@ -85,17 +108,16 @@ export const authApi = {
                 body: JSON.stringify({ password, confirmation_phrase: confirmationPhrase })
             }),
         refresh: async () => {
-            // SEC: refresh token httpOnly cookie'den okunuyor, burada yok.
-            const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-            });
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(`Refresh Error: ${response.status} - ${text}`);
+            // PERF/SEC-CRIT: refreshAccessToken() eşzamanlı çağrıları tek ağ
+            // isteğine indirger — backend refresh token rotasyonu tek
+            // kullanımlık olduğu için paralel iki çağrı ikincisini "replay"
+            // sayıp tüm oturumu iptal edebilir (bkz. client.ts açıklaması).
+            const { refreshAccessToken } = await import('./client');
+            const data = await refreshAccessToken();
+            if (!data) {
+                throw new Error('Refresh Error: refresh token geçersiz veya süresi dolmuş.');
             }
-            return response.json() as Promise<{ access_token: string; token_type: string }>;
+            return data;
         },
         logout: () =>
             apiFetch<{ message: string }>('/api/v1/auth/logout', {

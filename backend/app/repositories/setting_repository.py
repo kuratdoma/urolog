@@ -37,7 +37,7 @@ class SettingRepository:
             db_obj = SystemSetting(key=key, value=value, description=description)
             self.db.add(db_obj)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -45,4 +45,4 @@ class SettingRepository:
         db_obj = await self.get(key)
         if db_obj:
             await self.db.delete(db_obj)
-            await self.db.commit()
+            await self.db.flush()

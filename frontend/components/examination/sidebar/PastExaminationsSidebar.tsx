@@ -13,7 +13,7 @@ interface PastExaminationsSidebarProps {
     onNewExamination: () => void;
 }
 
-export const PastExaminationsSidebar: React.FC<PastExaminationsSidebarProps> = ({
+const PastExaminationsSidebarBase: React.FC<PastExaminationsSidebarProps> = ({
     pastExaminations,
     selectedExamId,
     onSelectExamination,
@@ -85,3 +85,6 @@ export const PastExaminationsSidebar: React.FC<PastExaminationsSidebarProps> = (
         </div>
     );
 };
+
+export const PastExaminationsSidebar = React.memo(PastExaminationsSidebarBase);
+PastExaminationsSidebar.displayName = "PastExaminationsSidebar";

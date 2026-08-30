@@ -42,13 +42,16 @@ class StokUrun(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # İlişkiler
-    # lazy="select": ürün listeleme sorguları her ürünün tüm alım/hareket
-    # geçmişini çekmesin. Gerektiğinde selectinload() ile açıkça yüklenir.
+    # lazy="selectin": base_class.py'deki mapper_configured guard'ı lazy="select"i
+    # yasaklıyor — async oturumda ilişkiye erişim örtük IO tetikleyip MissingGreenlet
+    # hatasına düşüyor. Bunun bedeli, ürün çekildiğinde alım/hareket geçmişinin de
+    # yüklenmesi; bu yüzden listeleme sorguları ilişki attribute'larına hiç dokunmaz,
+    # açık join kullanır (bkz. stock_repository.get_products / get_movements).
     alimlar = relationship(
-        "StokAlim", back_populates="urun", cascade="all, delete-orphan", lazy="select"
+        "StokAlim", back_populates="urun", cascade="all, delete-orphan", lazy="selectin"
     )
     hareketler = relationship(
-        "StokHareket", back_populates="urun", cascade="all, delete-orphan", lazy="select"
+        "StokHareket", back_populates="urun", cascade="all, delete-orphan", lazy="selectin"
     )
 
 
@@ -67,7 +70,7 @@ class StokAlim(Base):
     notlar = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    urun = relationship("StokUrun", back_populates="alimlar", lazy="select")
+    urun = relationship("StokUrun", back_populates="alimlar", lazy="selectin")
 
 
 class StokHareket(Base):
@@ -87,4 +90,4 @@ class StokHareket(Base):
     kullanici_id = Column(Integer, nullable=True)  # İşlemi yapan
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    urun = relationship("StokUrun", back_populates="hareketler", lazy="select")
+    urun = relationship("StokUrun", back_populates="hareketler", lazy="selectin")

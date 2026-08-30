@@ -57,8 +57,12 @@ cleanup() {
         echo -e "  ${GREEN}✓${NC} Frontend (PID $FRONTEND_PID) durduruldu."
     fi
 
-    # Port 3001'de kalan zombie süreçleri temizle
-    lsof -ti :3001 2>/dev/null | xargs kill -9 2>/dev/null
+    # Yalnızca bu scriptin başlattığı süreç grubunu temizle. Porta göre kör
+    # "lsof | xargs kill -9" yapmıyoruz: 3000 çok yaygın bir port ve bu script
+    # ile ilgisi olmayan dev sunucularını da öldürürdü.
+    if [ -n "$FRONTEND_PID" ]; then
+        kill -9 -- -"$FRONTEND_PID" 2>/dev/null
+    fi
 
     echo -e "${GREEN}✅ Sistem başarıyla kapatıldı.${NC}"
     exit 0
@@ -88,17 +92,31 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
-# 2. Port 3001 zombie temizliği (eski Next.js süreçleri)
+# 2. Port kontrolü ve temizliği (Next.js süreçleri)
 # ──────────────────────────────────────────────────────────────
-echo -e "${BLUE}[2/5] Port 3001 kontrol ediliyor...${NC}"
-OLD_PID=$(lsof -ti :3001 2>/dev/null)
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+echo -e "${BLUE}[2/5] Port ${FRONTEND_PORT} kontrol ediliyor...${NC}"
+OLD_PID=$(lsof -ti :${FRONTEND_PORT} 2>/dev/null)
 if [ -n "$OLD_PID" ]; then
-    echo -e "  ${YELLOW}⚠${NC}  Port 3001 meşgul (PID: $OLD_PID). Temizleniyor..."
-    kill -9 $OLD_PID 2>/dev/null
-    sleep 1
-    echo -e "  ${GREEN}✓${NC} Port 3001 serbest bırakıldı."
+    # Sadece kendi bıraktığımız node/next süreçlerini öldür. 3000 çok yaygın bir
+    # port; ilgisiz bir servisi sessizce sonlandırmak yerine uyarıp çıkıyoruz.
+    OLD_CMD=$(ps -p "$OLD_PID" -o comm= 2>/dev/null)
+    case "$OLD_CMD" in
+        *node*|*next*)
+            echo -e "  ${YELLOW}⚠${NC}  Port ${FRONTEND_PORT} meşgul (PID: $OLD_PID, $OLD_CMD). Temizleniyor..."
+            kill -9 "$OLD_PID" 2>/dev/null
+            sleep 1
+            echo -e "  ${GREEN}✓${NC} Port ${FRONTEND_PORT} serbest bırakıldı."
+            ;;
+        *)
+            echo -e "  ${RED}✗${NC}  Port ${FRONTEND_PORT} node dışı bir süreçte meşgul (PID: $OLD_PID, ${OLD_CMD:-bilinmiyor})."
+            echo -e "     Bu süreç bu scripte ait değil, otomatik kapatılmıyor."
+            echo -e "     Farklı bir port için: ${BLUE}FRONTEND_PORT=3001 ./start.sh${NC}"
+            exit 1
+            ;;
+    esac
 else
-    echo -e "  ${GREEN}✓${NC} Port 3001 müsait."
+    echo -e "  ${GREEN}✓${NC} Port ${FRONTEND_PORT} müsait."
 fi
 
 # Next.js lock dosyasını temizle (stale lock)
@@ -152,7 +170,7 @@ echo -e "${BLUE}[4/5] Backend API sağlık kontrolü...${NC}"
 HEALTH_RETRIES=10
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $HEALTH_RETRIES ]; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/auth/me 2>/dev/null)
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 2 http://localhost:8000/api/v1/auth/me 2>/dev/null)
     if [ "$HTTP_CODE" = "401" ] || [ "$HTTP_CODE" = "200" ]; then
         echo -e "  ${GREEN}✓${NC} Backend API yanıt veriyor (HTTP $HTTP_CODE)."
         break
@@ -162,7 +180,9 @@ while [ $HEALTH_COUNT -lt $HEALTH_RETRIES ]; do
 done
 
 if [ $HEALTH_COUNT -eq $HEALTH_RETRIES ]; then
-    echo -e "  ${YELLOW}⚠${NC}  Backend API henüz yanıt vermiyor, devam ediliyor..."
+    echo -e "  ${YELLOW}⚠${NC}  Backend API yanıt vermedi, konteyner yeniden başlatılıyor..."
+    docker compose restart backend > /dev/null 2>&1
+    sleep 3
 fi
 
 # ──────────────────────────────────────────────────────────────
@@ -184,12 +204,13 @@ fi
 # Lokal geliştirme ortam değişkenleri
 export NEXT_PUBLIC_GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export BACKEND_URL="http://127.0.0.1:8000"
+export ALLOWED_ORIGIN_HEADER="http://localhost:${FRONTEND_PORT}"
 
 echo ""
 echo -e "${CYAN}══════════════════════════════════════════════════${NC}"
 echo -e "  ${BOLD}UroLOG${NC} — ${GREEN}Sistem Aktif${NC}"
 echo -e "  🏷️  Git Commit: #${NEXT_PUBLIC_GIT_SHA}"
-echo -e "  🎨 Frontend  : ${BLUE}http://localhost:3001${NC}"
+echo -e "  🎨 Frontend  : ${BLUE}http://localhost:${FRONTEND_PORT}${NC}"
 echo -e "  🐘 Backend   : ${BLUE}http://localhost:8000${NC}"
 echo -e "  📊 DB (PG)   : ${BLUE}localhost:5434${NC}"
 echo -e "  🔑 Login     : .env dosyasındaki SEED_USER_EMAIL"
@@ -202,16 +223,19 @@ echo ""
 # Frontend hazır olunca tarayıcıyı otomatik aç (arka planda bekler)
 (
     for i in $(seq 1 60); do
-        if curl -s -o /dev/null "http://localhost:3001"; then
-            open "http://localhost:3001" 2>/dev/null
+        if curl -s -o /dev/null "http://localhost:${FRONTEND_PORT}"; then
+            open "http://localhost:${FRONTEND_PORT}" 2>/dev/null
             break
         fi
         sleep 1
     done
 ) &
 
-# Frontend'i foreground'da başlat (Ctrl+C ile durur → cleanup tetiklenir)
-npm run dev -- -p 3001 &
+# Frontend'i kendi süreç grubunda başlat: cleanup tüm alt süreçleri porta göre
+# kör arama yapmadan, sadece bu grubu hedefleyerek kapatabilsin.
+set -m
+npm run dev -- -p ${FRONTEND_PORT} &
+set +m
 FRONTEND_PID=$!
 wait $FRONTEND_PID
 

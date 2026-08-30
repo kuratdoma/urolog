@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
-import { Printer } from "lucide-react";
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { api } from "@/lib/api";
 import dynamic from "next/dynamic";
 import { PrescriptionPDF } from "@/components/pdf/PrescriptionPDF";

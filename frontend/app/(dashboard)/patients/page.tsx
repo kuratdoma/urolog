@@ -1,12 +1,13 @@
 "use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { User, X, Search, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, FileText, Binoculars, Stethoscope, Users, Plus, ArrowRight, ChevronDown, SlidersHorizontal, RotateCcw, Loader2, Download, ChevronLeft, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { User, X, Search, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, FileText, Binoculars, Stethoscope, Plus, ArrowRight, ChevronDown, SlidersHorizontal, RotateCcw, Loader2, Download, ChevronLeft, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
@@ -94,6 +95,7 @@ export default function PatientsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 100;
     const [isExporting, setIsExporting] = useState(false);
+    const queryClient = useQueryClient();
 
     // Debounced search
     const [debouncedAd, setDebouncedAd] = useState(adInput);
@@ -116,6 +118,10 @@ export default function PatientsPage() {
             soyad: debouncedSoyad || undefined
         }),
         enabled: !isAdvancedActive,
+        // PERF: Yeni arama sonucu gelene kadar eski listeyi göstermeye devam et
+        // — debounce süresinde tablo boşalmıyor, yüklenme spinneri sadece ilk
+        // yüklemede görünüyor.
+        placeholderData: keepPreviousData,
     });
 
     // Advanced search query
@@ -145,6 +151,9 @@ export default function PatientsPage() {
             });
         },
         enabled: isAdvancedActive && !!appliedAdvancedFilters,
+        // PERF: Sayfa değişirken eski sayfa verisini görüntüle — sayfalama
+        // sırasında tablo boşalmıyor.
+        placeholderData: keepPreviousData,
     });
 
     const patients = isAdvancedActive ? advancedPatientsData?.items : standardPatients;
@@ -293,6 +302,31 @@ export default function PatientsPage() {
             tc_kimlik: patient.tc_kimlik
         });
     }, [setActivePatient]);
+
+    // PERF: Kullanıcı satıra fare getirdiğinde hasta bootstrap verilerini arka planda
+    // tek istekle önceden yükle. Tıklama anında panel zaten dolu olur.
+    const handleRowHover = useCallback((patientId: string) => {
+        queryClient.prefetchQuery({
+            queryKey: ['patient-bootstrap', patientId],
+            queryFn: async () => {
+                const data = await api.patients.getBootstrap(patientId);
+                if (data.patient) {
+                    queryClient.setQueryData(['patient', patientId], data.patient);
+                }
+                if (data.muayeneler) {
+                    queryClient.setQueryData(['muayeneler', patientId], data.muayeneler);
+                }
+                if (data.appointments) {
+                    queryClient.setQueryData(['appointments', patientId], data.appointments);
+                }
+                if (data.timeline) {
+                    queryClient.setQueryData(['patient-timeline', patientId], data.timeline);
+                }
+                return data;
+            },
+            staleTime: 30 * 1000,
+        });
+    }, [queryClient]);
 
     return (
         <div className="flex flex-col gap-3 p-4 bg-slate-50/50 min-h-screen">
@@ -665,6 +699,7 @@ export default function PatientsPage() {
                                             selectedPatientId === patient.id && "bg-blue-50/50 hover:bg-blue-50/70"
                                         )}
                                         onClick={(e) => handleRowClick(e, patient)}
+                                        onMouseEnter={() => handleRowHover(patient.id)}
                                     >
                                         <TableCell>
                                             <span className="font-mono text-[11px] text-blue-600 font-bold uppercase">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, Imaging, Patient } from "@/lib/api";
+import { api, Patient } from "@/lib/api";
 import dynamic from "next/dynamic";
 import { LabPDF } from "@/components/pdf/LabPDF";
 import { format, parseISO } from "date-fns";

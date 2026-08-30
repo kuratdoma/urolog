@@ -3,6 +3,17 @@ import {
     BiyopsiSablonu, Definition, Doktor, RandevuTuru, ReceteSablonu, SablonTanim
 } from './types';
 
+/** GET /definitions/bootstrap yanıt tipi */
+export interface BootstrapResponse {
+    doktorlar: Doktor[];
+    kurumlar: Definition[];
+    meslekler: Definition[];
+    sigortalar: Definition[];
+    takip_konulari: Definition[];
+    randevu_turleri: RandevuTuru[];
+    recete_sablonlari: ReceteSablonu[];
+}
+
 export const definitionsApi = {
 
         kurumlar: {
@@ -100,6 +111,9 @@ export const definitionsApi = {
             create: (data: Partial<SablonTanim>) => apiFetch<SablonTanim>('/api/v1/definitions/sablonlar', { method: 'POST', body: JSON.stringify(data) }),
             update: (id: string, data: Partial<SablonTanim>) => apiFetch<SablonTanim>(`/api/v1/definitions/sablonlar/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
             delete: (id: string) => apiFetch<void>(`/api/v1/definitions/sablonlar/${id}`, { method: 'DELETE' }),
-        }
+        },
+        // PERF: 7 tanım listesini tek HTTP isteğiyle döndürür.
+        // Tekil list() metodları settings/yönetim sayfaları için korundu.
+        bootstrap: () => apiFetch<BootstrapResponse>('/api/v1/definitions/bootstrap'),
     
 };

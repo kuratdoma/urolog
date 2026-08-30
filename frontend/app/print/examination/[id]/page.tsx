@@ -6,7 +6,7 @@ import { api, Muayene, Patient } from "@/lib/api";
 import { format, parseISO } from "date-fns";
 import dynamic from "next/dynamic";
 import { ExaminationPDF } from "@/components/pdf/ExaminationPDF";
-import { FlaskConical, ScanLine, Printer } from "lucide-react";
+import { FlaskConical, ScanLine } from "lucide-react";
 
 // Dynamic import for PDFViewer to avoid SSR issues
 const PDFViewer = dynamic(() => import("@react-pdf/renderer").then(mod => mod.PDFViewer), {

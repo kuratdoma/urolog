@@ -11,6 +11,7 @@ from fastapi import FastAPI, Depends, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.core.config import settings
@@ -169,6 +170,11 @@ app.add_middleware(
         "X-Requested-With",
     ],
 )
+
+# PERF: JSON gövdelerini (hasta listeleri, ICD/ilaç tanımları) sıkıştırarak
+# transfer boyutunu düşürür. minimum_size altındaki gövdeler sıkıştırmanın
+# overhead'ine değmeyeceği için atlanır.
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(

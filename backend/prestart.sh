@@ -27,6 +27,20 @@ else
     fi
 fi
 
+# Seed ICD codes.
+# icd_tanilar artık ICD aramasının tek gerçek kaynağı (in-memory JSON servisi
+# kaldırıldı), bu yüzden JSON'a eklenen yeni kodların her deploy'da tabloya
+# taşınması gerekiyor. Script idempotent: yalnızca EKSİK kodları ekler, admin
+# uçlarından yapılan düzenlemeleri silmez.
+echo "[PRESTART] Seeding ICD codes (idempotent)..."
+if python maintenance/admin/seed_icds_from_json.py; then
+    echo "[PRESTART] ICD seed completed."
+else
+    # Uygulamayı bloklamıyoruz — tabloda zaten mevcut kodlar var; ancak
+    # sessizce geçmiyoruz ki eksik kod sorunu deploy logunda görünsün.
+    echo "[PRESTART] WARNING: ICD seed failed. Arama mevcut kayıtlarla çalışmaya devam eder."
+fi
+
 # Create required static directories if they don't exist
 mkdir -p static/documents static/photos static/imaging static/ai_scribe_templates
 

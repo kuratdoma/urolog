@@ -1,7 +1,7 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import or_
+from sqlalchemy import func, or_, text
 
 from app.models.system import ICDTani
 from app.schemas.system import ICDTaniCreate
@@ -10,6 +10,20 @@ from app.schemas.system import ICDTaniCreate
 class SystemRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    # Türkçe karakterleri normalize eden SQL ifadesi. p011 migration'ındaki
+    # ifade indeksi ile BİREBİR aynı olmalı, aksi halde indeks kullanılmaz.
+    ICD_NORMALIZE_SQL = "lower(translate(adi, 'ıİğĞüÜşŞöÖçÇ', 'iigguussoocc'))"
+    # Python tarafındaki karşılığı — sorgu metnine aynı dönüşüm uygulanır.
+    _TR_TRANSLATION = str.maketrans("ıİğĞüÜşŞöÖçÇ", "iigguussoocc")
+
+    # Muayene ekranındaki otomatik tamamlama için minimum sorgu uzunluğu.
+    # Tek karakterlik sorgular binlerce satır döndürür ve trigram indeksi
+    # devreye girmez — istemci de zaten 2 karakterden önce arama yapmıyor.
+    ICD_SEARCH_MIN_LENGTH = 2
+    # pg_trgm `%` operatörü kısa metinlerde çok gürültülü; benzerlik aramasını
+    # yalnızca anlamlı uzunluktaki sorgularda açıyoruz.
+    ICD_TRIGRAM_MIN_LENGTH = 4
 
     async def search_icd(
         self, query: Optional[str] = None, skip: int = 0, limit: int = 50
@@ -24,6 +38,84 @@ class SystemRepository:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    async def search_icd_ranked(
+        self, query: str, limit: int = 20
+    ) -> List[Dict[str, str]]:
+        """
+        Muayene ekranı otomatik tamamlaması için alaka düzeyine göre sıralı ICD
+        araması. Sıralama kademesi eski in-memory servisin davranışını korur:
+        tam kod > kod öneki > isimde geçen > trigram benzerliği.
+
+        p008 migration'ındaki GIN trigram indeksleri hem ILIKE '%...%' hem de
+        `%` benzerlik operatörü tarafından kullanılır.
+        """
+        normalized = (query or "").strip()
+        if len(normalized) < self.ICD_SEARCH_MIN_LENGTH:
+            return []
+
+        use_trigram = len(normalized) >= self.ICD_TRIGRAM_MIN_LENGTH
+
+        # Sorgu metni de kolonla aynı şekilde normalize edilir; böylece
+        # "uriner" yazan hekim "Üriner ..." tanılarını da bulur.
+        normalized_q = normalized.translate(self._TR_TRANSLATION).lower()
+        # WHERE/CASE içinde ifade indeksle BİREBİR aynı yazılmalı — COALESCE
+        # gibi bir sarmalayıcı planner'ın indeksi kullanmasını engelliyor.
+        # adi NULL ise LIKE de NULL döner ve satır zaten elenir.
+        adi_norm = self.ICD_NORMALIZE_SQL
+
+        sql = text(
+            f"""
+            SELECT kodu, adi
+            FROM icd_tanilar
+            WHERE COALESCE(is_deleted, FALSE) = FALSE
+              AND (
+                    kodu ILIKE :prefix
+                 OR {adi_norm} LIKE :contains
+                 OR (:use_trigram AND {adi_norm} % :q_norm)
+              )
+            ORDER BY
+              CASE
+                WHEN upper(kodu) = upper(:q) THEN 0
+                WHEN kodu ILIKE :prefix THEN 1
+                WHEN {adi_norm} LIKE :contains THEN 2
+                ELSE 3
+              END,
+              similarity(COALESCE({adi_norm}, ''), :q_norm) DESC,
+              kodu
+            LIMIT :limit
+            """
+        )
+
+        result = await self.db.execute(
+            sql,
+            {
+                "q": normalized,
+                "q_norm": normalized_q,
+                "prefix": f"{normalized}%",
+                "contains": f"%{normalized_q}%",
+                "use_trigram": use_trigram,
+                "limit": limit,
+            },
+        )
+        return [{"kodu": row.kodu, "adi": row.adi or ""} for row in result]
+
+    async def lookup_icd_names(self, codes: List[str]) -> Dict[str, Optional[str]]:
+        """
+        Verilen ICD kodlarının adlarını tek sorguda çözümler. Bulunamayan kod
+        için None döner — kodun kendisini "ad" gibi geri döndürmek rapor/PDF
+        çıktısına sahte veri sızdırdığı için bilinçli olarak yapılmıyor.
+        """
+        unique_codes = {c.strip().upper() for c in codes if c and c.strip()}
+        if not unique_codes:
+            return {}
+
+        stmt = select(ICDTani.kodu, ICDTani.adi).where(
+            func.upper(ICDTani.kodu).in_(unique_codes)
+        )
+        result = await self.db.execute(stmt)
+        found = {row.kodu.upper(): row.adi for row in result}
+        return {code: found.get(code) for code in unique_codes}
+
     async def get_icd_by_code(self, code: str) -> Optional[ICDTani]:
         result = await self.db.execute(select(ICDTani).filter(ICDTani.kodu == code))
         return result.scalars().first()
@@ -37,7 +129,7 @@ class SystemRepository:
             seviye=obj_in.seviye or "2",
         )
         self.db.add(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -46,7 +138,7 @@ class SystemRepository:
 
         stmt = delete(ICDTani).where(ICDTani.id.in_(ids))
         await self.db.execute(stmt)
-        await self.db.commit()
+        await self.db.flush()
         return True
 
     async def search_drugs(
@@ -97,7 +189,7 @@ class SystemRepository:
             aktif=obj_in.aktif,
         )
         self.db.add(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -107,7 +199,7 @@ class SystemRepository:
 
         stmt = delete(IlacTanim)
         await self.db.execute(stmt)
-        await self.db.commit()
+        await self.db.flush()
 
     async def batch_create_drugs(self, drugs_data: List[dict]):
         from app.models.system import IlacTanim
@@ -130,7 +222,7 @@ class SystemRepository:
             await self.db.execute(stmt)
             total += len(chunk)
 
-        await self.db.commit()
+        await self.db.flush()
         return total
 
     async def import_drugs_from_file(self, file_path: str) -> int:

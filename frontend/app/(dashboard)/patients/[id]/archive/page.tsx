@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { usePatientStore } from "@/stores/patient-store";
 import { api, Patient } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
 import {
     FileText, Plus, Save, Trash2, Download,
-    Search, FolderOpen, File as FileIcon, Archive, Eye, Upload,
+    Search, File as FileIcon, Archive, Eye, Upload,
     ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight, CheckSquare, Square
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,13 +22,13 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
+    AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
-    DialogTitle,
+    DialogTitle
 } from "@/components/ui/dialog";
 
 import { Button } from "@/components/ui/button";
@@ -37,17 +36,9 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { PatientHeader } from "@/components/clinical/patient-header";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
 
 
 

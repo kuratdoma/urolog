@@ -1,5 +1,4 @@
 import { Brain, Zap, Activity, Bone, Stethoscope, Users, Pill } from "lucide-react";
-import React from "react";
 
 export const ED_DRUG_DATABASE = [
     {

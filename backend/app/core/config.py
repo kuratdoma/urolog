@@ -41,9 +41,9 @@ class Settings(BaseSettings):
     DB_HOST: str = "db"
     DB_PORT: str = "5432"
 
-    # Database Pool Settings
-    DB_POOL_SIZE: int = 5
-    DB_MAX_OVERFLOW: int = 3
+    # Database Pool Settings (Tuned for high concurrent clinical queries)
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 20
     DB_POOL_TIMEOUT: int = 30
     DB_POOL_RECYCLE: int = 1800
     DB_POOL_PRE_PING: bool = True

@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_cache.decorator import cache
 from app.api import deps
+from app.core.cache_invalidation import CacheNS, invalidate
 from app.models.user import User
 from app.repositories.definition_repository import DefinitionRepository
-from app.services.icd_service import icd_service
+from app.repositories.system_repository import SystemRepository
 from app.schemas.definition import (
     Definition,
     DefinitionCreate,
@@ -31,7 +32,7 @@ router = APIRouter(
 
 # Kurumlar
 @router.get("/kurumlar", response_model=List[Definition])
-@cache(expire=3600)
+@cache(expire=3600, namespace=CacheNS.KURUMLAR)
 async def get_kurumlar(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_kurumlar()
@@ -42,7 +43,9 @@ async def create_kurum(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
-    return await repo.create_kurum(ad=obj_in.ad, aktif=obj_in.aktif)
+    result = await repo.create_kurum(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.KURUMLAR, CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/kurumlar/{id}", response_model=Definition)
@@ -53,6 +56,7 @@ async def update_kurum(
     db_obj = await repo.update_kurum(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Kurum bulunamadı")
+    await invalidate(CacheNS.KURUMLAR, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -61,12 +65,13 @@ async def delete_kurum(id: int, db: AsyncSession = Depends(deps.get_db), current
     repo = DefinitionRepository(db)
     if not await repo.delete_kurum(id):
         raise HTTPException(status_code=404, detail="Kurum bulunamadı")
+    await invalidate(CacheNS.KURUMLAR, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
 # Meslekler
 @router.get("/meslekler", response_model=List[Definition])
-@cache(expire=3600)
+@cache(expire=3600, namespace=CacheNS.MESLEKLER)
 async def get_meslekler(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_meslekler()
@@ -77,7 +82,9 @@ async def create_meslek(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
-    return await repo.create_meslek(ad=obj_in.ad, aktif=obj_in.aktif)
+    result = await repo.create_meslek(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.MESLEKLER, CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/meslekler/{id}", response_model=Definition)
@@ -88,6 +95,7 @@ async def update_meslek(
     db_obj = await repo.update_meslek(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Meslek bulunamadı")
+    await invalidate(CacheNS.MESLEKLER, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -96,12 +104,13 @@ async def delete_meslek(id: int, db: AsyncSession = Depends(deps.get_db), curren
     repo = DefinitionRepository(db)
     if not await repo.delete_meslek(id):
         raise HTTPException(status_code=404, detail="Meslek bulunamadı")
+    await invalidate(CacheNS.MESLEKLER, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
 # Sigortalar
 @router.get("/sigortalar", response_model=List[Definition])
-@cache(expire=3600)
+@cache(expire=3600, namespace=CacheNS.SIGORTALAR)
 async def get_sigortalar(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_sigortalar()
@@ -112,7 +121,9 @@ async def create_sigorta(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
-    return await repo.create_sigorta(ad=obj_in.ad, aktif=obj_in.aktif)
+    result = await repo.create_sigorta(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.SIGORTALAR, CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/sigortalar/{id}", response_model=Definition)
@@ -123,6 +134,7 @@ async def update_sigorta(
     db_obj = await repo.update_sigorta(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Sigorta bulunamadı")
+    await invalidate(CacheNS.SIGORTALAR, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -131,12 +143,13 @@ async def delete_sigorta(id: int, db: AsyncSession = Depends(deps.get_db), curre
     repo = DefinitionRepository(db)
     if not await repo.delete_sigorta(id):
         raise HTTPException(status_code=404, detail="Sigorta bulunamadı")
+    await invalidate(CacheNS.SIGORTALAR, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
 # Anestezi
 @router.get("/anestezi-tipleri", response_model=List[Definition])
-@cache(expire=3600)
+@cache(expire=3600, namespace=CacheNS.ANESTEZI)
 async def get_anestezi_tipleri(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_anestezi_tipleri()
@@ -147,7 +160,9 @@ async def create_anestezi(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
-    return await repo.create_anestezi(ad=obj_in.ad, aktif=obj_in.aktif)
+    result = await repo.create_anestezi(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.ANESTEZI)
+    return result
 
 
 @router.put("/anestezi-tipleri/{id}", response_model=Definition)
@@ -158,6 +173,7 @@ async def update_anestezi(
     db_obj = await repo.update_anestezi(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Anestezi tipi bulunamadı")
+    await invalidate(CacheNS.ANESTEZI)
     return db_obj
 
 
@@ -166,12 +182,13 @@ async def delete_anestezi(id: int, db: AsyncSession = Depends(deps.get_db), curr
     repo = DefinitionRepository(db)
     if not await repo.delete_anestezi(id):
         raise HTTPException(status_code=404, detail="Anestezi tipi bulunamadı")
+    await invalidate(CacheNS.ANESTEZI)
     return {"status": "success"}
 
 
 # Randevu Türleri
 @router.get("/randevu-turleri", response_model=List[RandevuTuru])
-@cache(expire=3600)
+@cache(expire=3600, namespace=CacheNS.RANDEVU_TURLERI)
 async def get_randevu_turleri(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_randevu_turleri()
@@ -182,9 +199,11 @@ async def create_randevu_turu(
     obj_in: RandevuTuruCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
-    return await repo.create_randevu_turu(
+    result = await repo.create_randevu_turu(
         ad=obj_in.ad, sure=obj_in.sure, renk=obj_in.renk, aktif=obj_in.aktif
     )
+    await invalidate(CacheNS.RANDEVU_TURLERI, CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/randevu-turleri/{id}", response_model=RandevuTuru)
@@ -197,6 +216,7 @@ async def update_randevu_turu(
     )
     if not db_obj:
         raise HTTPException(status_code=404, detail="Randevu türü bulunamadı")
+    await invalidate(CacheNS.RANDEVU_TURLERI, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -205,6 +225,7 @@ async def delete_randevu_turu(id: int, db: AsyncSession = Depends(deps.get_db), 
     repo = DefinitionRepository(db)
     if not await repo.delete_randevu_turu(id):
         raise HTTPException(status_code=404, detail="Randevu türü bulunamadı")
+    await invalidate(CacheNS.RANDEVU_TURLERI, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
@@ -248,6 +269,7 @@ async def delete_biyopsi(id: int, db: AsyncSession = Depends(deps.get_db), curre
 
 # Doktorlar
 @router.get("/doktorlar", response_model=List[Doktor])
+@cache(expire=3600, namespace=CacheNS.DOKTORLAR)
 async def get_doktorlar(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_doktorlar()
@@ -256,7 +278,7 @@ async def get_doktorlar(db: AsyncSession = Depends(deps.get_db)):
 @router.post("/doktorlar", response_model=Doktor)
 async def create_doktor(obj_in: DoktorCreate, db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
-    return await repo.create_doktor(
+    result = await repo.create_doktor(
         ad_soyad=obj_in.ad_soyad,
         brans=obj_in.brans,
         diploma_no=obj_in.diploma_no,
@@ -264,6 +286,8 @@ async def create_doktor(obj_in: DoktorCreate, db: AsyncSession = Depends(deps.ge
         uzmanlik_tescil_no=obj_in.uzmanlik_tescil_no,
         aktif=obj_in.aktif,
     )
+    await invalidate(CacheNS.DOKTORLAR, CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/doktorlar/{id}", response_model=Doktor)
@@ -282,6 +306,7 @@ async def update_doktor(
     )
     if not db_obj:
         raise HTTPException(status_code=404, detail="Doktor bulunamadı")
+    await invalidate(CacheNS.DOKTORLAR, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -290,6 +315,7 @@ async def delete_doktor(id: int, db: AsyncSession = Depends(deps.get_db), curren
     repo = DefinitionRepository(db)
     if not await repo.delete_doktor(id):
         raise HTTPException(status_code=404, detail="Doktor bulunamadı")
+    await invalidate(CacheNS.DOKTORLAR, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
@@ -333,6 +359,7 @@ async def delete_tetkik(id: int, db: AsyncSession = Depends(deps.get_db), curren
 
 # Takip Konuları
 @router.get("/takip-konulari", response_model=List[Definition])
+@cache(expire=3600, namespace=CacheNS.TAKIP_KONULARI)
 async def get_takip_konulari(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_takip_konulari()
@@ -343,7 +370,9 @@ async def create_takip_konusu(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
-    return await repo.create_takip_konusu(ad=obj_in.ad, aktif=obj_in.aktif)
+    result = await repo.create_takip_konusu(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.TAKIP_KONULARI, CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/takip-konulari/{id}", response_model=Definition)
@@ -354,6 +383,7 @@ async def update_takip_konusu(
     db_obj = await repo.update_takip_konusu(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Takip konusu bulunamadı")
+    await invalidate(CacheNS.TAKIP_KONULARI, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -362,11 +392,13 @@ async def delete_takip_konusu(id: int, db: AsyncSession = Depends(deps.get_db), 
     repo = DefinitionRepository(db)
     if not await repo.delete_takip_konusu(id):
         raise HTTPException(status_code=404, detail="Takip konusu bulunamadı")
+    await invalidate(CacheNS.TAKIP_KONULARI, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
 # Reçete Şablonları
 @router.get("/recete-sablonlari", response_model=List[ReceteSablonu])
+@cache(expire=3600, namespace=CacheNS.RECETE_SABLONLARI)
 async def get_recete_sablonlari(db: AsyncSession = Depends(deps.get_db)):
     repo = DefinitionRepository(db)
     return await repo.get_recete_sablonlari()
@@ -377,9 +409,11 @@ async def create_recete_sablonu(
     obj_in: ReceteSablonuCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
-    return await repo.create_recete_sablonu(
+    result = await repo.create_recete_sablonu(
         ad=obj_in.ad, icerik=obj_in.icerik, aktif=obj_in.aktif
     )
+    await invalidate(CacheNS.RECETE_SABLONLARI, CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/recete-sablonlari/{id}", response_model=ReceteSablonu)
@@ -392,6 +426,7 @@ async def update_recete_sablonu(
     )
     if not db_obj:
         raise HTTPException(status_code=404, detail="Reçete şablonu bulunamadı")
+    await invalidate(CacheNS.RECETE_SABLONLARI, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -400,6 +435,7 @@ async def delete_recete_sablonu(id: int, db: AsyncSession = Depends(deps.get_db)
     repo = DefinitionRepository(db)
     if not await repo.delete_recete_sablonu(id):
         raise HTTPException(status_code=404, detail="Reçete şablonu bulunamadı")
+    await invalidate(CacheNS.RECETE_SABLONLARI, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
@@ -613,26 +649,107 @@ async def delete_asistan(id: int, db: AsyncSession = Depends(deps.get_db), curre
     return {"status": "success"}
 
 
-# ICD Codes (In-Memory Search)
+# ICD Codes — tek gerçek kaynak: icd_tanilar tablosu (p008 trigram indeksleri).
+# JSON dosyası yalnızca seed girdisidir, çalışma zamanında okunmaz.
 @router.get("/icd-search")
-async def search_icd(q: str = Query("", min_length=1), limit: int = Query(20, le=100)):
-    return icd_service.search(q, limit)
+async def search_icd(
+    q: str = Query("", min_length=1),
+    limit: int = Query(20, le=100),
+    db: AsyncSession = Depends(deps.get_db),
+):
+    repo = SystemRepository(db)
+    return await repo.search_icd_ranked(q, limit)
 
 
+# NOT: fastapi-cache anahtarını argümanlardan üretiyor; AsyncSession bağımlılığı
+# her istekte farklı olduğu için @cache burada isabet üretmezdi. Indeksli tek
+# satırlık sorgu zaten ucuz, bu yüzden cache kaldırıldı.
 @router.get("/icd-lookup")
-@cache(expire=3600)
-async def lookup_icd_name(code: str = Query(..., min_length=1)):
-    name = icd_service.lookup_name(code)
-    return {"code": code, "name": name}
+async def lookup_icd_name(
+    code: str = Query(..., min_length=1),
+    db: AsyncSession = Depends(deps.get_db),
+):
+    """
+    Bulunamayan kod için `name: null` döner. Kodun kendisini ad gibi geri
+    döndürmek rapor/PDF çıktısına sahte tanı adı sızdırıyordu.
+    """
+    names = await SystemRepository(db).lookup_icd_names([code])
+    name = names.get(code.strip().upper())
+    return {"code": code, "name": name, "found": name is not None}
 
 
 @router.post("/icd-lookup-batch")
-async def lookup_icd_names_batch(codes: List[str]) -> dict:
+async def lookup_icd_names_batch(
+    codes: List[str],
+    db: AsyncSession = Depends(deps.get_db),
+) -> dict:
     """
     Aynı sayfada birden fazla ICD kodunun adı gerektiğinde (ör. bir hasta
     listesi/dashboard tablosu) satır başına ayrı istek atmak yerine tek
-    seferde toplu çözümleme. In-memory servis, DB'ye gitmiyor.
+    seferde toplu çözümleme. Bulunamayan kodlar `null` döner.
     """
-    unique_codes = {c for c in codes if c}
-    return {code: icd_service.lookup_name(code) for code in unique_codes}
+    return await SystemRepository(db).lookup_icd_names(codes)
 
+
+# ---------------------------------------------------------------------------
+# Bootstrap endpoint — form açılışında 7 tanım listesi tek seferde
+# ---------------------------------------------------------------------------
+import asyncio
+from pydantic import BaseModel
+
+
+class BootstrapResponse(BaseModel):
+    """
+    Hasta formu / muayene ekranı için gereken tüm statik tanım listelerini
+    tek HTTP yanıtında toplar. Böylece 7 ayrı istek yerine 1 istek gider
+    (RTT ×7 → ×1). İlaçlar paginated/autocomplete olduğu için burada yok.
+    """
+    doktorlar: List[Doktor]
+    kurumlar: List[Definition]
+    meslekler: List[Definition]
+    sigortalar: List[Definition]
+    takip_konulari: List[Definition]
+    randevu_turleri: List[RandevuTuru]
+    recete_sablonlari: List[ReceteSablonu]
+
+
+@router.get("/bootstrap", response_model=BootstrapResponse)
+@cache(expire=3600, namespace="def:bootstrap")
+async def get_bootstrap(db: AsyncSession = Depends(deps.get_db)):
+    """
+    Tüm tanım listelerini tek seferde döndürür. fastapi-cache Redis'te 1 saat
+    saklar; yazma endpoint'leri (POST/PUT/DELETE) ilgili namespace'lerini
+    invalidate ettiğinde bu cache de bağımsız olarak yenilenecektir — ilk
+    sonraki istek taze veriyi çeker ve tekrar cache'e yazar.
+
+    NOT: asyncio.gather burada 7 DB sorgusunu gerçekten paralel çalıştırır,
+    çünkü her biri bağımsız async I/O işlemi. Toplam süre en uzun sorgu
+    kadar olur (yaklaşık max(t1…t7)), 7 sorgunun toplamı değil.
+    """
+    repo = DefinitionRepository(db)
+    (
+        doktorlar,
+        kurumlar,
+        meslekler,
+        sigortalar,
+        takip_konulari,
+        randevu_turleri,
+        recete_sablonlari,
+    ) = await asyncio.gather(
+        repo.get_doktorlar(),
+        repo.get_kurumlar(),
+        repo.get_meslekler(),
+        repo.get_sigortalar(),
+        repo.get_takip_konulari(),
+        repo.get_randevu_turleri(),
+        repo.get_recete_sablonlari(),
+    )
+    return BootstrapResponse(
+        doktorlar=doktorlar,
+        kurumlar=kurumlar,
+        meslekler=meslekler,
+        sigortalar=sigortalar,
+        takip_konulari=takip_konulari,
+        randevu_turleri=randevu_turleri,
+        recete_sablonlari=recete_sablonlari,
+    )

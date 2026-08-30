@@ -6,7 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { insuranceProvisionApi, InsuranceProvisionDTO } from "@/lib/api/insuranceProvision";
-import { Printer, Eye, Save, Loader2, FileText } from "lucide-react";
+import { Printer, Eye, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 interface InsuranceProvisionModalProps {

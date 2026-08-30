@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { api, RandevuTuru } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
 export function AppointmentTypeSettings() {

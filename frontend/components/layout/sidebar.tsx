@@ -8,10 +8,9 @@ import {
     Users, Stethoscope, FlaskConical, Wallet,
     LayoutDashboard, LogOut, Calendar, Activity,
     Settings, FileText, Image as ImageIcon, FolderArchive,
-    ChevronDown, ChevronRight, ChevronLeft, Binoculars, Calculator, Menu,
+    ChevronDown, ChevronRight, Binoculars, Calculator, Menu,
     TrendingUp, TrendingDown, Package, Waves
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'next/navigation';
 import { usePatientStore } from '@/stores/patient-store';
@@ -19,7 +18,6 @@ import { useSettingsStore } from '@/stores/settings-store';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Footer } from './footer';
 
 export function Sidebar({ isCalendarPage = false }: { isCalendarPage?: boolean }) {
     const pathname = usePathname();

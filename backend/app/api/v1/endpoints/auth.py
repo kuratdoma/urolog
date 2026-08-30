@@ -64,22 +64,20 @@ async def login(
     user_repo = UserRepository(db)
     auth_service = AuthService(user_repo)
     try:
-        # Note: OAuth2PasswordRequestForm uses 'username' field, but we treat it as email
-        email = form_data.username  # This is actually the email
-        result = await auth_service.authenticate_user(email, form_data.password)
+        # Note: OAuth2PasswordRequestForm uses 'username' field, which can be email or username
+        identifier = form_data.username.strip()
+        result = await auth_service.authenticate_user(identifier, form_data.password)
 
-        # Audit Log: Login Success
-        user_result = await db.execute(select(User).filter(User.email == email))
-        user = user_result.scalars().first()
-        if user:
-            await AuditService.log(
-                db=db,
-                action="USER_LOGIN",
-                user_id=user.id,
-                ip_address=request.client.host if request.client else None,
-                user_agent=request.headers.get("user-agent"),
-                details={"email": email},
-            )
+        # Audit Log: Login Success — kullanıcıyı AuthService zaten yükledi,
+        # yeniden sorgulamıyoruz.
+        await AuditService.log(
+            db=db,
+            action="USER_LOGIN",
+            user_id=result["user_id"],
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            details={"identifier": identifier},
+        )
 
         # SEC: refresh token body'de dönmüyor, httpOnly cookie'ye taşınıyor.
         _set_refresh_cookie(response, result["refresh_token"])
@@ -91,7 +89,7 @@ async def login(
             action="USER_LOGIN_FAILED",
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
-            details={"email": form_data.username, "error": e.detail},
+            details={"identifier": form_data.username.strip(), "error": e.detail},
         )
         raise e
     except Exception as e:

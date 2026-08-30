@@ -142,18 +142,26 @@ async def seed_icd_tanilar(session: AsyncSession):
     
     if os.path.exists(fallback_json):
         print(f"Reading ICD from JSON: {fallback_json}")
-        await session.execute(text("TRUNCATE TABLE icd_tanilar RESTART IDENTITY CASCADE;"))
+        # TRUNCATE kaldırıldı: icd_tanilar çalışma zamanının tek gerçek kaynağı
+        # ve admin uçlarından düzenlenebiliyor. Seed yalnızca EKSİK kodları
+        # ekler (idempotent), mevcut kayıtlara dokunmaz.
+        existing = {
+            row[0]
+            for row in (await session.execute(text("SELECT kodu FROM icd_tanilar"))).all()
+        }
         data = load_json(fallback_json)
         count = 0
         for item in data:
             code = item.get('kodu', item.get('code', '')).strip()
             name = item.get('adi', item.get('name', '')).strip()
-            if code and name:
+            if code and name and code not in existing:
                 session.add(ICDTani(kodu=code, adi=name, aktif="1", seviye="2"))
+                existing.add(code)
                 count += 1
-            if count % 500 == 0: await session.flush()
+                if count % 500 == 0:
+                    await session.flush()
         await session.commit()
-        print(f"✅ Loaded {count} ICD codes from JSON.")
+        print(f"✅ Added {count} new ICD codes ({len(existing) - count} already present).")
     else:
         print("⚠️ icd_fallback.json not found. Skipping.")
 

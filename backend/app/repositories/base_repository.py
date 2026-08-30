@@ -79,10 +79,48 @@ class BaseRepository(Generic[ModelType]):
         if self.context:
             obj.created_by = self.context.user_id
         self.session.add(obj)
+        # NOT: commit burada YAPILMAZ. İstek sınırında `get_db()` commit ediyor
+        # (app/api/deps.py). Repository'nin commit atması, servis/orchestrator
+        # katmanının çok adımlı bir işlemi (ör. ödeme + kasa hareketi + cari
+        # güncelleme) tek transaction'da toplamasını imkânsız kılıyordu: ilk
+        # adım commit'lendikten sonra ikincisi hata verirse yarım kayıt kalıyordu.
+        # flush, PK ve sunucu tarafı default değerleri üretmek için yeterli.
         await self.session.flush()
-        await self.session.commit()
         await self.session.refresh(obj)
         return obj
+
+    async def create_many(self, items: List[Any]) -> List[ModelType]:
+        """
+        Birden çok kaydı tek round-trip ve tek transaction ile oluşturur.
+
+        Tek tek `create()` çağırmak N adet INSERT üretiyordu; eskiden her biri
+        ayrıca commit'lendiği için araya bir hata girdiğinde önceki kayıtlar
+        kalıcı oluyor ve "batch" uçları atomik olmuyordu. Burada tüm satırlar
+        aynı transaction'a yazılır: biri patlarsa istek sınırındaki rollback
+        hepsini geri alır.
+        """
+        if not items:
+            return []
+
+        objs: List[ModelType] = []
+        for data in items:
+            raw = data.model_dump() if hasattr(data, "model_dump") else data
+            valid = {k: v for k, v in raw.items() if hasattr(self.model, k)}
+
+            tarih = valid.get("tarih")
+            if tarih is None and hasattr(self.model, "tarih"):
+                valid["tarih"] = datetime.now()
+            elif isinstance(tarih, date) and not isinstance(tarih, datetime):
+                valid["tarih"] = datetime.combine(tarih, datetime.min.time())
+
+            obj = self.model(**valid)
+            if self.context:
+                obj.created_by = self.context.user_id
+            objs.append(obj)
+
+        self.session.add_all(objs)
+        await self.session.flush()
+        return objs
 
     async def update(self, record_id: Any, data: Any) -> Optional[ModelType]:
         obj = await self.get_by_id(record_id)
@@ -104,7 +142,6 @@ class BaseRepository(Generic[ModelType]):
         if self.context:
             obj.updated_by = self.context.user_id
         await self.session.flush()
-        await self.session.commit()
         await self.session.refresh(obj)
         return obj
 
@@ -115,5 +152,23 @@ class BaseRepository(Generic[ModelType]):
             .values(is_deleted=True)
         )
         result = await self.session.execute(stmt)
-        await self.session.commit()
+        await self.session.flush()
         return result.rowcount > 0
+
+    async def soft_delete_many(self, record_ids: List[Any]) -> int:
+        """
+        Birden çok kaydı tek UPDATE ile siler (id IN (...)).
+
+        Tek tek `soft_delete()` çağırmak N adet UPDATE round-trip'i üretiyordu.
+        Silinen satır sayısını döner.
+        """
+        if not record_ids:
+            return 0
+        stmt = (
+            update(self.model)
+            .where(self.model.id.in_(record_ids))
+            .values(is_deleted=True)
+        )
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount or 0

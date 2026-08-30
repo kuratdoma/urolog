@@ -43,6 +43,9 @@ async def test_login_sets_httponly_refresh_cookie_not_in_body():
         "access_token": "fake-access-token",
         "refresh_token": "fake-refresh-token",
         "token_type": "bearer",
+        # AuthService sözleşmesinin parçası: login endpoint'i audit kaydında
+        # kullanıcıyı yeniden sorgulamak yerine bunu kullanır.
+        "user_id": 42,
     }
     try:
         with patch(

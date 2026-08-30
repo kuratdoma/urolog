@@ -19,9 +19,8 @@ import {
     TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    Plus, Edit, Trash2, Settings, List,
-    Tag, Activity, RefreshCw, Check, X,
-    AlertCircle, Save, Wallet, Search,
+    Plus, Edit, Trash2, Settings,
+    Tag, Activity, RefreshCw, Check, X, Save, Wallet, Search,
     ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';

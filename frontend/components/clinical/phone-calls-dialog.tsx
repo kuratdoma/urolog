@@ -6,8 +6,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogDescription,
-    DialogFooter // Add this
+    DialogDescription // Add this
 } from "@/components/ui/dialog";
 import {
     AlertDialog,
@@ -17,7 +16,7 @@ import {
     AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle,
+    AlertDialogTitle
 } from "@/components/ui/alert-dialog"; // Add this
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +27,9 @@ import {
     Trash2,
     Save,
     X,
-    LogOut,
     Calendar,
     User,
     PhoneCall as PhoneIcon,
-    ChevronRight,
     Search,
     Clock,
     UserCheck,

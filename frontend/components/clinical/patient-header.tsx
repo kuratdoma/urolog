@@ -1,12 +1,10 @@
 "use client";
 
-import { Patient, api } from "@/lib/api";
+import { Patient } from "@/lib/api";
 import Link from "next/link";
 import { format, differenceInYears, parseISO } from "date-fns";
-import { useState, useEffect, useRef } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { Search, Phone } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { Phone } from "lucide-react";
 import { PhoneCallsDialog } from "./phone-calls-dialog";
 import { PrivateNotesDialog } from "./private-notes-dialog";
 import { useAuthStore } from "@/stores/auth-store";
@@ -15,135 +13,6 @@ interface PatientHeaderProps {
     patient: Patient | null;
     moduleName: string;
     moduleSubtitle?: string;
-    showSearch?: boolean;
-}
-
-interface PatientSearchProps {
-    currentPatientId: string | undefined;
-}
-
-export function PatientSearch({ currentPatientId }: PatientSearchProps) {
-    const router = useRouter();
-    const pathname = usePathname();
-    const [ad, setAd] = useState("");
-    const [soyad, setSoyad] = useState("");
-    const [results, setResults] = useState<Patient[]>([]);
-    const [isOpen, setIsOpen] = useState(false);
-    const wrapperRef = useRef<HTMLDivElement>(null);
-
-    // Fetch patients when inputs change
-    useEffect(() => {
-        const fetchPatients = async () => {
-            if (ad.length < 2 && soyad.length < 2) {
-                setResults([]);
-                setIsOpen(false);
-                return;
-            }
-            try {
-                const data = await api.patients.list({ ad, soyad, limit: 5 });
-                setResults(data);
-                setIsOpen(true);
-            } catch (error) {
-                console.error(error);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchPatients, 300);
-        return () => clearTimeout(timeoutId);
-    }, [ad, soyad]);
-
-    // Close dropdown on outside click
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const handleSelect = (p: Patient) => {
-        // We need the current patient ID to replace it, but we can extract it from pathname
-        // or we can pass it as prop. Simple way: just replace the last numeric ID segment if possible,
-        // or just navigate to generic patient page if regex fails.
-        if (!pathname) return;
-
-        // Assuming path format /patients/[id]/...
-        // We can just construct the target path for the new patient on the same module.
-        // Let's try to be smart about the current module.
-
-        const segments = pathname.split('/');
-        // finding the index of 'patients'
-        const patientIndex = segments.indexOf('patients');
-        if (patientIndex !== -1 && segments[patientIndex + 1]) {
-            segments[patientIndex + 1] = String(p.id);
-            const newPath = segments.join('/');
-            router.push(newPath);
-        } else {
-            router.push(`/patients/${p.id}`);
-        }
-
-        // Reset search
-        setAd("");
-        setSoyad("");
-        setIsOpen(false);
-    };
-
-    return (
-        <div className="w-full relative" ref={wrapperRef}>
-            <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1 transition-all focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 shadow-sm">
-                <Search className="h-4 w-4 text-slate-400 ml-2" />
-
-                <Input
-                    placeholder="Ad Ara"
-                    value={ad}
-                    onChange={(e) => setAd(e.target.value)}
-                    onFocus={() => { if (results.length > 0) setIsOpen(true); }}
-                    className="h-7 text-xs bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-400 w-full"
-                />
-
-                <div className="h-4 w-px bg-slate-300 mx-1"></div>
-
-                <Input
-                    placeholder="Soyad Ara"
-                    value={soyad}
-                    onChange={(e) => setSoyad(e.target.value)}
-                    onFocus={() => { if (results.length > 0) setIsOpen(true); }}
-                    className="h-7 text-xs bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-slate-400 w-full"
-                />
-
-                {/* Results Dropdown */}
-                {isOpen && results.length > 0 && (
-                    <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white rounded-lg border border-slate-200 shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 z-50">
-                        <div className="bg-slate-50/50 px-3 py-1.5 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            Hızlı Hasta Değişimi
-                        </div>
-                        <div className="max-h-[300px] overflow-y-auto p-1">
-                            {results.map((p) => (
-                                <button
-                                    key={p.id}
-                                    onClick={() => handleSelect(p)}
-                                    className="w-full text-left flex items-center gap-3 p-2 hover:bg-slate-50 rounded-md transition-colors group"
-                                >
-                                    <div className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-bold group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">
-                                        {p.ad?.charAt(0)}{p.soyad?.charAt(0)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="text-sm font-bold text-slate-700 group-hover:text-black">{p.ad} {p.soyad}</div>
-                                        <div className="text-[10px] text-slate-400 font-mono">TC: {p.tc_kimlik || '---'}</div>
-                                    </div>
-                                    {p.id === currentPatientId && (
-                                        <div className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Aktif</div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
 }
 
 export function PatientHeader({ patient, moduleName, moduleSubtitle }: PatientHeaderProps) {

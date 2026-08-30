@@ -24,8 +24,6 @@ import {
     DialogFooter
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { Badge } from "@/components/ui/badge";
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -231,6 +229,7 @@ export default function CalendarPage() {
     const { data: appointments, refetch } = useQuery({
         queryKey: ['appointments', dateRange.start, dateRange.end, showChanges],
         queryFn: () => api.appointments.list({ start: dateRange.start, end: dateRange.end, include_deleted: showChanges }),
+        staleTime: 180 * 1000,
     });
 
     // Delete Mutation

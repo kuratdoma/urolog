@@ -1,12 +1,11 @@
 import React from "react";
+import { propsEqualWithShallowValue } from "@/components/examination/shared/memoValue";
 import { DiagnosisData, DiagnosisItem } from "./schema";
 import { DiagnosisICDCombobox } from "./DiagnosisICDCombobox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Tag, Plus, Trash2, Pill, Printer, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { DebouncedTextarea } from "@/components/examination/shared/DebouncedText";
+import { Tag, Plus, Trash2, Pill, FileText } from "lucide-react";
 
 
 interface DiagnosisFormProps {
@@ -17,7 +16,7 @@ interface DiagnosisFormProps {
     onOpenPrescription: () => void;
 }
 
-export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
+const DiagnosisFormBase: React.FC<DiagnosisFormProps> = ({
     value,
     onChange,
     readOnly = false,
@@ -105,10 +104,10 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
 
                     <div className="space-y-2 pt-2">
                         <Label className="text-xs text-slate-500 uppercase tracking-wider">Sonuç / Karar</Label>
-                        <Textarea
+                        <DebouncedTextarea
                             value={value.sonuc || ""}
                             disabled={readOnly}
-                            onChange={(e) => updateField("sonuc", e.target.value)}
+                            onValueChange={(v) => updateField("sonuc", v)}
                             className="bg-slate-50 border-slate-100 min-h-[60px] resize-y font-mono text-sm"
                             placeholder="Takip, Operasyon, Konsültasyon, Tetkik..."
                         />
@@ -116,10 +115,10 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
 
                     <div className="space-y-2 pt-2">
                         <Label className="text-xs text-slate-500 uppercase tracking-wider">Öneriler</Label>
-                        <Textarea
+                        <DebouncedTextarea
                             value={value.oneriler || ""}
                             disabled={readOnly}
-                            onChange={(e) => updateField("oneriler", e.target.value)}
+                            onValueChange={(v) => updateField("oneriler", v)}
                             className="bg-slate-50 border-slate-100 min-h-[60px] resize-y font-mono text-sm"
                             placeholder="Hastaya verilen öneriler..."
                         />
@@ -136,10 +135,10 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
                 <div className="p-4 space-y-4 flex-1">
                     <div className="space-y-2">
                         <Label className="text-xs text-slate-500 uppercase tracking-wider">Tedavi / Plan</Label>
-                        <Textarea
+                        <DebouncedTextarea
                             value={value.tedavi || ""}
                             disabled={readOnly}
-                            onChange={(e) => updateField("tedavi", e.target.value)}
+                            onValueChange={(v) => updateField("tedavi", v)}
                             className="min-h-[120px] bg-slate-50 border-slate-100 resize-y font-mono text-sm"
                             placeholder="Tedavi planı detayları..."
                         />
@@ -205,10 +204,10 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
                                 HAZIRLA
                             </Button>
                         </div>
-                        <Textarea
+                        <DebouncedTextarea
                             value={value.recete || ""}
                             disabled={readOnly}
-                            onChange={(e) => updateField("recete", e.target.value)}
+                            onValueChange={(v) => updateField("recete", v)}
                             className="bg-slate-50 border-slate-100 min-h-[100px] resize-y font-mono text-sm"
                             placeholder="İlaç isimleri, doz..."
                         />
@@ -218,3 +217,6 @@ export const DiagnosisForm: React.FC<DiagnosisFormProps> = ({
         </div>
     );
 };
+
+export const DiagnosisForm = React.memo(DiagnosisFormBase, propsEqualWithShallowValue);
+DiagnosisForm.displayName = "DiagnosisForm";

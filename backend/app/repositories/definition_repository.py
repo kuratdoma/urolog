@@ -41,7 +41,7 @@ class DefinitionRepository:
     async def _create(self, model: Type[T], **kwargs) -> T:
         db_obj = model(**kwargs)
         self.db.add(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -52,7 +52,7 @@ class DefinitionRepository:
         for key, value in kwargs.items():
             if value is not None:
                 setattr(db_obj, key, value)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -61,7 +61,7 @@ class DefinitionRepository:
         if not db_obj:
             return False
         await self.db.delete(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         return True
 
     # Kurumlar

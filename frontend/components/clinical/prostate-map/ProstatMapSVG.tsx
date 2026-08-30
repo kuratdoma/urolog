@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import * as Popover from "@radix-ui/react-popover";
-import { Settings, Check, Copy, RotateCcw, Crosshair, Target, Info } from "lucide-react";
+import { Settings, Check, Copy, RotateCcw, Info } from "lucide-react";
 import { PiradsLesion, PIRADS_COLORS } from "./types";
 import { PiradsLesionPanel } from "./PiradsLesionPanel";
 import { toast } from "sonner";

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, Loader2, MapPin, Hash } from "lucide-react";
+import { Plus, Trash2, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { api, BiyopsiSablonu } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
 export function BiopsyTemplateSettings() {

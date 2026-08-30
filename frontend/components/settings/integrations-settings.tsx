@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Calendar, CheckCircle2, XCircle, Link2, ExternalLink, Download, Brain, Save, Zap, Eye, EyeOff } from "lucide-react";
+import { Loader2, Calendar, CheckCircle2, XCircle, Link2, ExternalLink, Brain, Save, Zap, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { api, SystemSettingCreate, SystemSetting } from "@/lib/api";
 import { UserGoogleStatus } from "@/lib/api/integrations";
@@ -19,9 +19,8 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
+    DialogTrigger
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useSettingsStore } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";

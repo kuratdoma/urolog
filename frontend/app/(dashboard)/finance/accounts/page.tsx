@@ -29,7 +29,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
+    DialogFooter
 } from '@/components/ui/dialog';
 
 const formatCurrency = (amount: number) => {

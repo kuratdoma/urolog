@@ -2,24 +2,19 @@
 
 import { useState } from "react";
 import { useQuery } from '@tanstack/react-query';
-import { api, AylikOzet, FinansOzet, KategoriKirilim, YaslandirmaKova } from '@/lib/api';
-import { format, subYears, startOfYear, endOfYear } from 'date-fns';
-import { tr } from 'date-fns/locale';
+import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    LineChart, Line, Legend, PieChart, Pie, Cell, AreaChart, Area
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, AreaChart, Area
 } from "recharts";
 import {
-    TrendingUp, TrendingDown, CreditCard, DollarSign,
-    Calendar, Download, FileText, Filter, RefreshCw,
-    ArrowUpRight, ArrowDownLeft, Wallet, PieChart as PieChartIcon
+    TrendingUp, DollarSign,
+    Calendar, Download, FileText, RefreshCw,
+    ArrowUpRight, ArrowDownLeft, Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import ExcelJS from 'exceljs';
-import html2pdf from 'html2pdf.js';
 
 export default function FinanceReportsPage() {
     const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -77,6 +72,7 @@ export default function FinanceReportsPage() {
     const exportToExcel = async () => {
         if (!monthlySummary) return;
 
+        const ExcelJS = (await import('exceljs')).default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Aylık Finans Raporu");
 
@@ -116,10 +112,11 @@ export default function FinanceReportsPage() {
         URL.revokeObjectURL(url);
     };
 
-    const exportToPdf = () => {
+    const exportToPdf = async () => {
         const element = document.getElementById('report-content');
         if (!element) return;
 
+        const html2pdf = (await import('html2pdf.js')).default;
         const opt = {
             margin: 10,
             filename: `finans_raporu_${year}.pdf`,

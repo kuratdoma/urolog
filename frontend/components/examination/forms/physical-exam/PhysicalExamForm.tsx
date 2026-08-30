@@ -1,11 +1,11 @@
 import React, { useState } from "react";
+import { propsEqualWithShallowValue } from "@/components/examination/shared/memoValue";
 import { PhysicalExamData } from "./schema";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Eye, ClipboardCheck } from "lucide-react";
+import { DebouncedTextarea, DebouncedInput } from "@/components/examination/shared/DebouncedText";
+import { ClipboardCheck } from "lucide-react";
 
 // --- Local Components ---
 
@@ -29,11 +29,11 @@ const QuickSelectInput = React.memo(({
 
     return (
         <div className={cn("relative w-full", disabled && "opacity-70 pointer-events-none")}>
-            <Input
+            <DebouncedInput
                 value={value || ""}
                 disabled={disabled}
-                onChange={(e) => {
-                    onChange(e.target.value);
+                onValueChange={(v) => {
+                    onChange(v);
                     setShowSuggestions(true);
                 }}
                 onFocus={() => {
@@ -97,9 +97,12 @@ const UroflowInput = React.memo(({
 }) => {
     const seg = parseUroflow(value || "");
 
+    // Yerel state ile üst state aynı kuralı uygulasın: sanitize prop'u yazarken
+    // anında, update ise üst forma yazarken temizler.
+    const onlyDigits = (raw: string) => raw.replace(/[^0-9]/g, "").slice(0, 4);
+
     const update = (field: "qmax" | "qav" | "vol" | "pvr", raw: string) => {
-        const digits = raw.replace(/[^0-9]/g, "").slice(0, 4);
-        onChange(buildUroflowText({ ...seg, [field]: digits }));
+        onChange(buildUroflowText({ ...seg, [field]: onlyDigits(raw) }));
     };
 
     const segClass = "h-8 w-14 text-xs bg-white font-mono text-center px-1";
@@ -107,13 +110,13 @@ const UroflowInput = React.memo(({
     return (
         <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-bold text-slate-500 font-mono">UF:</span>
-            <Input value={seg.qmax} disabled={disabled} inputMode="numeric" onChange={(e) => update("qmax", e.target.value)} className={segClass} placeholder="QMax" />
+            <DebouncedInput value={seg.qmax} disabled={disabled} inputMode="numeric" sanitize={onlyDigits} onValueChange={(v) => update("qmax", v)} className={segClass} placeholder="QMax" />
             <span className="text-xs text-slate-400 font-mono">//</span>
-            <Input value={seg.qav} disabled={disabled} inputMode="numeric" onChange={(e) => update("qav", e.target.value)} className={segClass} placeholder="Qav" />
+            <DebouncedInput value={seg.qav} disabled={disabled} inputMode="numeric" sanitize={onlyDigits} onValueChange={(v) => update("qav", v)} className={segClass} placeholder="Qav" />
             <span className="text-xs text-slate-400 font-mono">//</span>
-            <Input value={seg.vol} disabled={disabled} inputMode="numeric" onChange={(e) => update("vol", e.target.value)} className={segClass} placeholder="Vol" />
+            <DebouncedInput value={seg.vol} disabled={disabled} inputMode="numeric" sanitize={onlyDigits} onValueChange={(v) => update("vol", v)} className={segClass} placeholder="Vol" />
             <span className="text-xs font-bold text-slate-500 font-mono ml-2">PVR:</span>
-            <Input value={seg.pvr} disabled={disabled} inputMode="numeric" onChange={(e) => update("pvr", e.target.value)} className={segClass} placeholder="nn" />
+            <DebouncedInput value={seg.pvr} disabled={disabled} inputMode="numeric" sanitize={onlyDigits} onValueChange={(v) => update("pvr", v)} className={segClass} placeholder="nn" />
             <span className="text-xs text-slate-400 font-mono">mL</span>
         </div>
     );
@@ -129,7 +132,7 @@ interface PhysicalExamFormProps {
     onOpenPEForm?: () => void;
 }
 
-export const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({
+const PhysicalExamFormBase: React.FC<PhysicalExamFormProps> = ({
     value,
     onChange,
     readOnly = false,
@@ -241,20 +244,20 @@ export const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({
             )}
 
             {/* Main Textarea - Sistemik Muayene */}
-            <Textarea
+            <DebouncedTextarea
                 value={value.fizik_muayene || ""}
                 disabled={readOnly}
-                onChange={(e) => updateField("fizik_muayene", e.target.value)}
+                onValueChange={(v) => updateField("fizik_muayene", v)}
                 className="min-h-[200px] bg-slate-50 border-slate-200 resize-y font-mono text-sm"
                 placeholder="Sistemik muayene bulguları..."
             />
 
             <div className="space-y-2">
                 <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">DRE (Parmakla Rektal Muayene)</Label>
-                <Textarea
+                <DebouncedTextarea
                     value={value.rektal_tuse || ""}
                     disabled={readOnly}
-                    onChange={(e) => updateField("rektal_tuse", e.target.value)}
+                    onValueChange={(v) => updateField("rektal_tuse", v)}
                     rows={3}
                     className="bg-slate-50 border-slate-200 min-h-[60px] resize-y font-mono text-sm focus:bg-white transition-colors"
                     placeholder="Prostat büyüklüğü, kıvamı, nodül..."
@@ -263,10 +266,10 @@ export const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({
 
             <div className="space-y-2">
                 <Label className="text-xs text-slate-500 uppercase tracking-wider font-bold">Yapılan İşlem / Prosedür</Label>
-                <Textarea
+                <DebouncedTextarea
                     value={value.prosedur || ""}
                     disabled={readOnly}
-                    onChange={(e) => updateField("prosedur", e.target.value)}
+                    onValueChange={(v) => updateField("prosedur", v)}
                     rows={2}
                     className="bg-slate-50 border-slate-200 min-h-[60px] resize-y font-mono text-sm focus:bg-white transition-colors"
                     placeholder="PRP, ESWT, Biyopsi, Sistoskopi vb..."
@@ -275,3 +278,6 @@ export const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({
         </div>
     );
 };
+
+export const PhysicalExamForm = React.memo(PhysicalExamFormBase, propsEqualWithShallowValue);
+PhysicalExamForm.displayName = "PhysicalExamForm";

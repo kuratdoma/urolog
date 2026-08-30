@@ -383,6 +383,91 @@ async def create_patient(
 # --- INSTANCE ROUTES (DYNAMIC) ---
 
 
+# ---------------------------------------------------------------------------
+# Patient Bootstrap — panel açılışında 4 sorgu tek seferde
+# ---------------------------------------------------------------------------
+# ÖNEMLİ: Bu route /{id}/timeline ve /{id}'den ÖNCE tanımlanmalıdır;
+# FastAPI path parametrelerini sırayla eşleştirir.
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel as _BM
+from app.schemas.clinical import MuayeneResponse
+from app.schemas.appointment import RandevuResponse
+from app.repositories.appointment_repository import AppointmentRepository
+from app.controllers.legacy_adapters.clinical_adapter import ClinicalAdapter
+
+
+class PatientBootstrapResponse(_BM):
+    """
+    Hasta panelini açmak için gereken verileri tek HTTP yanıtında toplar.
+    Frontend bunu aldığında tekil query key'lere (patient, muayeneler,
+    appointments, patient-timeline) setQueryData ile dağıtır — diğer
+    sayfalar cache'ten anında okur, ağ isteği atmaz.
+    """
+    patient: dict
+    muayeneler: List[dict]
+    appointments: List[dict]
+    timeline: List[dict]
+
+
+@router.get("/{id}/bootstrap", response_model=PatientBootstrapResponse)
+async def get_patient_bootstrap(
+    *,
+    request: Request,
+    db: AsyncSession = Depends(deps.get_db),
+    id: UUID,
+) -> Any:
+    """
+    Hasta detay paneli için bootstrap verisi.
+    asyncio.gather ile 4 sorguyu paralel çalıştırır:
+      - Hasta profili
+      - Muayeneler
+      - Randevular
+      - Timeline
+
+    Toplam süre max(t_profil, t_muayene, t_randevu, t_timeline) olur,
+    dört sorgunun toplamı değil.
+    """
+    context = UserContext(
+        user_id=getattr(request.state, "user_id", None),
+        username=getattr(request.state, "username", None),
+        ip_address=request.client.host,
+    )
+    controller = PatientController(db, context)
+    adapter = ClinicalAdapter(db)
+    apt_repo = AppointmentRepository(db)
+    str_id = str(id)
+
+    try:
+        patient, muayeneler, appointments, timeline = await asyncio.gather(
+            controller.get_patient_profile(id),
+            adapter.get_patient_muayeneler(str_id),
+            apt_repo.get_by_patient(str_id),
+            controller.get_timeline(id),
+        )
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Bootstrap verisi alınırken hata oluştu")
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Pydantic model → dict dönüşümü (serializable)
+    def _to_dict(obj):
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump()
+        if hasattr(obj, "dict"):
+            return obj.dict()
+        return obj
+
+    return PatientBootstrapResponse(
+        patient=_to_dict(patient),
+        muayeneler=[_to_dict(m) for m in (muayeneler or [])],
+        appointments=[_to_dict(a) for a in (appointments or [])],
+        timeline=list(timeline or []),
+    )
+
+
 @router.get("/{id}/timeline")
 @cache(expire=30)
 async def get_patient_timeline(
@@ -391,6 +476,7 @@ async def get_patient_timeline(
     """Get patient timeline."""
     controller = PatientController(db)
     return await controller.get_timeline(id)
+
 
 
 @router.get("/{id}", response_model=PatientLegacyResponse)

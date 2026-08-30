@@ -6,10 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { PatientHeader } from "@/components/clinical/patient-header";
 import { Button } from "@/components/ui/button";
-import { Activity, Plus, TrendingUp, History, ClipboardList, ChevronRight, LayoutDashboard, Settings2, Beaker, Target, Info, AlertTriangle } from "lucide-react";
+import { Activity, Plus, TrendingUp, History, ClipboardList, ChevronRight, LayoutDashboard, Target, Info, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LipusForm } from "@/components/clinical/lipus/LipusForm";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -19,10 +19,7 @@ import {
     XAxis, 
     YAxis, 
     CartesianGrid, 
-    Tooltip as ChartTooltip,
-    BarChart,
-    Bar,
-    Cell
+    Tooltip as ChartTooltip
 } from 'recharts';
 
 export default function LipusDashboardPage() {

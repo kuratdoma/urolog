@@ -1,132 +1,83 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { api, ReceteSablonu, Doktor, Definition, RandevuTuru } from "@/lib/api";
+import { api, Doktor, RandevuTuru } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 
+// PERF: Tanım listeleri (doktor, ilaç, kurum, meslek, sigorta, takip konusu,
+// randevu türü) nadiren değişir. Önceki implementasyon 7 ayrı useQuery ile
+// 7 paralel HTTP isteği yapıyordu (her form mount'unda). Artık tek
+// /definitions/bootstrap isteği tüm listeleri döndürüyor:
+//   - RTT × 7 → × 1 (ilk açılış veya cache miss'te)
+//   - staleTime 60dk ile aynı oturumda tekrar istek atılmıyor
+//   - React Query dedup: aynı anda birden çok form açılsa tek istek
+const DEFINITIONS_STALE_TIME = 60 * 60 * 1000; // 60 dk
+
 export const useSystemDefinitions = (initialDoctor: string = "", onDoctorFound?: (docName: string) => void) => {
-    const [doctors, setDoctors] = useState<string[]>([]);
-    const [doctorDetails, setDoctorDetails] = useState<Doktor[]>([]);
-    const [prescriptionTemplates, setPrescriptionTemplates] = useState<any[]>([]);
-    const [drugList, setDrugList] = useState<any[]>([]);
-    const [institutions, setInstitutions] = useState<string[]>([]);
-    const [occupations, setOccupations] = useState<string[]>([]);
-    const [insurances, setInsurances] = useState<string[]>([]);
-    const [followUpSubjects, setFollowUpSubjects] = useState<string[]>([]);
-    const [appointmentTypes, setAppointmentTypes] = useState<RandevuTuru[]>([]);
+    const queryClient = useQueryClient();
+    const token = useAuthStore((s) => s.token);
+    const hasHydrated = useAuthStore((s) => s._hasHydrated);
+    const enabled = hasHydrated && !!token;
+
+    // Tek istek — 7 tanım listesini toplu çeker.
+    const bootstrapQuery = useQuery({
+        queryKey: ["definitions", "bootstrap"],
+        queryFn: () => api.definitions.bootstrap(),
+        staleTime: DEFINITIONS_STALE_TIME,
+        enabled,
+    });
+
+    // İlaçlar paginated/autocomplete olduğu için bootstrap dışında kalıyor.
+    const drugsQuery = useQuery({
+        queryKey: ["definitions", "drugs"],
+        queryFn: async () => {
+            try {
+                return await api.system.getIlaclar();
+            } catch (e) {
+                // Fallback: backend/redis erişilemezse yerel tohum veriyle devam et.
+                const response = await fetch('/drugs_seed.json');
+                if (response.ok) return await response.json();
+                throw e;
+            }
+        },
+        staleTime: DEFINITIONS_STALE_TIME,
+        enabled,
+    });
+
+    const bootstrap = bootstrapQuery.data;
+
+    const doctorDetails: Doktor[] = Array.isArray(bootstrap?.doktorlar) ? bootstrap.doktorlar : [];
+    const doctors = doctorDetails.map(d => d.ad_soyad);
 
     useEffect(() => {
-        const fetchDefinitions = async () => {
-            try {
-                // parallel fetch from sharded APIs with Promise.allSettled for hot-reload resilience
-                const [
-                    docsRes,
-                    templatesRes,
-                    drugsRes,
-                    instsRes,
-                    occsRes,
-                    insursRes,
-                    followupsRes,
-                    apptTypesRes
-                ] = await Promise.allSettled([
-                    api.definitions.doktorlar.list(),
-                    api.definitions.receteSablonlari.list(),
-                    api.system.getIlaclar(),
-                    api.definitions.kurumlar.list(),
-                    api.definitions.meslekler.list(),
-                    api.definitions.sigortalar.list(),
-                    api.definitions.takipKonulari.list(),
-                    api.definitions.randevuTurleri.list()
-                ]);
-
-                const docs = docsRes.status === 'fulfilled' ? docsRes.value : [];
-                const templates = templatesRes.status === 'fulfilled' ? templatesRes.value : [];
-                const drugs = drugsRes.status === 'fulfilled' ? drugsRes.value : [];
-                const insts = instsRes.status === 'fulfilled' ? instsRes.value : [];
-                const occs = occsRes.status === 'fulfilled' ? occsRes.value : [];
-                const insurs = insursRes.status === 'fulfilled' ? insursRes.value : [];
-                const followups = followupsRes.status === 'fulfilled' ? followupsRes.value : [];
-                const apptTypes = apptTypesRes.status === 'fulfilled' ? apptTypesRes.value : [];
-
-                // Doctors mapping
-                if (Array.isArray(docs)) {
-                    setDoctorDetails(docs);
-                    const docNames = docs.map(d => d.ad_soyad);
-                    setDoctors(docNames);
-
-                    // Default to first doctor (satisfies single doctor auto-assign and first doctor default for multiple)
-                    if (initialDoctor === "" && docs.length > 0 && onDoctorFound) {
-                        const docToSet = docs[0].ad_soyad;
-                        if (docToSet) {
-                            onDoctorFound(docToSet);
-                        }
-                    }
-                }
-
-                // Prescription Templates mapping
-                if (Array.isArray(templates)) {
-                    const parsedTemplates = templates.map(t => {
-                        try {
-                            const drugsData = t.icerik ? JSON.parse(t.icerik) : [];
-                            return {
-                                id: t.id,
-                                templateName: t.ad,
-                                drugs: drugsData
-                            };
-                        } catch {
-                            return { id: t.id, templateName: t.ad, drugs: [] };
-                        }
-                    });
-                    setPrescriptionTemplates(parsedTemplates);
-                }
-
-                // Drug List mapping
-                if (Array.isArray(drugs)) {
-                    setDrugList(drugs);
-                }
-
-                // Simple definition arrays (Kurum, Meslek, Sigorta, Takip)
-                if (Array.isArray(insts)) setInstitutions(insts.map(i => i.ad));
-                if (Array.isArray(occs)) setOccupations(occs.map(o => o.ad));
-                if (Array.isArray(insurs)) setInsurances(insurs.map(i => i.ad));
-                if (Array.isArray(followups)) setFollowUpSubjects(followups.map(f => f.ad));
-                if (Array.isArray(apptTypes)) setAppointmentTypes(apptTypes);
-
-            } catch (e) {
-                console.error("Failed to fetch definitions", e);
-                // Fallback: drugs_seed.json for drugs if API fails
-                try {
-                    const response = await fetch('/drugs_seed.json');
-                    if (response.ok) {
-                        const seedData = await response.json();
-                        setDrugList(seedData);
-                    }
-                } catch (fbError) {
-                    console.error("Fallback failed", fbError);
-                }
+        if (initialDoctor === "" && doctorDetails.length > 0 && onDoctorFound) {
+            const docToSet = doctorDetails[0].ad_soyad;
+            if (docToSet) {
+                onDoctorFound(docToSet);
             }
-        };
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [doctorDetails]);
 
-        // Guard to prevent duplicate fetches
-        let fetched = false;
-
-        // Wait for auth store hydration before fetching
-        const unsubscribe = useAuthStore.subscribe((state) => {
-            if (state._hasHydrated && state.token && !fetched) {
-                fetched = true;
-                fetchDefinitions();
-                unsubscribe();
+    const prescriptionTemplates = useMemo(() => {
+        const templates = bootstrap?.recete_sablonlari;
+        if (!Array.isArray(templates)) return [];
+        return templates.map(t => {
+            try {
+                const drugsData = t.icerik ? JSON.parse(t.icerik) : [];
+                return { id: t.id, templateName: t.ad, drugs: drugsData };
+            } catch {
+                return { id: t.id, templateName: t.ad, drugs: [] };
             }
         });
+    }, [bootstrap?.recete_sablonlari]);
 
-        // Check if already hydrated
-        const currentState = useAuthStore.getState();
-        if (currentState._hasHydrated && currentState.token && !fetched) {
-            fetched = true;
-            fetchDefinitions();
-        }
-
-        return () => unsubscribe();
-    }, []);
+    const drugList = Array.isArray(drugsQuery.data) ? drugsQuery.data : [];
+    const institutions = Array.isArray(bootstrap?.kurumlar) ? bootstrap.kurumlar.map(i => i.ad) : [];
+    const occupations = Array.isArray(bootstrap?.meslekler) ? bootstrap.meslekler.map(o => o.ad) : [];
+    const insurances = Array.isArray(bootstrap?.sigortalar) ? bootstrap.sigortalar.map(i => i.ad) : [];
+    const followUpSubjects = Array.isArray(bootstrap?.takip_konulari) ? bootstrap.takip_konulari.map(f => f.ad) : [];
+    const appointmentTypes: RandevuTuru[] = Array.isArray(bootstrap?.randevu_turleri) ? bootstrap.randevu_turleri : [];
 
     const savePrescriptionTemplate = async (name: string, drugs: any[]) => {
         try {
@@ -137,12 +88,10 @@ export const useSystemDefinitions = (initialDoctor: string = "", onDoctorFound?:
                 aktif: true
             });
 
-            // Update local state
-            setPrescriptionTemplates(prev => [...prev, {
-                id: newTemplate.id,
-                templateName: newTemplate.ad,
-                drugs: drugs
-            }]);
+            // Bootstrap cache'i de yenilenmeli — backend write endpoint'i
+            // BOOTSTRAP namespace'ini de invalidate ediyor, bu istemci tarafında
+            // query'yi yeniden fetch ettirir.
+            queryClient.invalidateQueries({ queryKey: ["definitions", "bootstrap"] });
 
             toast.success("Şablon başarıyla kaydedildi.");
             return newTemplate;

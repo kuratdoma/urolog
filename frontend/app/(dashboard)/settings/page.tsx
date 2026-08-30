@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
     Settings,
     Users,
@@ -17,7 +17,6 @@ import {
     Loader2,
     Info,
     ShieldCheck,
-    Brain,
     Zap,
     Activity,
     Users2,
@@ -29,7 +28,6 @@ import {
     FileText,
     Pill,
     Stethoscope,
-    FileEdit,
     Wallet,
     Package,
     FileSignature
@@ -53,7 +51,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
+    DialogTrigger
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -61,7 +59,7 @@ import { useSettingsStore } from "@/stores/settings-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { Slider } from "@/components/ui/slider";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, SystemUser, SystemUserCreate, SystemSetting, SystemSettingCreate, ICDTani, ICDTaniCreate } from "@/lib/api";
+import { api, SystemUser, SystemUserCreate, SystemSetting, SystemSettingCreate } from "@/lib/api";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -70,14 +68,13 @@ import {
     AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle,
+    AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
 import { DoctorsSettings } from "@/components/settings/doctors-settings";
 import { DefinitionList } from "@/components/settings/definition-list";
 import { AppointmentTypeSettings } from "@/components/settings/appointment-type-settings";
 import { BiopsyTemplateSettings } from "@/components/settings/biopsy-template-settings";
-import { DrugsSettings } from "@/components/settings/drugs-settings";
 import { PrescriptionTemplateSettings } from "@/components/settings/prescription-template-settings";
 import { GeneralTemplateSettings } from "@/components/settings/general-template-settings";
 import { IntegrationsSettings } from "@/components/settings/integrations-settings";

@@ -109,7 +109,7 @@ export function ExaminationDialogs({
         mshqDialogOpen, setMshqDialogOpen
     } = dialogs;
 
-    const { doctorDetails, prescriptionTemplates, drugList, savePrescriptionTemplate } = definitions;
+    const { doctorDetails, prescriptionTemplates, savePrescriptionTemplate } = definitions;
 
     return (
         <>
@@ -270,7 +270,7 @@ export function ExaminationDialogs({
                 open={prescriptionPopoverOpen} onOpenChange={setPrescriptionPopoverOpen}
                 patient={patient || {}}
                 pastPrescriptions={pastExaminations.filter((e: Muayene) => e.recete).map((e: Muayene) => ({ date: e.tarih ? new Date(e.tarih).toLocaleDateString() : '-', content: e.recete || '', doctorName: e.doktor || '' }))}
-                doctors={doctorDetails as string[]} templates={prescriptionTemplates as string[]} drugs={drugList as string[]}
+                doctors={doctorDetails as string[]} templates={prescriptionTemplates as string[]}
                 onCommit={(t) => setFormData((prev: ExaminationFormData) => ({ ...prev, recete: prev.recete ? prev.recete + "\n" + t : t }))}
                 onSaveTemplate={savePrescriptionTemplate as any} initialDoctorName={formData.doktor}
             />

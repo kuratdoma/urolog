@@ -1,4 +1,4 @@
-import { PhysicalExamData, physicalExamSchema } from "./schema";
+import { PhysicalExamData } from "./schema";
 
 export const physicalExamAdapter = {
     toNew: (formData: any): PhysicalExamData => {

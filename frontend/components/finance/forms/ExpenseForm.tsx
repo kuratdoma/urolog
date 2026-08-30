@@ -9,9 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle, TrendingDown, Plus, Trash2, Save, Building2, CreditCard, Banknote, Upload, FileText, User, X } from 'lucide-react';
-import { api, FinansKategori, FinansKasa, Firma, Patient, Muayene, Doktor } from '@/lib/api';
+import { AlertCircle, Plus, Trash2, Save, Building2, CreditCard, Banknote, Upload, User } from 'lucide-react';
+import { api, FinansKategori, FinansKasa, Firma, Muayene, Doktor } from '@/lib/api';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 

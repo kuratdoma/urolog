@@ -47,5 +47,3 @@ export const EDCSchema = z.object({
 });
 
 export type EDCData = z.infer<typeof EDCSchema>;
-
-export const defaultEDCData: EDCData = {};

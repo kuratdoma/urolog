@@ -86,16 +86,6 @@ export const canonicalizeTestName = (name: string): string => {
 };
 
 
-/**
- * Compare two test names for equality, ignoring case and Turkish character variations
- * @param name1 - First test name
- * @param name2 - Second test name
- * @returns true if names match after normalization
- */
-export const testNamesMatch = (name1: string, name2: string): boolean => {
-    return normalizeTestName(name1) === normalizeTestName(name2);
-};
-
 export const formatLabDecimal = (val: string | number | undefined | null): string => {
     if (val === undefined || val === null || val === '') return '-';
     const str = val.toString().trim();

@@ -364,26 +364,23 @@ async def create_genel_lab_batch(
 ) -> Any:
     """Create a batch of lab results."""
     repo = ClinicalRepository(db)
-    results = []
-    for item in payload:
-        # Validate required fields
-        if not item.get("hasta_id") or not item.get("tetkik_adi"):
-            continue
-
-        res = await repo.create_tetkik_sonuc(
-            TetkikSonucCreate(
-                hasta_id=item.get("hasta_id"),
-                tarih=item.get("tarih") or datetime.now(),
-                tetkik_adi=item.get("tetkik_adi"),
-                sonuc=item.get("sonuc"),
-                birim=item.get("birim"),
-                referans_araligi=item.get("referans_araligi"),
-                sembol=item.get("sembol"),
-                kategori="Laboratuvar",
-            )
+    # Tüm satırlar tek transaction'da yazılır: biri patlarsa hiçbiri kalmaz.
+    # Önceden satır başına commit atılıyordu, yarım içe aktarma mümkündü.
+    objs = [
+        TetkikSonucCreate(
+            hasta_id=item.get("hasta_id"),
+            tarih=item.get("tarih") or datetime.now(),
+            tetkik_adi=item.get("tetkik_adi"),
+            sonuc=item.get("sonuc"),
+            birim=item.get("birim"),
+            referans_araligi=item.get("referans_araligi"),
+            sembol=item.get("sembol"),
+            kategori="Laboratuvar",
         )
-        results.append(res)
-    return results
+        for item in payload
+        if item.get("hasta_id") and item.get("tetkik_adi")
+    ]
+    return await repo.create_tetkik_sonuc_batch(objs)
 
 
 @router.delete("/genel/batch", response_model=bool)
@@ -395,6 +392,6 @@ async def delete_genel_lab_batch(
 ) -> Any:
     """Delete a batch of lab results."""
     repo = ClinicalRepository(db)
-    for res_id in ids:
-        await repo.delete_tetkik_sonuc(res_id)
+    # Tek UPDATE ... WHERE id IN (...) — önceden id başına ayrı UPDATE+COMMIT.
+    await repo.delete_tetkik_sonuc_batch(ids)
     return True

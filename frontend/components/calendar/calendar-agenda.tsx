@@ -1,6 +1,6 @@
 'use client';
 
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';

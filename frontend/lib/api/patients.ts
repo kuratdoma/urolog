@@ -1,8 +1,16 @@
 import { apiFetch } from './client';
 import { validateResponse, PatientSchema } from '../schemas';
 import {
-    PaginatedResponse, Patient, PatientCreate, PatientReportDTO, TimelineItem
+    PaginatedResponse, Patient, PatientCreate, PatientReportDTO, TimelineItem, Muayene
 } from './types';
+
+/** GET /patients/{id}/bootstrap yanıt tipi */
+export interface PatientBootstrap {
+    patient: Patient;
+    muayeneler: Muayene[];
+    appointments: any[];  // RandevuResponse — any kullanıldı, tip çıkarımı sağlanıyor
+    timeline: TimelineItem[];
+}
 
 export const patientsApi = {
 
@@ -19,6 +27,7 @@ export const patientsApi = {
             const data = await apiFetch<Patient>(`/api/v1/patients/${id}`);
             return validateResponse(data, PatientSchema, `patients.get(${id})`) as Patient;
         },
+        getBootstrap: (id: string) => apiFetch<PatientBootstrap>(`/api/v1/patients/${id}/bootstrap`),
         getById: (id: string) => apiFetch<Patient>(`/api/v1/patients/${id}`),
         getCounts: (id: string) => apiFetch<{
             muayene: number;

@@ -1,4 +1,5 @@
 import React from "react";
+import { propsEqualWithShallowValue } from "@/components/examination/shared/memoValue";
 import { SystemQueryData } from "./schema";
 import { SystemQueryCombobox } from "@/components/ui/system-query-combobox";
 import { SystemQueryButtonGroup } from "@/components/ui/system-query-button-group";
@@ -9,7 +10,7 @@ interface SystemQueryFormProps {
     readOnly?: boolean;
 }
 
-export const SystemQueryForm: React.FC<SystemQueryFormProps> = ({
+const SystemQueryFormBase: React.FC<SystemQueryFormProps> = ({
     value,
     onChange,
     readOnly = false
@@ -162,3 +163,6 @@ export const SystemQueryForm: React.FC<SystemQueryFormProps> = ({
         </div>
     );
 };
+
+export const SystemQueryForm = React.memo(SystemQueryFormBase, propsEqualWithShallowValue);
+SystemQueryForm.displayName = "SystemQueryForm";

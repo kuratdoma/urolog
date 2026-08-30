@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
-import { useRouter } from "next/navigation";
 import { api, Muayene, Patient } from "@/lib/api";
 import { usePatientStore } from "@/stores/patient-store";
-import { useSettingsStore } from "@/stores/settings-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAIScribeStore } from "@/stores/ai-scribe-store";
 import { useSystemDefinitions } from "./useSystemDefinitions";
@@ -85,10 +84,10 @@ export interface ExaminationFormData {
 }
 
 export const useExaminationPageLogic = (patientId: string) => {
-    const router = useRouter();
     const { setActivePatient, activePatient } = usePatientStore();
 
 
+    const queryClient = useQueryClient();
     // Core State
     const [patient, setPatient] = useState<Patient | null>(null);
     const [pastExaminations, setPastExaminations] = useState<Muayene[]>([]);
@@ -526,7 +525,7 @@ export const useExaminationPageLogic = (patientId: string) => {
     }, [latestResult, setLatestResult]);
 
     // Handlers
-    const handleNewExamination = async () => {
+    const handleNewExamination = useCallback(async () => {
         setIsCreatingNew(true);
         resetForm();
         setIsEditing(true);
@@ -588,7 +587,7 @@ export const useExaminationPageLogic = (patientId: string) => {
         } else {
             toast.info("Yeni muayene formu açıldı.");
         }
-    };
+    }, [pastExaminations, resetForm]);
 
 
 
@@ -710,6 +709,12 @@ export const useExaminationPageLogic = (patientId: string) => {
             exams.sort((a, b) => new Date(b.tarih || '').getTime() - new Date(a.tarih || '').getTime());
             setPastExaminations(exams);
 
+            // Invalidate React Query caches so dashboard, timeline, patient-bootstrap and muayene lists update instantly
+            queryClient.invalidateQueries({ queryKey: ['muayeneler', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['patient-bootstrap', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['patient-timeline', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+
             const currentData = JSON.stringify({ ...formData, tarih: formData.tarih ? format(formData.tarih, 'yyyy-MM-dd') : null });
             setLastSavedData(currentData);
             if (!silent) setIsEditing(false);
@@ -744,8 +749,12 @@ export const useExaminationPageLogic = (patientId: string) => {
             const exams = await api.clinical.getMuayeneler(patientId);
             exams.sort((a, b) => new Date(b.tarih || '').getTime() - new Date(a.tarih || '').getTime());
             setPastExaminations(exams);
+            queryClient.invalidateQueries({ queryKey: ['muayeneler', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['patient-bootstrap', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['patient-timeline', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
             if (selectedExamId === examToDelete) handleNewExamination();
-        } catch (e) { toast.error("Silme başarısız."); }
+        } catch { toast.error("Silme başarısız."); }
     };
 
     return {

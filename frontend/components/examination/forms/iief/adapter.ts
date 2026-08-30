@@ -15,7 +15,7 @@ export const iiefAdapter = {
                     q6: (parsed.q6 || 0).toString(),
                 };
             }
-        } catch (e) { }
+        } catch { }
         return answers;
     },
     toLegacy: (data: IIEFData): { iief_ef_answers: string } => ({

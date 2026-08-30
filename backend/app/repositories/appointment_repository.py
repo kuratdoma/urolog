@@ -276,7 +276,7 @@ class AppointmentRepository:
             db_obj.updated_by_id = user_id
             db_obj.updated_by_name = user_name
         self.db.add(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
 
         # Reload with relationship
@@ -318,7 +318,7 @@ class AppointmentRepository:
             db_obj.updated_by_id = user_id
             db_obj.updated_by_name = user_name
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
 
         # Reload with relationship
@@ -356,5 +356,5 @@ class AppointmentRepository:
         )
         self.db.add(tarihce)
         
-        await self.db.commit()
+        await self.db.flush()
         return True

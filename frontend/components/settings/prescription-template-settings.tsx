@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, FileSignature, Pill } from "lucide-react";
+import { Plus, Trash2, FileSignature } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ReceteSablonu } from "@/lib/api";
 import { toast } from "sonner";

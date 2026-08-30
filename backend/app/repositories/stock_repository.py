@@ -64,7 +64,7 @@ class StockRepository:
         # Yeni ürünün başlangıç maliyeti = tanımlanan birim fiyat
         db_obj.ortalama_maliyet = obj_in.birim_fiyat or Decimal(0)
         self.db.add(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -87,7 +87,7 @@ class StockRepository:
             db_obj.ortalama_maliyet = update_data["birim_fiyat"] or Decimal(0)
 
         self.db.add(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -99,7 +99,7 @@ class StockRepository:
         # Soft delete
         db_obj.aktif = False
         self.db.add(db_obj)
-        await self.db.commit()
+        await self.db.flush()
         return True
 
     # --- HAREKETLER VE STOK GÜNCELLEME ---
@@ -150,7 +150,7 @@ class StockRepository:
         product.mevcut_stok = new_stock
         self.db.add(product)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 
@@ -243,7 +243,7 @@ class StockRepository:
         product.mevcut_stok = yeni_stok
         self.db.add(product)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_obj)
         return db_obj
 

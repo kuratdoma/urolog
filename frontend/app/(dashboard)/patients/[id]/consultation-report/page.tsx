@@ -10,8 +10,7 @@ import {
     Search,
     Trash2,
     Printer,
-    FileText,
-    RefreshCw,
+    RefreshCw
 } from "lucide-react";
 import { cn, formatToSentenceCasePreservingAbbreviations } from "@/lib/utils";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -31,7 +30,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
+    AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";

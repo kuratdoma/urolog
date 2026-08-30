@@ -1,7 +1,3 @@
-import { apiFetch } from './api/client';
-import { useAuthStore } from '@/stores/auth-store';
-import { validateResponse, PatientSchema, MuayeneSchema } from './schemas';
-import { DashboardData } from '@/types/dashboard';
 
 import {
     AIScribeResponse, AIScribeStatus, AIScribeTemplate, Appointment, AppointmentCreate, AuditLog, AylikOzet, BiyopsiSablonu, BorcluHasta, ChartDataPoint,

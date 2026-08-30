@@ -1,24 +1,24 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState } from "react";
 import { useQuery } from '@tanstack/react-query';
-import { api, ReferencePatient, DiagnosisFilterResult, CohortRow, HeatmapData } from '@/lib/api';
+import { api, ReferencePatient, DiagnosisFilterResult, CohortRow } from '@/lib/api';
 import { format, parseISO, subMonths, startOfDay, startOfWeek, startOfMonth, startOfYear, subYears, endOfMonth, endOfYear } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    LineChart, Line, Cell, PieChart, Pie
+    LineChart, Line, Cell
 } from "recharts";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
     Filter, Users, TrendingUp, Activity, CreditCard, Scissors,
     ChevronDown, ArrowRight, User, Calendar, Clock, Search,
-    Target, Percent, UserCheck, RefreshCw, Stethoscope, Heart,
+    Target, UserCheck, RefreshCw, Stethoscope, Heart,
     Building, Globe, UserPlus, Ban
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,12 +31,10 @@ import {
     DialogContent,
     DialogDescription,
     DialogHeader,
-    DialogTitle,
+    DialogTitle
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
 // Day names for heatmap

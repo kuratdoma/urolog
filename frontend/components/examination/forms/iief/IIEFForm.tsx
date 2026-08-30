@@ -59,7 +59,7 @@ const IIEFQuestionRow = React.memo(({
 ));
 IIEFQuestionRow.displayName = "IIEFQuestionRow";
 
-export interface IIEFFormProps extends Ops<IIEFData> {
+interface IIEFFormProps extends Ops<IIEFData> {
     compact?: boolean;
 }
 

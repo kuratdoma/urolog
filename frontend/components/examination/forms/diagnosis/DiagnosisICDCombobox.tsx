@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 import { searchStaticICD, lookupICDName } from "@/lib/icd-codes";
 import { ICDTani } from "@/lib/api";
 
+// Otomatik tamamlama isteklerinin bekleme süresi (ms).
+const SEARCH_DEBOUNCE_MS = 300;
+
 interface DiagnosisICDComboboxProps {
     label: string;
     value: string;
@@ -43,52 +46,73 @@ export const DiagnosisICDCombobox = React.memo(({
         setLocalCode(code);
     }, [code]);
 
-    // Search when name input changes
+    // İsim alanı için arama: 300ms debounce + AbortController.
+    // Her tuş vuruşunda istek atmak, DB'ye giden aramada geç dönen eski
+    // yanıtların yenisini ezmesine yol açıyordu.
     useEffect(() => {
         if (!localValue || localValue.length < 2 || !isFocused) {
             setIcdResults([]);
+            setIsLoading(false);
             return;
         }
 
-        let isActive = true;
-        setIsLoading(true);
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+            setIsLoading(true);
+            searchStaticICD(localValue, controller.signal).then(results => {
+                if (controller.signal.aborted) return;
+                const mappedResults: ICDTani[] = results.map((item, index) => ({
+                    id: index,
+                    kodu: item.kodu,
+                    adi: item.adi,
+                    ust_kodu: "",
+                    aktif: "1",
+                    seviye: "1"
+                }));
 
-        searchStaticICD(localValue).then(results => {
-            if (!isActive) return;
-            const mappedResults: ICDTani[] = results.map((item, index) => ({
-                id: index,
-                kodu: item.kodu,
-                adi: item.adi,
-                ust_kodu: "",
-                aktif: "1",
-                seviye: "1"
-            }));
+                setIcdResults(mappedResults);
+                setShowSuggestions(true);
+                setIsLoading(false);
+            });
+        }, SEARCH_DEBOUNCE_MS);
 
-            setIcdResults(mappedResults);
-            setShowSuggestions(true);
-            setIsLoading(false);
-        });
-
-        return () => { isActive = false; };
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
     }, [localValue, isFocused]);
 
-    // Auto-fill name when exact ICD code is entered
+    // Kod alanı yazılırken isim otomatik doldurulur — ancak yalnızca isim
+    // alanı BOŞSA. Daha önce her karakterde lookup tetiklenip hekimin elle
+    // yazdığı tanı metnini eziyordu.
     const handleCodeChange = useCallback((newCode: string) => {
         const upperCode = newCode.toUpperCase();
         setLocalCode(upperCode);
-
-        // Code exactly 3 chars minimum (e.g. A00)
-        if (upperCode.length >= 3) {
-            lookupICDName(upperCode).then(name => {
-                if (name !== upperCode) {
-                    setLocalValue(name);
-                    onValueChange(name);
-                }
-            });
-        }
         onCodeChange(upperCode);
+    }, [onCodeChange]);
 
-    }, [onValueChange, onCodeChange]);
+    // Kod alanı için debounce'lu lookup; iptal edilebilir.
+    useEffect(() => {
+        if (!codeFocused || localCode.length < 3) return;
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+            lookupICDName(localCode, controller.signal).then(name => {
+                if (controller.signal.aborted || !name) return;
+                // Kullanıcının yazdığı tanı adını asla ezme.
+                setLocalValue(prev => {
+                    if (prev.trim()) return prev;
+                    onValueChange(name);
+                    return name;
+                });
+            });
+        }, SEARCH_DEBOUNCE_MS);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [localCode, codeFocused, onValueChange]);
 
     const handleSyncToParent = (val: string) => {
         onValueChange(val);

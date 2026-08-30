@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, AuditLog } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,7 +12,6 @@ import { tr } from "date-fns/locale";
 import { Loader2, ShieldAlert, Key, ChevronDown, ChevronRight, User, Clock, MapPin, Monitor, FileText, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 import { EmergencyDropPanel } from "./emergency-drop";
 
 // Action type mapping for Turkish display

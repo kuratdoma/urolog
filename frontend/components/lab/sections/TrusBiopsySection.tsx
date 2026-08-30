@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO } from "date-fns";
-import { Calendar as CalendarIcon, Printer, ArrowUpDown } from "lucide-react";
+import { Calendar as Printer, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculateProstatVolume } from "@/lib/lab-utils";
 import { LabTrusBiopsy } from "@/lib/api/types";

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { format, parseISO, isValid } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { SmartCalendar } from "@/components/ui/SmartCalendar";
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
+  PopoverTrigger
 } from "@/components/ui/popover";
 
 interface DatePickerProps {

@@ -1,17 +1,15 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { api } from "@/lib/api";
 import { 
-    LabBiochemistry, 
     LabHemogram, 
     LabUrine, 
     LabSpermiogram, 
     LabTrusBiopsy, 
-    LabUroflowmetriCreate, 
-    Patient 
+    LabUroflowmetriCreate 
 } from "@/lib/api/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { normalizeTestName, canonicalizeTestName } from "@/lib/lab-utils";

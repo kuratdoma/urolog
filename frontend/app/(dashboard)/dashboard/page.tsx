@@ -14,20 +14,16 @@ import {
     Clock,
     CheckCircle2,
     XCircle,
-    Search,
     ChevronRight,
-    ArrowRight,
     Wallet,
-    TrendingUp,
-    TrendingDown,
     X
 } from "lucide-react";
 import Link from "next/link";
-import { format, parseISO, differenceInYears } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { usePatientStore } from '@/stores/patient-store';
 
-import { api, Appointment, FinansOzet, BorcluHasta } from "@/lib/api";
+import { api, Appointment } from "@/lib/api";
 import { lookupICDNamesBatch } from "@/lib/icd-codes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,23 +36,14 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuTrigger,
+    DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from "sonner";
-import { Popover, PopoverContent, PopoverAnchor, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { FileText, Stethoscope, Binoculars } from 'lucide-react';
 import { cn } from "@/lib/utils";
-
-function calculateAge(dob?: string) {
-    if (!dob) return '-';
-    try {
-        return differenceInYears(new Date(), parseISO(dob));
-    } catch {
-        return '-';
-    }
-}
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('tr-TR', {
@@ -102,6 +89,7 @@ export default function DashboardPage() {
     const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
         queryKey: ['dashboard'],
         queryFn: api.dashboard.get,
+        staleTime: 180 * 1000,
         refetchInterval: 60000
     });
 
@@ -137,6 +125,7 @@ export default function DashboardPage() {
             start: todayStart.toISOString(),
             end: todayEnd.toISOString()
         }),
+        staleTime: 180 * 1000,
     });
 
     // Finance Summary
@@ -346,7 +335,7 @@ export default function DashboardPage() {
                                                             </div>
                                                         </TableCell>
                                                         <TableCell className="text-xs text-slate-600 max-w-[180px] truncate">
-                                                            <IcdNameDisplay name={patient.son_tani ? (icdNameMap[patient.son_tani] || patient.son_tani) : undefined} />
+                                                            <IcdNameDisplay name={patient.son_tani ? (icdNameMap[patient.son_tani.toUpperCase()] || patient.son_tani) : undefined} />
                                                         </TableCell>
                                                         <TableCell className="text-center font-medium text-slate-700 text-xs">
                                                             <span className="text-[11px] text-slate-600">

@@ -2,22 +2,14 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { api, Imaging, Patient } from "@/lib/api";
+import { api, Imaging } from "@/lib/api";
 import { ProstateMapWidget, PiradsLesion } from "@/components/clinical/prostate-map";
 import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
 import {
-    Calendar as CalendarIcon,
-    Plus,
+    Calendar as Plus,
     Save,
     Trash2,
     Printer,
-    FileImage,
-    ImageIcon,
-    Search,
-    ChevronDown,
-    Activity,
-    FileText,
     AlertCircle,
     CheckCircle2,
     AlertTriangle,
@@ -29,20 +21,14 @@ import { SystemQueryCombobox } from "@/components/clinical/system-query-combobox
 
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
+    SelectValue
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -57,7 +43,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
+    AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 
 export default function ImagingPage() {

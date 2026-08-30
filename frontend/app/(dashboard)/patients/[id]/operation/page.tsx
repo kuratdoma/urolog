@@ -5,14 +5,11 @@ import { useParams } from "next/navigation";
 import { usePatientStore } from "@/stores/patient-store";
 import { api, Operation, Patient } from "@/lib/api";
 import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
 import {
-    Calendar as CalendarIcon, Plus, Save, Trash2, Printer, AlignLeft, Settings, FileText, Activity, Scissors,
+    Calendar as Plus, Save, Trash2, Printer, Activity, Scissors,
     Layout,
-    ClipboardList,
     Check,
     Search,
-    UserPlus,
     Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
     Popover,
     PopoverContent,
-    PopoverTrigger,
+    PopoverTrigger
 } from "@/components/ui/popover";
 import {
     Dialog,
@@ -34,16 +31,9 @@ import {
     DialogDescription,
     DialogFooter,
     DialogHeader,
-    DialogTitle,
+    DialogTitle
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { useAIScribeStore } from "@/stores/ai-scribe-store";

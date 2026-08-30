@@ -4,12 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { api, FollowUp, Operation, MedicalReport } from "@/lib/api";
 import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
 import {
-    Calendar as CalendarIcon,
-    Plus,
+    Calendar as Plus,
     Save,
-    Search,
     AlertCircle,
     FileText,
     Activity,
@@ -22,35 +19,29 @@ import {
     Printer,
     X,
     Scissors,
-    FileHeart,
+    FileHeart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExaminationPrintDialog } from "@/components/examination/ExaminationPrintDialog";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
+    SelectValue
 } from "@/components/ui/select";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuTrigger,
+    DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
     AlertDialog,
@@ -60,7 +51,7 @@ import {
     AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle,
+    AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

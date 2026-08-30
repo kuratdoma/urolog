@@ -1,17 +1,15 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from '@/lib/api';
 import { Card, CardContent } from "@/components/ui/card";
-import { User, Phone, Calendar, Stethoscope, ChevronRight, Minimize2, Maximize2, Trash2, AlertTriangle, FlaskConical, Banknote } from "lucide-react";
+import { Phone, Calendar, Stethoscope, ChevronRight, Maximize2, FlaskConical, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { differenceInYears, parseISO, format, isValid } from "date-fns";
 import Link from 'next/link';
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { CreateAppointmentDialog } from "../appointments/create-appointment-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { toast } from "sonner";
 
 function safeFormatDate(dateStr?: string | null | undefined, fmt: string = 'dd.MM.yyyy') {
     if (!dateStr) return '-';
@@ -40,26 +38,36 @@ export function PatientDetailPanel({ patientId, onPatientDeleted }: { patientId:
     const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
     const queryClient = useQueryClient();
 
-    const { data: patient, isLoading: patientLoading } = useQuery({
-        queryKey: ['patient', patientId],
-        queryFn: () => api.patients.get(patientId),
-        retry: false, // Don't retry if 404
+    // PERF: Bootstrap sorgusu - profil, muayeneler, randevular ve timeline tek istekte gelir.
+    // Gelen veri tekil query cache'lerine (['patient', id], ['muayeneler', id], ['appointments', id])
+    // de yazılır, böylece alt sayfalar veya sekmeler bu veriyi sıfır ağ gecikmesiyle doğrudan cache'ten alır.
+    const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery({
+        queryKey: ['patient-bootstrap', patientId],
+        queryFn: async () => {
+            const data = await api.patients.getBootstrap(patientId);
+            if (data.patient) {
+                queryClient.setQueryData(['patient', patientId], data.patient);
+            }
+            if (data.muayeneler) {
+                queryClient.setQueryData(['muayeneler', patientId], data.muayeneler);
+            }
+            if (data.appointments) {
+                queryClient.setQueryData(['appointments', patientId], data.appointments);
+            }
+            if (data.timeline) {
+                queryClient.setQueryData(['patient-timeline', patientId], data.timeline);
+            }
+            return data;
+        },
+        retry: false,
+        staleTime: 30 * 1000,
     });
 
-    const { data: muayeneler, isLoading: muayeneLoading } = useQuery({
-        queryKey: ['muayeneler', patientId],
-        queryFn: () => api.clinical.getMuayeneler(patientId),
-        enabled: !!patient,
-    });
+    const patient = bootstrapData?.patient;
+    const muayeneler = bootstrapData?.muayeneler;
+    const appointments = bootstrapData?.appointments;
 
-    const { data: appointments, isLoading: appointmentsLoading } = useQuery({
-        queryKey: ['appointments', patientId],
-        queryFn: () => api.appointments.getForPatient(patientId),
-        enabled: !!patient,
-    });
-
-
-    if (patientLoading) {
+    if (bootstrapLoading) {
         return <div className="text-center p-8">Yükleniyor...</div>;
     }
 

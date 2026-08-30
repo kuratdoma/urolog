@@ -5,7 +5,7 @@ import { tr } from 'date-fns/locale';
 import { Views, View } from 'react-big-calendar';
 import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon,
-    User, Eye, EyeOff, LayoutPanelLeft, Layout,
+    User, Eye, EyeOff, LayoutPanelLeft,
     ZoomIn, ZoomOut, Plus, RefreshCw, History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ import {
     SelectValue
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
-import { Toggle } from "@/components/ui/toggle";
 
 interface CalendarHeaderProps {
     date: Date;

@@ -226,7 +226,7 @@ class ClinicalRepository:
             db_note.created_by = self.context.user_id
         self.session.add(db_note)
         await self.session.flush()
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(db_note)
         return {
             "id": db_note.id, "hasta_id": db_note.hasta_id, "tarih": db_note.tarih,
@@ -250,7 +250,7 @@ class ClinicalRepository:
         if self.context:
             db_note.updated_by = self.context.user_id
         await self.session.flush()
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(db_note)
         return {
             "id": db_note.id, "hasta_id": db_note.hasta_id, "tarih": db_note.tarih,
@@ -297,8 +297,30 @@ class ClinicalRepository:
     async def update_tetkik_sonuc(self, id: UUID, obj_in: Any) -> Optional[TetkikSonuc]:
         return await self._tetkik.update(id, obj_in)
 
+    async def create_tetkik_sonuc_batch(self, objs_in: List[Any]) -> List[TetkikSonuc]:
+        """
+        Toplu tetkik sonucu kaydı — tek INSERT grubu, tek transaction.
+
+        Tek tek `create_tetkik_sonuc` çağırmak yerine kullanılır. Tetkik adı ve
+        birim normalizasyonu burada da uygulanır; aksi halde toplu içe aktarılan
+        sonuçlar tekil kayıtlardan farklı isimlerle kaydedilir ve trend
+        grafikleri aynı tetkiki iki ayrı seri gibi gösterir.
+        """
+        from app.services.lab_normalizer_service import normalize_lab_record
+
+        for obj_in in objs_in:
+            if getattr(obj_in, "tetkik_adi", None):
+                obj_in.tetkik_adi, obj_in.birim = normalize_lab_record(
+                    obj_in.tetkik_adi, getattr(obj_in, "birim", None)
+                )
+        return await self._tetkik.create_many(objs_in)
+
     async def delete_tetkik_sonuc(self, id: UUID) -> bool:
         return await self._tetkik.soft_delete(id)
+
+    async def delete_tetkik_sonuc_batch(self, ids: List[UUID]) -> int:
+        """Toplu tetkik silme — tek UPDATE ... WHERE id IN (...)."""
+        return await self._tetkik.soft_delete_many(ids)
 
     # ─── Photos ──────────────────────────────────────────────────────────
 
@@ -342,7 +364,7 @@ class ClinicalRepository:
                 .where(Hasta.id == note.hasta_id)
                 .values(has_private_notes=True)
             )
-            await self.session.commit()
+            await self.session.flush()
         return note
 
     async def update_private_note(self, id: UUID, obj_in: Any) -> Optional[KisiselNot]:
@@ -370,7 +392,7 @@ class ClinicalRepository:
                 .where(Hasta.id == hasta_id)
                 .values(has_private_notes=any_remaining)
             )
-            await self.session.commit()
+            await self.session.flush()
             
         return success
 

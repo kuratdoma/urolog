@@ -11,7 +11,7 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
+    SelectValue
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";

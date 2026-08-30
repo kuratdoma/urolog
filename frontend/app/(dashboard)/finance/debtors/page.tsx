@@ -1,25 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
     Users,
     ArrowLeft,
     Search,
     RefreshCw,
-    Phone,
-    Mail,
     User,
-    TrendingUp,
-    AlertTriangle,
     ExternalLink
 } from 'lucide-react';
 import { api, BorcluHasta } from '@/lib/api';
-import { toast } from 'sonner';
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('tr-TR', {

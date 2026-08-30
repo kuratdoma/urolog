@@ -16,9 +16,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { api, Patient } from '@/lib/api';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { addMinutes, format, parseISO, isWithinInterval, areIntervalsOverlapping, startOfDay, endOfDay } from 'date-fns';
+import { addMinutes, format, parseISO, areIntervalsOverlapping, startOfDay, endOfDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, Check, Search, X, Plus, Stethoscope, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Calendar as CalendarIcon, Search, X, Plus, Stethoscope, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -27,7 +27,7 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue,
+    SelectValue
 } from "@/components/ui/select";
 import { useAuthStore } from '@/stores/auth-store';
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";

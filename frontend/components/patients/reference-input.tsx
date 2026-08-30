@@ -4,8 +4,6 @@ import * as React from 'react';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
-import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 interface ReferenceInputProps {

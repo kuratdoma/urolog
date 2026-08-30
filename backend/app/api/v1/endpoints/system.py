@@ -5,6 +5,7 @@ from app.core.limiter import limiter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.core.cache_invalidation import CacheNS, invalidate
 from fastapi_cache.decorator import cache
 from app.repositories.system_repository import SystemRepository
 import os
@@ -63,7 +64,7 @@ async def list_backups(
 
 @router.get("/icd", response_model=List[ICDTaniResponse])
 @limiter.limit("30/minute")
-@cache(expire=3600)
+@cache(expire=3600, namespace=CacheNS.ICD)
 async def get_icds(
     request: Request,
     q: Optional[str] = Query(None, description="Search query for ICD code or name"),
@@ -107,7 +108,9 @@ async def create_icd(
     if existing:
         raise HTTPException(status_code=400, detail="ICD code already exists")
 
-    return await repo.create_icd(obj_in)
+    result = await repo.create_icd(obj_in)
+    await invalidate(CacheNS.ICD)
+    return result
 
 
 @router.post("/icd/delete-batch")
@@ -119,6 +122,7 @@ async def batch_delete_icd(
     """
     repo = SystemRepository(db)
     await repo.delete_icds(ids)
+    await invalidate(CacheNS.ICD)
     return {"status": "success", "deleted_count": len(ids)}
 
 
@@ -127,7 +131,7 @@ async def batch_delete_icd(
 
 @router.get("/drugs", response_model=List[IlacResponse])
 @limiter.limit("60/minute")
-@cache(expire=300)
+@cache(expire=300, namespace=CacheNS.DRUGS)
 async def get_drugs(
     request: Request,
     q: Optional[str] = Query(
@@ -286,6 +290,7 @@ async def upload_drugs_excel(
     # insert new
     count = await repo.batch_create_drugs(drugs_data)
 
+    await invalidate(CacheNS.DRUGS)
     return {"status": "success", "imported_count": count}
 
 
@@ -311,6 +316,7 @@ async def import_local_drugs(
     repo = SystemRepository(db)
     try:
         count = await repo.import_drugs_from_file(full_path)
+        await invalidate(CacheNS.DRUGS)
         return {"status": "success", "imported_count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
