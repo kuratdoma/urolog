@@ -18,5 +18,6 @@ from .appointment import Randevu
 from .user_oauth import UserOAuth
 from .audit import AuditLog
 from .stock import StokUrun, StokAlim, StokHareket
+from .personal_note import PersonalNote, NoteReminderOccurrence, RecurrenceType, ReminderOccurrenceStatus
 
 # Sharded Models are imported directly where needed to avoid circular imports with app.models.__init__

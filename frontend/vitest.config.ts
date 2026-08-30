@@ -11,7 +11,7 @@ export default defineConfig({
         setupFiles: ["./vitest.setup.ts"],
         // Şimdilik yalnızca açıkça test yazılmış alanlar. Kapsam genişledikçe
         // bu desen gevşetilebilir.
-        include: ["components/**/*.test.{ts,tsx}", "lib/**/*.test.{ts,tsx}"],
+        include: ["components/**/*.test.{ts,tsx}", "lib/**/*.test.{ts,tsx}", "hooks/**/*.test.{ts,tsx}"],
     },
     resolve: {
         alias: {

@@ -41,6 +41,7 @@ from app.api.v1.endpoints import (
     hpv_briefing,
     insurance_provision,
     setup,
+    personal_notes,
 )
 import app.db.base
 
@@ -221,6 +222,9 @@ app.include_router(
     tags=["integrations"],
 )
 app.include_router(audit.router, prefix=f"{settings.API_V1_STR}/audit", tags=["audit"])
+app.include_router(
+    personal_notes.router, prefix=f"{settings.API_V1_STR}/notes", tags=["personal-notes"]
+)
 app.include_router(stock.router, prefix=f"{settings.API_V1_STR}/stock", tags=["stock"])
 app.include_router(
     ai_scribe.router, prefix=f"{settings.API_V1_STR}/ai-scribe", tags=["ai-scribe"]

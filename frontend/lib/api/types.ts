@@ -1647,3 +1647,55 @@ export interface AIScribeResponse {
     extracted_keywords?: string[];
 }
 
+// --- Personal Notes & Reminders ---
+
+export type RecurrenceType = 'once' | 'daily' | 'weekly' | 'monthly';
+export type ReminderOccurrenceStatus = 'pending' | 'fired' | 'acknowledged' | 'snoozed' | 'missed';
+export type NoteColor = 'default' | 'green' | 'blue' | 'yellow' | 'red';
+export type NoteSortBy = 'due_date' | 'created_at' | 'importance';
+
+export interface PersonalNote {
+    id: number;
+    user_id: number;
+    title: string;
+    content?: string;
+    color: NoteColor;
+    recurrence_type: RecurrenceType;
+    interval: number;
+    time_of_day: string; // "HH:MM:SS"
+    starts_at: string;
+    ends_at?: string;
+    is_done: boolean;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface PersonalNoteCreate {
+    title: string;
+    content?: string;
+    color?: NoteColor;
+    recurrence_type: RecurrenceType;
+    interval: number;
+    time_of_day: string;
+    starts_at: string;
+    ends_at?: string;
+}
+
+export type PersonalNoteUpdate = Partial<PersonalNoteCreate> & { is_done?: boolean };
+
+export interface NoteReminderOccurrence {
+    id: number;
+    note_id: number;
+    scheduled_for: string;
+    status: ReminderOccurrenceStatus;
+    fired_at?: string;
+    acknowledged_at?: string;
+    snoozed_to?: string;
+    note: PersonalNote;
+}
+
+export interface DueRemindersResponse {
+    due: NoteReminderOccurrence[];
+    missed_count: number;
+}
+

@@ -53,6 +53,7 @@ import { lipusApi } from './api/lipus';
 import { consentFormsApi } from './api/consentForms';
 import { hpvBriefingApi } from './api/hpvBriefing';
 import { insuranceProvisionApi } from './api/insuranceProvision';
+import { personalNotesApi } from './api/personalNotes';
 
 export const api = {
     patients: patientsApi,
@@ -75,4 +76,5 @@ export const api = {
     consentForms: consentFormsApi,
     hpvBriefing: hpvBriefingApi,
     insuranceProvision: insuranceProvisionApi,
+    personalNotes: personalNotesApi,
 };

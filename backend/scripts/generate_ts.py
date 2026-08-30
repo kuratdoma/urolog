@@ -2,7 +2,8 @@ import os
 import sys
 import inspect
 from typing import get_type_hints, List, Optional, Union, Any, Dict, get_args, get_origin
-from datetime import date, datetime
+from datetime import date, datetime, time
+from enum import Enum
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -18,11 +19,12 @@ import app.schemas.definition as def_schemas
 import app.schemas.dashboard as dashboard_schemas
 import app.schemas.stock as stock_schemas
 import app.schemas.audit as audit_schemas
+import app.schemas.personal_note as personal_note_schemas
 
 modules = [
-    patient_schemas, clinical_schemas, finance_schemas, 
-    user_schemas, appt_schemas, def_schemas, 
-    dashboard_schemas, stock_schemas, audit_schemas
+    patient_schemas, clinical_schemas, finance_schemas,
+    user_schemas, appt_schemas, def_schemas,
+    dashboard_schemas, stock_schemas, audit_schemas, personal_note_schemas
 ]
 
 TYPE_MAPPING = {
@@ -32,6 +34,7 @@ TYPE_MAPPING = {
     bool: "boolean",
     date: "string",
     datetime: "string",
+    time: "string",
     UUID: "string",
     Any: "any",
     dict: "{ [key: string]: any }",
@@ -60,12 +63,32 @@ def get_ts_type(py_type) -> str:
         ts_args = [get_ts_type(arg) for arg in filtered_args]
         return " | ".join(ts_args)
 
+    if isinstance(py_type, type) and issubclass(py_type, Enum):
+        return py_type.__name__
+
     if hasattr(py_type, "__name__"):
         if issubclass(py_type, BaseModel):
             return py_type.__name__
         return py_type.__name__
 
     return "any"
+
+def collect_enum_types(py_type, out: dict) -> None:
+    """Model alanlarında geçen str Enum sınıflarını toplar; TS union type olarak yayınlanır."""
+    origin = get_origin(py_type)
+    args = get_args(py_type)
+
+    if isinstance(py_type, type) and issubclass(py_type, Enum):
+        out[py_type.__name__] = py_type
+        return
+
+    if origin in (list, List, Union) or origin is dict or origin is Dict:
+        for arg in args:
+            collect_enum_types(arg, out)
+
+def generate_enum_type(enum_cls) -> str:
+    values = " | ".join(f'"{member.value}"' for member in enum_cls)
+    return f"export type {enum_cls.__name__} = {values};\n"
 
 def generate_interface(model: type[BaseModel]) -> str:
     lines = [f"export interface {model.__name__} {{"]
@@ -95,7 +118,16 @@ def main():
 
     ts_content = "/* eslint-disable @typescript-eslint/no-explicit-any */\n"
     ts_content += "// This file is auto-generated. Do not edit manually.\n\n"
-    
+
+    enum_types = {}
+    for model in all_models:
+        for field in model.model_fields.values():
+            collect_enum_types(field.annotation, enum_types)
+    for enum_cls in enum_types.values():
+        ts_content += generate_enum_type(enum_cls)
+    if enum_types:
+        ts_content += "\n"
+
     for model in all_models:
         try:
             ts_content += generate_interface(model)
