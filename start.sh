@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # ──────────────────────────────────────────────────────────────
@@ -96,25 +95,25 @@ fi
 # ──────────────────────────────────────────────────────────────
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 echo -e "${BLUE}[2/5] Port ${FRONTEND_PORT} kontrol ediliyor...${NC}"
-OLD_PID=$(lsof -ti :${FRONTEND_PORT} 2>/dev/null)
+OLD_PID=$(lsof -ti :${FRONTEND_PORT} -sTCP:LISTEN 2>/dev/null)
 if [ -n "$OLD_PID" ]; then
-    # Sadece kendi bıraktığımız node/next süreçlerini öldür. 3000 çok yaygın bir
-    # port; ilgisiz bir servisi sessizce sonlandırmak yerine uyarıp çıkıyoruz.
-    OLD_CMD=$(ps -p "$OLD_PID" -o comm= 2>/dev/null)
-    case "$OLD_CMD" in
-        *node*|*next*)
-            echo -e "  ${YELLOW}⚠${NC}  Port ${FRONTEND_PORT} meşgul (PID: $OLD_PID, $OLD_CMD). Temizleniyor..."
-            kill -9 "$OLD_PID" 2>/dev/null
-            sleep 1
-            echo -e "  ${GREEN}✓${NC} Port ${FRONTEND_PORT} serbest bırakıldı."
-            ;;
-        *)
-            echo -e "  ${RED}✗${NC}  Port ${FRONTEND_PORT} node dışı bir süreçte meşgul (PID: $OLD_PID, ${OLD_CMD:-bilinmiyor})."
-            echo -e "     Bu süreç bu scripte ait değil, otomatik kapatılmıyor."
-            echo -e "     Farklı bir port için: ${BLUE}FRONTEND_PORT=3001 ./start.sh${NC}"
-            exit 1
-            ;;
-    esac
+    for pid in $OLD_PID; do
+        OLD_CMD=$(ps -p "$pid" -o comm= 2>/dev/null)
+        case "$OLD_CMD" in
+            *node*|*next*)
+                echo -e "  ${YELLOW}⚠${NC}  Port ${FRONTEND_PORT} meşgul (PID: $pid, $OLD_CMD). Temizleniyor..."
+                kill -9 "$pid" 2>/dev/null
+                sleep 1
+                echo -e "  ${GREEN}✓${NC} Port ${FRONTEND_PORT} serbest bırakıldı."
+                ;;
+            *)
+                echo -e "  ${RED}✗${NC}  Port ${FRONTEND_PORT} node dışı bir süreçte meşgul (PID: $pid, ${OLD_CMD:-bilinmiyor})."
+                echo -e "     Bu süreç bu scripte ait değil, otomatik kapatılmıyor."
+                echo -e "     Farklı bir port için: ${BLUE}FRONTEND_PORT=3001 ./start.sh${NC}"
+                exit 1
+                ;;
+        esac
+    done
 else
     echo -e "  ${GREEN}✓${NC} Port ${FRONTEND_PORT} müsait."
 fi

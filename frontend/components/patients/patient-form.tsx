@@ -22,7 +22,7 @@ import { ReferenceInput } from './reference-input';
 import { useSystemDefinitions } from '@/hooks/useSystemDefinitions';
 import { ComboboxSelect } from '@/components/ui/combobox-select';
 
-function validateTCKN(value: string) {
+export function validateTCKN(value: string) {
     if (!value) return true;
     if (typeof value !== 'string') return false;
     if (value.length !== 11) return false;

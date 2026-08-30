@@ -16,19 +16,21 @@ async def test_get_lab_trends_endpoint():
 
     app.dependency_overrides[deps.get_db] = override_db
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        request_data = {
-            "patient_id": "00000000-0000-0000-0000-000000000000",
-            "test_names": ["PSA"],
-        }
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            request_data = {
+                "patient_id": "00000000-0000-0000-0000-000000000000",
+                "test_names": ["PSA"],
+            }
 
-        with patch.object(LabAnalysisService, "get_lab_trends", return_value=[]):
-            response = await ac.post("/api/v1/lab-analysis/trends", json=request_data)
-            assert response.status_code in [401, 200]
+            with patch.object(LabAnalysisService, "get_lab_trends", return_value=[]):
+                response = await ac.post("/api/v1/lab-analysis/trends", json=request_data)
+                assert response.status_code in [401, 200]
 
-            if response.status_code == 200:
-                data = response.json()
-                assert isinstance(data, list)
+                if response.status_code == 200:
+                    data = response.json()
+                    assert isinstance(data, list)
+    finally:
+        app.dependency_overrides.pop(deps.get_db, None)
 
-    app.dependency_overrides.pop(deps.get_db, None)
