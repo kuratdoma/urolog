@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, Muayene } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, History, FileSignature, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, History, FileSignature, Loader2, Stethoscope } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { PatientForm } from '@/components/patients/patient-form';
@@ -128,7 +128,17 @@ export default function PatientDetailPage() {
                         <span className="font-medium text-slate-900">{patient.ad} {patient.soyad}</span>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                        <Link href={`/patients/${patientId}/examination`}>
+                            <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-sm"
+                                id="patient-examination-btn"
+                            >
+                                <Stethoscope className="h-4 w-4" />
+                                Muayene Formu
+                            </Button>
+                        </Link>
                         <Button
                             variant="outline"
                             size="sm"

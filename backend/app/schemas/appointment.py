@@ -58,6 +58,10 @@ class ClinicalBriefSchema(BaseModel):
     son_not_icerik: Optional[str] = None
     son_not_tip: Optional[str] = None
 
+    # Yeni Hasta / İlk Kayıt Durumu
+    is_new_patient: Optional[bool] = False
+    hasta_notu: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

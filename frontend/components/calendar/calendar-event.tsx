@@ -11,8 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/lib/api';
+import { usePatientStore } from '@/stores/patient-store';
 
 interface CalendarEventProps {
     event: {
@@ -47,6 +49,8 @@ export function CalendarEvent({
     isGhosted,
     changeStatus
 }: CalendarEventProps) {
+    const router = useRouter();
+    const { setActivePatient } = usePatientStore();
     const apt = event.resource;
     const [isOpen, setIsOpen] = useState(false);
     const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
@@ -319,7 +323,7 @@ export function CalendarEvent({
                     </div>
 
                     {/* Clinical Brief Section */}
-                    {apt.clinical_brief && (apt.clinical_brief.son_muayene_tani || apt.clinical_brief.son_muayene_sikayet || apt.clinical_brief.son_not_icerik) && (
+                    {apt.clinical_brief && (apt.clinical_brief.son_muayene_tani || apt.clinical_brief.son_muayene_sikayet || apt.clinical_brief.son_not_icerik || apt.clinical_brief.son_muayene_sonuc || apt.clinical_brief.son_muayene_tedavi) ? (
                         <div className="p-3 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-xl border border-slate-100/80 space-y-2">
                             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Önceki Geliş Özeti</span>
                             {(apt.clinical_brief.son_muayene_tani || apt.clinical_brief.son_muayene_sikayet) && (
@@ -356,13 +360,70 @@ export function CalendarEvent({
                                 </div>
                             )}
                         </div>
-                    )}
+                    ) : (apt.hasta_id || apt.hasta) ? (
+                        <div className="p-3 bg-gradient-to-br from-slate-50 to-blue-50/20 rounded-xl border border-slate-100/80 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] text-blue-600 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                    <Stethoscope className="w-3.5 h-3.5 text-blue-500" />
+                                    İlk Başvuru / Yeni Kayıt
+                                </span>
+                                <Badge variant="outline" className="text-[8px] h-4 bg-blue-50 text-blue-700 border-blue-200">Yeni Hasta</Badge>
+                            </div>
+                            {apt.notes && (
+                                <div className="bg-white/80 p-2 rounded-lg border border-slate-100">
+                                    <span className="text-[9px] text-slate-400 font-semibold block mb-0.5">Randevu Notu / Şikayet:</span>
+                                    <p className="text-[11px] text-slate-700 italic leading-tight">{apt.notes}</p>
+                                </div>
+                            )}
+                            {apt.clinical_brief?.hasta_notu && (
+                                <div className="bg-white/80 p-2 rounded-lg border border-slate-100">
+                                    <span className="text-[9px] text-slate-400 font-semibold block mb-0.5">Hasta Kayıt Notu:</span>
+                                    <p className="text-[11px] text-slate-700 italic leading-tight">{apt.clinical_brief.hasta_notu}</p>
+                                </div>
+                            )}
+                            {!apt.notes && !apt.clinical_brief?.hasta_notu && (
+                                <p className="text-[11px] text-slate-500 italic">Geçmiş muayene kaydı bulunmuyor. Yeni muayene formu başlatabilirsiniz.</p>
+                            )}
+                        </div>
+                    ) : null}
 
                     {/* Actions Grid — hidden for deleted appointments */}
                     {!changeStatus && (
                     <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
                         {apt.status !== 'blocked' && (
                             <>
+                                {(apt.hasta_id || apt.hasta?.id) && (
+                                    <Button
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            const pId = apt.hasta_id || apt.hasta?.id;
+                                            if (pId) {
+                                                if (apt.hasta) {
+                                                    setActivePatient({
+                                                        id: String(apt.hasta.id),
+                                                        ad: apt.hasta.ad,
+                                                        soyad: apt.hasta.soyad,
+                                                        tc_kimlik: apt.hasta.tc_kimlik,
+                                                    });
+                                                } else {
+                                                    const nameParts = (apt.title || '').trim().split(' ');
+                                                    const soyad = nameParts.length > 1 ? nameParts.pop() || '' : '';
+                                                    const ad = nameParts.join(' ') || apt.title;
+                                                    setActivePatient({
+                                                        id: String(pId),
+                                                        ad,
+                                                        soyad,
+                                                    });
+                                                }
+                                                router.push(`/patients/${pId}/examination`);
+                                            }
+                                        }}
+                                        className="h-9 rounded-xl font-bold text-[11px] bg-blue-600 hover:bg-blue-700 text-white shadow-sm col-span-2 flex items-center justify-center gap-2"
+                                    >
+                                        <Stethoscope className="w-4 h-4" />
+                                        Muayene Formunu Aç
+                                    </Button>
+                                )}
                                 <Button
                                     onClick={() => apt.hasta_id && onGoToPatient(String(apt.hasta_id))}
                                     variant="secondary"
@@ -409,7 +470,7 @@ export function CalendarEvent({
                                             onRemoveGoogle?.(apt.id);
                                         }}
                                         variant="outline"
-                                        className="h-9 rounded-xl border-red-200 text-red-700 font-bold text-[11px] hover:bg-red-50"
+                                        className="h-9 rounded-xl border-red-200 text-red-700 font-bold text-[11px] hover:bg-red-50 col-span-2"
                                     >
                                         <CalendarIcon className="w-3.5 h-3.5 mr-2" />
                                         G.Takvim&apos;den Sil

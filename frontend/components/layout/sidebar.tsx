@@ -31,6 +31,34 @@ export function Sidebar({ isCalendarPage = false }: { isCalendarPage?: boolean }
         { href: '/calendar', label: 'Takvim', icon: Calendar, module: 'appointments' },
     ].filter(item => hasModuleAccess(item.module));
 
+    const patientIdFromUrl = useMemo(() => {
+        const match = pathname?.match(/^\/patients\/([a-zA-Z0-9-]+)/);
+        const id = match ? match[1] : null;
+        return id && id !== 'create' ? id : null;
+    }, [pathname]);
+
+    // If activePatient is not set or differs from URL, fetch patient to synchronize store
+    const { data: urlPatient } = useQuery({
+        queryKey: ['patient', patientIdFromUrl],
+        queryFn: () => patientIdFromUrl ? api.patients.get(patientIdFromUrl) : null,
+        enabled: !!patientIdFromUrl && (!activePatient || activePatient.id !== patientIdFromUrl),
+        staleTime: 30000,
+    });
+
+    useEffect(() => {
+        if (urlPatient && (!activePatient || activePatient.id !== urlPatient.id)) {
+            setActivePatient({
+                id: urlPatient.id,
+                ad: urlPatient.ad,
+                soyad: urlPatient.soyad,
+                tc_kimlik: urlPatient.tc_kimlik,
+                dogum_tarihi: urlPatient.dogum_tarihi,
+                protokol_no: urlPatient.protokol_no,
+                cinsiyet: urlPatient.cinsiyet,
+            });
+        }
+    }, [urlPatient, activePatient, setActivePatient]);
+
     // Fetch patient record counts if an active patient is selected
     const { data: counts } = useQuery({
         queryKey: ['patientCounts', activePatient?.id],

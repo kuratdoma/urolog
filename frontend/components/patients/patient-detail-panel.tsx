@@ -152,18 +152,24 @@ export function PatientDetailPanel({ patientId, onPatientDeleted }: { patientId:
                     <span>{safeFormatDate(patient.created_at)}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
+                    <Link href={`/patients/${patient.id}/examination`} className="w-full">
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 font-bold text-xs">
+                            <Stethoscope className="w-3.5 h-3.5 mr-1" />
+                            Muayene
+                        </Button>
+                    </Link>
                     <Link href={`/patients/${patient.id}`} className="w-full">
-                        <Button className="w-full bg-slate-100 hover:bg-white text-slate-900 border-0 font-medium">
-                            <Stethoscope className="w-4 h-4 mr-2" />
+                        <Button className="w-full bg-slate-100 hover:bg-white text-slate-900 border-0 font-medium text-xs">
+                            <FileText className="w-3.5 h-3.5 mr-1" />
                             Detay
                         </Button>
                     </Link>
                     <Button
                         onClick={() => setIsAppointmentDialogOpen(true)}
-                        className="w-full bg-slate-100 hover:bg-white text-slate-900 border-0 font-medium"
+                        className="w-full bg-slate-100 hover:bg-white text-slate-900 border-0 font-medium text-xs"
                     >
-                        <Calendar className="w-4 h-4 mr-2" />
+                        <Calendar className="w-3.5 h-3.5 mr-1" />
                         Randevu
                     </Button>
                 </div>
@@ -281,26 +287,34 @@ export function PatientDetailPanel({ patientId, onPatientDeleted }: { patientId:
                 {activeTab === 'exams' && (
                     <div className="space-y-2">
                         {sortedExams.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 mt-12">
-                                <Stethoscope className="w-12 h-12 mb-3 text-slate-200" />
-                                <span className="text-sm font-medium">Muayene kaydı bulunamadı</span>
+                            <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 mt-10 space-y-3">
+                                <Stethoscope className="w-10 h-10 text-slate-200 mx-auto" />
+                                <span className="text-sm font-medium">Henüz muayene kaydı bulunmuyor</span>
+                                <Link href={`/patients/${patient.id}/examination`}>
+                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs">
+                                        <Stethoscope className="w-3.5 h-3.5 mr-1.5" />
+                                        İlk Muayeneyi Başlat
+                                    </Button>
+                                </Link>
                             </div>
                         ) : (
                             sortedExams.map((exam) => (
-                                <Card key={exam.id} className="border border-slate-200 shadow-sm hover:border-blue-300 transition-colors cursor-pointer group bg-white">
-                                    <CardContent className="p-3">
-                                        <div className="flex justify-between items-start mb-1">
-                                            <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                                                {exam.tarih ? safeFormatDate(exam.tarih) : 'Tarihsiz'}
+                                <Link key={exam.id} href={`/patients/${patient.id}/examination`}>
+                                    <Card className="border border-slate-200 shadow-sm hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer group bg-white mb-2">
+                                        <CardContent className="p-3">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                                                    {exam.tarih ? safeFormatDate(exam.tarih) : 'Tarihsiz'}
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
                                             </div>
-                                            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
-                                        </div>
-                                        <div className="text-xs text-slate-600 line-clamp-2 pl-0">
-                                            <span className="font-medium text-slate-500">Tanı: </span>
-                                            {exam.sikayet || 'Belirtilmemiş'}
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                            <div className="text-xs text-slate-600 line-clamp-2 pl-0">
+                                                <span className="font-medium text-slate-500">Tanı / Şikayet: </span>
+                                                {exam.tani1 || exam.sikayet || 'Belirtilmemiş'}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
                             ))
                         )}
                     </div>

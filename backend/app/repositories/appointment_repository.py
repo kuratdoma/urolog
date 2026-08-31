@@ -103,9 +103,18 @@ class AppointmentRepository:
         from app.repositories.finance.models import FinansIslem
         from sqlalchemy import cast, Date, text
         from app.schemas.appointment import ClinicalBriefSchema
+        from uuid import UUID
 
-        # Restore missing hasta_ids definition and all imports
-        hasta_ids = [a.hasta_id for a in appointments if a.hasta_id]
+        # Safely convert hasta_ids to UUID list
+        hasta_ids = []
+        for a in appointments:
+            if a.hasta_id:
+                try:
+                    h_uuid = a.hasta_id if isinstance(a.hasta_id, UUID) else UUID(str(a.hasta_id))
+                    hasta_ids.append(h_uuid)
+                except Exception:
+                    pass
+
         if not hasta_ids:
             return appointments
 
@@ -117,8 +126,8 @@ class AppointmentRepository:
                 FinansIslem.is_deleted == False
             )
         )
-        if start: fin_query = fin_query.where(FinansIslem.tarih >= start.date())
-        if end: fin_query = fin_query.where(FinansIslem.tarih <= end.date())
+        if start: fin_query = fin_query.where(FinansIslem.tarih >= (start.date() if isinstance(start, datetime) else start))
+        if end: fin_query = fin_query.where(FinansIslem.tarih <= (end.date() if isinstance(end, datetime) else end))
         
         fin_res = await self.db.execute(fin_query)
         # Map: (hasta_id, date) -> status
@@ -150,7 +159,6 @@ class AppointmentRepository:
         # 3. Clinical Brief — Fetch last Muayene per patient (bulk, DISTINCT ON)
         exam_map = {}  # hasta_id_str -> ClinicalBriefSchema partial
         try:
-            from sqlalchemy import distinct
             exam_query = (
                 select(
                     Muayene.hasta_id,
@@ -219,7 +227,7 @@ class AppointmentRepository:
 
         # 5. Attach to models (Pydantic will pick these up)
         for apt in appointments:
-            apt_date = apt.start.date()
+            apt_date = apt.start.date() if isinstance(apt.start, datetime) else apt.start
             key = (str(apt.hasta_id), apt_date)
             
             # Payment status mapping
@@ -236,20 +244,37 @@ class AppointmentRepository:
             if h_str:
                 exam_data = exam_map.get(h_str, {})
                 note_data = note_map.get(h_str, {})
-                if exam_data or note_data:
-                    apt.clinical_brief = ClinicalBriefSchema(
-                        **{**exam_data, **note_data}
-                    )
+                
+                # Check if patient is a new patient (no prior exams/notes)
+                is_new = not bool(exam_data or note_data)
+                
+                hasta_obj = getattr(apt, 'hasta', None)
+                h_notu = None
+                if hasta_obj:
+                    h_notu = getattr(hasta_obj, 'kimlik_notlar', None) or getattr(hasta_obj, 'kayit_notu', None)
+
+                apt.clinical_brief = ClinicalBriefSchema(
+                    **{
+                        **exam_data,
+                        **note_data,
+                        "is_new_patient": is_new,
+                        "hasta_notu": h_notu
+                    }
+                )
 
         return appointments
 
     async def get_by_id(self, randevu_id: int) -> Optional[Randevu]:
         result = await self.db.execute(
             select(Randevu)
-            .options(selectinload(Randevu.hasta))
+            .options(selectinload(Randevu.hasta), selectinload(Randevu.doctor))
             .filter(Randevu.id == randevu_id)
         )
-        return result.scalars().first()
+        appointment = result.scalars().first()
+        if appointment:
+            enriched = await self._enrich_appointments([appointment], appointment.start, appointment.end)
+            return enriched[0] if enriched else appointment
+        return None
 
     async def get_by_patient(self, hasta_id: str) -> List[Randevu]:
         result = await self.db.execute(
@@ -285,7 +310,11 @@ class AppointmentRepository:
             .options(selectinload(Randevu.hasta), selectinload(Randevu.doctor))
             .filter(Randevu.id == db_obj.id)
         )
-        return result.scalars().first()
+        created_apt = result.scalars().first()
+        if created_apt:
+            enriched = await self._enrich_appointments([created_apt], created_apt.start, created_apt.end)
+            return enriched[0] if enriched else created_apt
+        return db_obj
 
     async def update(self, randevu_id: int, obj_in: RandevuUpdate, user_id: int = None, user_name: str = None) -> Optional[Randevu]:
         db_obj = await self.get_by_id(randevu_id)
@@ -327,7 +356,11 @@ class AppointmentRepository:
             .options(selectinload(Randevu.hasta), selectinload(Randevu.doctor))
             .filter(Randevu.id == randevu_id)
         )
-        return result.scalars().first()
+        updated_apt = result.scalars().first()
+        if updated_apt:
+            enriched = await self._enrich_appointments([updated_apt], updated_apt.start, updated_apt.end)
+            return enriched[0] if enriched else updated_apt
+        return db_obj
 
     async def delete(self, randevu_id: int, reason: Optional[str] = None, user_id: int = None, user_name: str = None) -> bool:
         db_obj = await self.get_by_id(randevu_id)

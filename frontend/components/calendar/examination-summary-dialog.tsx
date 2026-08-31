@@ -54,7 +54,27 @@ export function ExaminationSummaryDialog({ isOpen, onClose, patientId, patientNa
                 {isLoading ? (
                     <div className="py-10 text-center text-slate-500">Yükleniyor...</div>
                 ) : !latestExam ? (
-                    <div className="py-10 text-center text-slate-500 italic">Henüz muayene kaydı bulunmuyor.</div>
+                    <div className="py-8 text-center space-y-3">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
+                            <Stethoscope className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-sm font-semibold text-slate-700">Geçmiş Muayene Kaydı Bulunmuyor</p>
+                            <p className="text-xs text-slate-400">Bu hasta için henüz tıbbi muayene kaydı girilmemiş.</p>
+                        </div>
+                        {patientId && (
+                            <Button
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
+                                onClick={() => {
+                                    router.push(`/patients/${patientId}/examination`);
+                                    onClose();
+                                }}
+                            >
+                                <Stethoscope className="w-3.5 h-3.5 mr-1.5" />
+                                İlk Muayeneyi Başlat
+                            </Button>
+                        )}
+                    </div>
                 ) : (
                     <ScrollArea className="max-h-[60vh] pr-4">
                         <div className="space-y-4 py-2">
@@ -107,7 +127,7 @@ export function ExaminationSummaryDialog({ isOpen, onClose, patientId, patientNa
                     </ScrollArea>
                 )}
                 <DialogFooter className="flex sm:justify-between gap-2">
-                    {patientId && (
+                    {patientId && latestExam && (
                         <Button
                             variant="default"
                             className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"

@@ -578,7 +578,7 @@ export default function CalendarPage() {
                     appointments={dayAppointments}
                     showSidebar={showSidebar}
                     toggleSidebar={toggleSidebar}
-                    onAppointmentClick={(apt) => {
+                    onEditAppointment={(apt) => {
                         setEditingAppointment(apt);
                         setShowCreateDialog(true);
                     }}

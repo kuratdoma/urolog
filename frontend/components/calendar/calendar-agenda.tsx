@@ -1,20 +1,22 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill } from 'lucide-react';
+import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill, Pencil, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/lib/api';
+import { usePatientStore } from '@/stores/patient-store';
 
 interface CalendarAgendaProps {
     date: Date;
     appointments: any[];
     showSidebar: boolean;
     toggleSidebar: () => void;
-    onAppointmentClick: (apt: Appointment) => void;
+    onAppointmentClick?: (apt: Appointment) => void;
+    onEditAppointment?: (apt: Appointment) => void;
 }
 
 /** Truncate text to maxLen characters with ellipsis */
@@ -28,8 +30,42 @@ export function CalendarAgenda({
     appointments,
     showSidebar,
     toggleSidebar,
-    onAppointmentClick
+    onAppointmentClick,
+    onEditAppointment
 }: CalendarAgendaProps) {
+    const router = useRouter();
+    const { setActivePatient } = usePatientStore();
+
+    const handleCardClick = (apt: Appointment) => {
+        const patientId = apt.hasta_id || apt.hasta?.id;
+        if (patientId) {
+            // Set active patient in global store
+            if (apt.hasta) {
+                setActivePatient({
+                    id: String(apt.hasta.id),
+                    ad: apt.hasta.ad,
+                    soyad: apt.hasta.soyad,
+                    tc_kimlik: apt.hasta.tc_kimlik,
+                });
+            } else {
+                const nameParts = (apt.title || '').trim().split(' ');
+                const soyad = nameParts.length > 1 ? nameParts.pop() || '' : '';
+                const ad = nameParts.join(' ') || apt.title;
+                setActivePatient({
+                    id: String(patientId),
+                    ad: ad,
+                    soyad: soyad,
+                });
+            }
+            // Navigate directly to examination form
+            router.push(`/patients/${patientId}/examination`);
+        } else if (onEditAppointment) {
+            onEditAppointment(apt);
+        } else if (onAppointmentClick) {
+            onAppointmentClick(apt);
+        }
+    };
+
     return (
         <aside className={cn(
             "absolute top-0 right-0 w-[340px] bg-white h-full z-30 shadow-2xl border-l border-slate-200 flex flex-col transition-all duration-300 transform",
@@ -58,14 +94,16 @@ export function CalendarAgenda({
                         const isPast = evt.end < new Date();
                         const isNow = evt.start <= new Date() && evt.end >= new Date();
                         const brief = evt.resource?.clinical_brief;
+                        const hasPreviousBrief = brief && (brief.son_muayene_tani || brief.son_muayene_sikayet || brief.son_not_icerik || brief.son_muayene_sonuc || brief.son_muayene_tedavi);
+                        const hasNotes = evt.resource.notes || brief?.hasta_notu;
 
                         return (
                             <div
                                 key={evt.id}
-                                onClick={() => onAppointmentClick(evt.resource)}
+                                onClick={() => handleCardClick(evt.resource)}
                                 className={cn(
                                     "group flex flex-col p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-lg relative overflow-hidden",
-                                    evt.resource.status === 'blocked' ? "bg-red-50 border-red-100" : (isNow ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-100 hover:border-blue-200"),
+                                    evt.resource.status === 'blocked' ? "bg-red-50 border-red-100" : (isNow ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-100 hover:border-blue-300 hover:bg-slate-50/40"),
                                     isPast && "opacity-60 bg-slate-50/50 grayscale-[0.5]"
                                 )}
                             >
@@ -86,27 +124,39 @@ export function CalendarAgenda({
                                             {format(evt.end, 'HH:mm')}
                                         </span>
                                     </div>
-                                    <Badge variant="outline" className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-white shadow-sm">
-                                        {evt.resource.type || 'Muayene'}
-                                    </Badge>
+                                    <div className="flex items-center gap-1">
+                                        <Badge variant="outline" className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-white shadow-sm">
+                                            {evt.resource.type || 'Muayene'}
+                                        </Badge>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (onEditAppointment) onEditAppointment(evt.resource);
+                                                else if (onAppointmentClick) onAppointmentClick(evt.resource);
+                                            }}
+                                            title="Randevuyu Düzenle"
+                                        >
+                                            <Pencil className="w-3 h-3" />
+                                        </Button>
+                                    </div>
                                 </div>
 
-                                <h4 className="font-bold text-sm text-slate-800 leading-tight mb-2 pl-2 uppercase tracking-tight">
-                                    {(evt.resource?.hasta_id || evt.resource?.hasta?.id) ? (
-                                        <Link
-                                            href={`/patients/${evt.resource?.hasta_id || evt.resource?.hasta?.id}/examination`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="hover:text-blue-600 hover:underline transition-colors inline-block"
-                                        >
-                                            {evt.title}
-                                        </Link>
-                                    ) : (
-                                        evt.title
+                                <div className="flex items-center justify-between pl-2 mb-2">
+                                    <h4 className="font-bold text-sm text-slate-800 leading-tight uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                                        {evt.title}
+                                    </h4>
+                                    {(evt.resource?.hasta_id || evt.resource?.hasta?.id) && (
+                                        <span className="text-[10px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                                            Muayene <ChevronRight className="w-3 h-3" />
+                                        </span>
                                     )}
-                                </h4>
+                                </div>
 
                                 {/* Clinical Brief — inline compact section */}
-                                {brief && (brief.son_muayene_tani || brief.son_muayene_sikayet || brief.son_not_icerik) && (
+                                {hasPreviousBrief ? (
                                     <div className="mx-2 mb-2 p-2.5 rounded-xl bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-100/80 space-y-1.5">
                                         {/* Son Muayene — tarih + tanı */}
                                         {(brief.son_muayene_tani || brief.son_muayene_sikayet) && (
@@ -155,7 +205,21 @@ export function CalendarAgenda({
                                             </div>
                                         )}
                                     </div>
-                                )}
+                                ) : (evt.resource?.hasta_id || evt.resource?.hasta?.id) ? (
+                                    <div className="mx-2 mb-2 p-2 rounded-xl bg-slate-50/80 border border-slate-100/80 space-y-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <Stethoscope className="w-3 h-3 text-blue-500 shrink-0" />
+                                            <span className="text-[9px] text-blue-600 font-bold uppercase tracking-wider">
+                                                İlk Muayene / Yeni Kayıt
+                                            </span>
+                                        </div>
+                                        {hasNotes && (
+                                            <p className="text-[10px] text-slate-600 italic leading-tight line-clamp-2 pl-4">
+                                                "{truncate(hasNotes, 80)}"
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : null}
 
                                 <div className="flex items-center justify-between pl-2 mt-auto">
                                     <div className="flex items-center gap-3">
