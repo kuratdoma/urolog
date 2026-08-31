@@ -107,10 +107,10 @@ export function useAppointmentForm({
                 const defs = await api.definitions.randevuTurleri.list();
                 if (defs && defs.length > 0) {
                     const mappedServices = defs.map((d: any) => ({
-                        id: d.tur_adi,
-                        label: d.tur_adi,
-                        duration: d.varsayilan_sure || 15,
-                        color: d.renk_kodu || '#3b82f6'
+                        id: d.ad || d.tur_adi || 'Muayene',
+                        label: d.ad || d.tur_adi || 'Muayene',
+                        duration: d.sure || d.varsayilan_sure || 15,
+                        color: d.renk || d.renk_kodu || '#3b82f6'
                     }));
                     setServices(mappedServices);
                     if (!selectedServiceId && !appointment) {
@@ -134,12 +134,12 @@ export function useAppointmentForm({
         if (isOpen) {
             if (appointment) {
                 setSelectedPatient({
-                    id: appointment.patient_id,
+                    id: appointment.patient_id || (appointment.hasta ? String(appointment.hasta.id) : ''),
                     name: appointment.title
                 });
                 setStartDate(new Date(appointment.start));
                 setEndDate(new Date(appointment.end));
-                setSelectedServiceId(appointment.service_id || 'Muayene');
+                setSelectedServiceId(appointment.type || appointment.service_id || 'Muayene');
                 setNotes(appointment.notes || '');
                 setIsBlockedMode(appointment.status === 'blocked');
             } else {
@@ -214,12 +214,14 @@ export function useAppointmentForm({
         }
 
         const payload = {
+            hasta_id: selectedPatient?.id || null,
             patient_id: selectedPatient?.id || null,
             title: isBlockedMode
                 ? (blockedCategory === 'Ameliyat' && selectedPatient ? `[AMELİYAT] ${selectedPatient.name}` : `[BLOKE] ${blockedCategory}`)
                 : selectedPatient?.name,
             start: startDate.toISOString(),
             end: endDate.toISOString(),
+            type: isBlockedMode ? 'BLOCKED' : selectedServiceId,
             service_id: isBlockedMode ? 'blocked' : selectedServiceId,
             doctor_name: selectedDoctorName,
             status: isBlockedMode ? 'blocked' : 'scheduled',
