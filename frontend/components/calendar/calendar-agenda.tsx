@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill } from 'lucide-react';
@@ -91,7 +92,17 @@ export function CalendarAgenda({
                                 </div>
 
                                 <h4 className="font-bold text-sm text-slate-800 leading-tight mb-2 pl-2 uppercase tracking-tight">
-                                    {evt.title}
+                                    {(evt.resource?.hasta_id || evt.resource?.hasta?.id) ? (
+                                        <Link
+                                            href={`/patients/${evt.resource?.hasta_id || evt.resource?.hasta?.id}/examination`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="hover:text-blue-600 hover:underline transition-colors inline-block"
+                                        >
+                                            {evt.title}
+                                        </Link>
+                                    ) : (
+                                        evt.title
+                                    )}
                                 </h4>
 
                                 {/* Clinical Brief — inline compact section */}
