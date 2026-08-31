@@ -113,16 +113,30 @@ class DefinitionRepository:
     async def get_anestezi_tipleri(self) -> List[AnesteziTipi]:
         return await self._get_all(AnesteziTipi)
 
+    async def get_anestezi_turleri(self) -> List[AnesteziTipi]:
+        return await self.get_anestezi_tipleri()
+
     async def create_anestezi(self, ad: str, aktif: bool = True) -> AnesteziTipi:
         return await self._create(AnesteziTipi, ad=ad, aktif=aktif)
+
+    async def create_anestezi_turu(self, ad: str, aktif: bool = True) -> AnesteziTipi:
+        return await self.create_anestezi(ad=ad, aktif=aktif)
 
     async def update_anestezi(
         self, id: int, ad: str = None, aktif: bool = None
     ) -> Optional[AnesteziTipi]:
         return await self._update(AnesteziTipi, id, ad=ad, aktif=aktif)
 
+    async def update_anestezi_turu(
+        self, id: int, ad: str = None, aktif: bool = None
+    ) -> Optional[AnesteziTipi]:
+        return await self.update_anestezi(id=id, ad=ad, aktif=aktif)
+
     async def delete_anestezi(self, id: int) -> bool:
         return await self._delete(AnesteziTipi, id)
+
+    async def delete_anestezi_turu(self, id: int) -> bool:
+        return await self.delete_anestezi(id=id)
 
     # Randevu Türleri
     async def get_randevu_turleri(self) -> List[RandevuTuru]:

@@ -298,22 +298,30 @@ async def get_bootstrap_definitions(db: AsyncSession = Depends(deps.get_db)):
     7 ayrı HTTP çağrısı yerine tek çağrı ile ağ maliyetini düşürür.
     Redis'te 1 saat önbelleklenir; tanımlar değiştiğinde geçersiz kılınır.
     """
-    def_repo = DefinitionRepository(db)
-    sys_repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
 
-    kurumlar = await def_repo.get_kurumlar()
-    meslekler = await def_repo.get_meslekler()
-    sigortalar = await def_repo.get_sigortalar()
-    anestezi_turleri = await def_repo.get_anestezi_turleri()
-    hastaneler = await sys_repo.get_hastaneler()
-    cerrahlar = await sys_repo.get_cerrahlar()
-    anestezi_personelleri = await sys_repo.get_anestezi_personelleri()
+    doktorlar = await repo.get_doktorlar()
+    kurumlar = await repo.get_kurumlar()
+    meslekler = await repo.get_meslekler()
+    sigortalar = await repo.get_sigortalar()
+    takip_konulari = await repo.get_takip_konulari()
+    randevu_turleri = await repo.get_randevu_turleri()
+    recete_sablonlari = await repo.get_recete_sablonlari()
+    anestezi_turleri = await repo.get_anestezi_tipleri()
+    hastaneler = await repo.get_hastaneler()
+    cerrahlar = await repo.get_cerrahlar()
+    anestezi_personelleri = await repo.get_anestezi_personelleri()
 
     return {
+        "doktorlar": doktorlar,
         "kurumlar": kurumlar,
         "meslekler": meslekler,
         "sigortalar": sigortalar,
+        "takip_konulari": takip_konulari,
+        "randevu_turleri": randevu_turleri,
+        "recete_sablonlari": recete_sablonlari,
         "anestezi_turleri": anestezi_turleri,
+        "anestezi_tipleri": anestezi_turleri,
         "hastaneler": hastaneler,
         "cerrahlar": cerrahlar,
         "anestezi_personelleri": anestezi_personelleri,

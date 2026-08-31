@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -115,17 +116,44 @@ export function ExaminationDialogs({
         <>
             {/* IPSS Dialog */}
             <Dialog open={ipssDialogOpen} onOpenChange={setIpssDialogOpen}>
-                <DialogContent className="max-w-2xl bg-white p-0 gap-0"><DialogHeader className="p-4 bg-slate-50"><DialogTitle>IPSS Değerlendirmesi ({ipssTotal})</DialogTitle></DialogHeader><ScrollArea className="max-h-[60vh] p-4"><IPSSForm value={ipssAdapter.toNew(formData)} onChange={(d) => setFormData((prev: ExaminationFormData) => ({ ...prev, ...ipssAdapter.toLegacy(d) }))} readOnly={!isEditing} /></ScrollArea><DialogFooter className="p-4"><Button onClick={() => setIpssDialogOpen(false)}>Tamam</Button></DialogFooter></DialogContent>
+                <DialogContent className="max-w-2xl bg-white p-0 gap-0">
+                    <DialogHeader className="p-4 bg-slate-50">
+                        <DialogTitle>IPSS Değerlendirmesi ({ipssTotal})</DialogTitle>
+                        <DialogDescription className="sr-only">IPSS prostat semptom skoru değerlendirme formu</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh] p-4">
+                        <IPSSForm value={ipssAdapter.toNew(formData)} onChange={(d) => setFormData((prev: ExaminationFormData) => ({ ...prev, ...ipssAdapter.toLegacy(d) }))} readOnly={!isEditing} />
+                    </ScrollArea>
+                    <DialogFooter className="p-4">
+                        <Button onClick={() => setIpssDialogOpen(false)}>Tamam</Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
 
             {/* IIEF Dialog */}
             <Dialog open={iiefDialogOpen} onOpenChange={setIiefDialogOpen}>
-                <DialogContent className="max-w-4xl bg-white p-0 gap-0"><DialogHeader className="p-4 bg-indigo-50"><DialogTitle>IIEF-EF ({iiefTotal})</DialogTitle></DialogHeader><ScrollArea className="max-h-[55vh] p-4"><IIEFForm value={iiefAdapter.toNew({ iief_ef_answers: JSON.stringify(iiefAnswers) })} onChange={(d) => { const legacy = iiefAdapter.toLegacy(d); if (legacy.iief_ef_answers) setIiefAnswers(JSON.parse(legacy.iief_ef_answers)); }} readOnly={!isEditing} /></ScrollArea><DialogFooter className="p-4"><Button variant="outline" onClick={onIIEFExport} disabled={!iiefFilled}>Öyküye Aktar</Button><Button onClick={() => setIiefDialogOpen(false)}>Tamam</Button></DialogFooter></DialogContent>
+                <DialogContent className="max-w-4xl bg-white p-0 gap-0">
+                    <DialogHeader className="p-4 bg-indigo-50">
+                        <DialogTitle>IIEF-EF ({iiefTotal})</DialogTitle>
+                        <DialogDescription className="sr-only">Uluslararası erektil fonksiyon indeksi formu</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[55vh] p-4">
+                        <IIEFForm value={iiefAdapter.toNew({ iief_ef_answers: JSON.stringify(iiefAnswers) })} onChange={(d) => { const legacy = iiefAdapter.toLegacy(d); if (legacy.iief_ef_answers) setIiefAnswers(JSON.parse(legacy.iief_ef_answers)); }} readOnly={!isEditing} />
+                    </ScrollArea>
+                    <DialogFooter className="p-4">
+                        <Button variant="outline" onClick={onIIEFExport} disabled={!iiefFilled}>Öyküye Aktar</Button>
+                        <Button onClick={() => setIiefDialogOpen(false)}>Tamam</Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
 
             {/* MSHQ Dialog */}
             <Dialog open={mshqDialogOpen} onOpenChange={setMshqDialogOpen}>
-                <DialogContent className="max-w-2xl bg-white p-0 gap-0"><DialogHeader className="p-4 bg-orange-50"><DialogTitle>MSHQ-Ej Değerlendirmesi ({formData.mshq})</DialogTitle></DialogHeader><ScrollArea className="max-h-[55vh] p-4">
+                <DialogContent className="max-w-2xl bg-white p-0 gap-0">
+                    <DialogHeader className="p-4 bg-orange-50">
+                        <DialogTitle>MSHQ-Ej Değerlendirmesi ({formData.mshq})</DialogTitle>
+                        <DialogDescription className="sr-only">Erkek cinsel sağlık anketi formu</DialogDescription>
+                    </DialogHeader><ScrollArea className="max-h-[55vh] p-4">
                     <div className="p-4 space-y-6">
                         <div className="space-y-4">
                             <PEQuestion
@@ -202,58 +230,81 @@ export function ExaminationDialogs({
 
             {/* PEDT Dialog */}
             <Dialog open={pedtValues.open} onOpenChange={pedtValues.setOpen}>
-                <DialogContent className="max-w-2xl bg-white p-0 gap-0"><DialogHeader className="p-4 bg-rose-50"><DialogTitle>PEDT ({pedtValues.total})</DialogTitle></DialogHeader><ScrollArea className="max-h-[55vh] p-4">
-                    <div className="space-y-1">
+                <DialogContent className="max-w-2xl bg-white p-0 gap-0">
+                    <DialogHeader className="p-4 bg-rose-50">
+                        <DialogTitle>PEDT ({pedtValues.total})</DialogTitle>
+                        <DialogDescription className="sr-only">Prematür ejakülasyon tanı aracı formu</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[55vh] p-4">
                         <PEQuestion label="1. KONTROL ZORLUĞU" description="Boşalmayı geciktirmek sizin için ne kadar zor?" value={pedtValues.answers.q1} onChange={(v) => pedtValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, q1: v }))} options={[{ value: "0", label: "Hiç zor değil" }, { value: "1", label: "Biraz zor" }, { value: "2", label: "Orta" }, { value: "3", label: "Çok zor" }, { value: "4", label: "Aşırı" }]} disabled={!isEditing} />
                         <PEQuestion label="2. BOŞALMA SIKLIĞI" description="Partneriniz istediği süreden önce ne sıklıkla boşalıyorsunuz?" value={pedtValues.answers.q2} onChange={(v) => pedtValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, q2: v }))} options={[{ value: "0", label: "Hiçbir zaman" }, { value: "1", label: "Nadiren" }, { value: "2", label: "Bazen" }, { value: "3", label: "Sıklıkla" }, { value: "4", label: "Her zaman" }]} disabled={!isEditing} />
                         <PEQuestion label="3. MİNİMAL UYARI" description="Çok az bir cinsel uyarıyla boşalma ne sıklıkla oluyor?" value={pedtValues.answers.q3} onChange={(v) => pedtValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, q3: v }))} options={[{ value: "0", label: "Hiçbir zaman" }, { value: "1", label: "Nadiren" }, { value: "2", label: "Bazen" }, { value: "3", label: "Sıklıkla" }, { value: "4", label: "Her zaman" }]} disabled={!isEditing} />
                         <PEQuestion label="4. SIKINTI DÜZEYİ" description="Erken boşalma ne kadar sıkıntı veriyor?" value={pedtValues.answers.q4} onChange={(v) => pedtValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, q4: v }))} options={[{ value: "0", label: "Hiç" }, { value: "1", label: "Biraz" }, { value: "2", label: "Orta" }, { value: "3", label: "Çok" }, { value: "4", label: "Aşırı" }]} disabled={!isEditing} />
                         <PEQuestion label="5. PARTNER MEMNUNİYETSİZLİĞİ" description="Partnerinizin boşalma zamanlamasından memnun olmadığı konusunda ne kadar endişeleniyorsunuz?" value={pedtValues.answers.q5} onChange={(v) => pedtValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, q5: v }))} options={[{ value: "0", label: "Hiç" }, { value: "1", label: "Biraz" }, { value: "2", label: "Orta" }, { value: "3", label: "Çok" }, { value: "4", label: "Aşırı" }]} disabled={!isEditing} />
-                    </div>
-                </ScrollArea><DialogFooter className="p-4"><Button variant="outline" onClick={pedtValues.onExport} disabled={!pedtValues.filled}>Öyküye Aktar</Button><Button onClick={() => pedtValues.setOpen(false)}>Tamam</Button></DialogFooter></DialogContent>
+                    </ScrollArea>
+                    <DialogFooter className="p-4">
+                        <Button variant="outline" onClick={pedtValues.onExport} disabled={!pedtValues.filled}>Öyküye Aktar</Button>
+                        <Button onClick={() => pedtValues.setOpen(false)}>Tamam</Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
 
             {/* PE Clinical Dialog */}
             <Dialog open={peFormValues.open} onOpenChange={peFormValues.setOpen}>
-                <DialogContent className="!max-w-[90vw] !w-[50vw] min-w-[600px] max-h-[90vh] p-0 overflow-hidden bg-white"><DialogHeader className="p-5 bg-cyan-50 flex flex-row items-center gap-3"><div className="p-2 bg-cyan-100 rounded-lg"><Zap className="h-5 w-5 text-cyan-600" /></div><div className="flex flex-col"><DialogTitle className="text-lg font-bold text-slate-900">PE Klinik Değerlendirme Formu</DialogTitle><p className="text-sm text-cyan-700 italic">Prematür Ejakülasyon - Klinik Öykü ve Ayırıcı Tanı</p></div></DialogHeader><ScrollArea className="flex-1 w-full overflow-y-auto pr-2" style={{ maxHeight: 'calc(90vh - 160px)' }}>
-                    <div className="p-5 space-y-6">
-                        <div className="space-y-2">
-                            <h4 className="font-bold text-[10px] text-cyan-700 border-b border-cyan-100 pb-1.5 flex items-center gap-2 uppercase tracking-tight">
-                                <span className="bg-cyan-100 text-cyan-700 rounded-full w-4 h-4 flex items-center justify-center text-[9px]">1</span>
-                                Temel Tanısal Sorular
-                            </h4>
-                            <div className="grid grid-cols-1 gap-3">
-                                <PEQuestion label="BOŞALMA SÜRESİ (IELT)" description="Vajinal penetrasyon sonrası boşalma süreniz nedir?" value={peFormValues.answers.ielt} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ielt: v }))} options={[{ value: "1", label: "1 dakikadan az" }, { value: "2", label: "1-2 dakika" }, { value: "3", label: "2-3 dakika" }, { value: "4", label: "3 dakikadan fazla" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
-                                <PEQuestion label="BAŞLANGIÇ ZAMANI" description="Sorun ne zaman başladı?" value={peFormValues.answers.baslangic} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, baslangic: v }))} options={[{ value: "lifelong", label: "İlk ilişkiden beri (Yaşam Boyu)" }, { value: "acquired", label: "Sonradan Gelişti (Edinilmiş)" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
-                                <PEQuestion label="DURUMSAL TUTARLILIK" description="Sorun hangi durumlarda görülüyor?" value={peFormValues.answers.tutarlilik} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, tutarlilik: v }))} options={[{ value: "general", label: "Her ilişkide (Genel)" }, { value: "situational", label: "Belli partner/durumlarda (Durumsal)" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
-                                <PEQuestion label="SIKLIK" description="Ne sıklıkla erken boşalma yaşanıyor?" value={peFormValues.answers.siklik} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, siklik: v }))} options={[{ value: "always", label: "Her ilişkide" }, { value: "intermittent", label: "Zaman zaman / Aralıklı" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                <DialogContent className="!max-w-[90vw] !w-[50vw] min-w-[600px] max-h-[90vh] p-0 overflow-hidden bg-white">
+                    <DialogHeader className="p-5 bg-cyan-50 flex flex-row items-center gap-3">
+                        <div className="p-2 bg-cyan-100 rounded-lg">
+                            <Zap className="h-5 w-5 text-cyan-600" />
+                        </div>
+                        <div className="flex flex-col">
+                            <DialogTitle className="text-lg font-bold text-slate-900">PE Klinik Değerlendirme Formu</DialogTitle>
+                            <DialogDescription className="text-sm text-cyan-700 italic">Prematür Ejakülasyon - Klinik Öykü ve Ayırıcı Tanı</DialogDescription>
+                        </div>
+                    </DialogHeader>
+                    <ScrollArea className="flex-1 w-full overflow-y-auto pr-2" style={{ maxHeight: 'calc(90vh - 160px)' }}>
+                        <div className="p-5 space-y-6">
+                            <div className="space-y-2">
+                                <h4 className="font-bold text-[10px] text-cyan-700 border-b border-cyan-100 pb-1.5 flex items-center gap-2 uppercase tracking-tight">
+                                    <span className="bg-cyan-100 text-cyan-700 rounded-full w-4 h-4 flex items-center justify-center text-[9px]">1</span>
+                                    Temel Tanısal Sorular
+                                </h4>
+                                <div className="grid grid-cols-1 gap-3">
+                                    <PEQuestion label="BOŞALMA SÜRESİ (IELT)" description="Vajinal penetrasyon sonrası boşalma süreniz nedir?" value={peFormValues.answers.ielt} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ielt: v }))} options={[{ value: "1", label: "1 dakikadan az" }, { value: "2", label: "1-2 dakika" }, { value: "3", label: "2-3 dakika" }, { value: "4", label: "3 dakikadan fazla" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                    <PEQuestion label="BAŞLANGIÇ ZAMANI" description="Sorun ne zaman başladı?" value={peFormValues.answers.baslangic} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, baslangic: v }))} options={[{ value: "lifelong", label: "İlk ilişkiden beri (Yaşam Boyu)" }, { value: "acquired", label: "Sonradan Gelişti (Edinilmiş)" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                    <PEQuestion label="DURUMSAL TUTARLILIK" description="Sorun hangi durumlarda görülüyor?" value={peFormValues.answers.tutarlilik} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, tutarlilik: v }))} options={[{ value: "general", label: "Her ilişkide (Genel)" }, { value: "situational", label: "Belli partner/durumlarda (Durumsal)" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                    <PEQuestion label="SIKLIK" description="Ne sıklıkla erken boşalma yaşanıyor?" value={peFormValues.answers.siklik} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, siklik: v }))} options={[{ value: "always", label: "Her ilişkide" }, { value: "intermittent", label: "Zaman zaman / Aralıklı" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-bold text-[10px] text-cyan-700 border-b border-cyan-100 pb-1.5 flex items-center gap-2 uppercase tracking-tight">
+                                    <span className="bg-cyan-100 text-cyan-700 rounded-full w-4 h-4 flex items-center justify-center text-[9px]">2</span>
+                                    Ayırıcı Tanı ve Eşlik Eden Durumlar
+                                </h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <PEQuestion label="SERTLEŞME SORUNU (ED)" description="Sertleşme kaybı eşlik ediyor mu?" value={peFormValues.answers.ed_var} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ed_var: v }))} options={[{ value: "yes", label: "Evet, ED eşlik ediyor" }, { value: "no", label: "Hayır, sertleşme normal" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                    <PEQuestion label="SERTLİK KAYBI KORKUSU" description="Ereksiyonu kaybetmemek için acele ediyor musunuz?" value={peFormValues.answers.ed_korku} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ed_korku: v }))} options={[{ value: "yes", label: "Evet, acele ediyorum" }, { value: "no", label: "Hayır" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                    <PEQuestion label="İLAÇ / MADDE" description="Düzenli ilaç veya madde kullanımı var mı?" value={peFormValues.answers.ilac} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ilac: v }))} options={[{ value: "yes", label: "Evet" }, { value: "no", label: "Hayır" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                    <PEQuestion label="İLİŞKİ KALİTESİ" description="Partner ilişkiniz nasıl?" value={peFormValues.answers.iliski} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, iliski: v }))} options={[{ value: "good", label: "İyi / Sorunsuz" }, { value: "problems", label: "İlişkisel sorunlar mevcut" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
+                                    <PEQuestion label="PERFORMANS KAYGISI" description="İlişki öncesi yoğun kaygı ve stres var mı?" value={peFormValues.answers.kaygi} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, kaygi: v }))} options={[{ value: "yes", label: "Evet, yoğun kaygı var" }, { value: "no", label: "Hayır" }]} disabled={!isEditing} compact activeColor="rose" hideValue />
+                                </div>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <h4 className="font-bold text-[10px] text-cyan-700 border-b border-cyan-100 pb-1.5 flex items-center gap-2 uppercase tracking-tight">
-                                <span className="bg-cyan-100 text-cyan-700 rounded-full w-4 h-4 flex items-center justify-center text-[9px]">2</span>
-                                Ayırıcı Tanı ve Eşlik Eden Durumlar
-                            </h4>
-                            <div className="grid grid-cols-1 gap-2">
-                                <PEQuestion label="SERTLEŞME SORUNU (ED)" description="Sertleşme kaybı eşlik ediyor mu?" value={peFormValues.answers.ed_var} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ed_var: v }))} options={[{ value: "yes", label: "Evet, ED eşlik ediyor" }, { value: "no", label: "Hayır, sertleşme normal" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
-                                <PEQuestion label="SERTLİK KAYBI KORKUSU" description="Ereksiyonu kaybetmemek için acele ediyor musunuz?" value={peFormValues.answers.ed_korku} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ed_korku: v }))} options={[{ value: "yes", label: "Evet, acele ediyorum" }, { value: "no", label: "Hayır" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
-                                <PEQuestion label="İLAÇ / MADDE" description="Düzenli ilaç veya madde kullanımı var mı?" value={peFormValues.answers.ilac} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, ilac: v }))} options={[{ value: "yes", label: "Evet" }, { value: "no", label: "Hayır" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
-                                <PEQuestion label="İLİŞKİ KALİTESİ" description="Partner ilişkiniz nasıl?" value={peFormValues.answers.iliski} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, iliski: v }))} options={[{ value: "good", label: "İyi / Sorunsuz" }, { value: "problems", label: "İlişkisel sorunlar mevcut" }]} disabled={!isEditing} compact activeColor="cyan" hideValue />
-                                <PEQuestion label="PERFORMANS KAYGISI" description="İlişki öncesi yoğun kaygı ve stres var mı?" value={peFormValues.answers.kaygi} onChange={(v) => peFormValues.setAnswers((prev: Record<string, unknown>) => ({ ...prev, kaygi: v }))} options={[{ value: "yes", label: "Evet, yoğun kaygı var" }, { value: "no", label: "Hayır" }]} disabled={!isEditing} compact activeColor="rose" hideValue />
-                            </div>
-                        </div>
-                    </div>
-                </ScrollArea><DialogFooter className="p-3"><Button variant="outline" onClick={peFormValues.onExport} disabled={!peFormValues.filled}>Öyküye Aktar</Button><Button onClick={() => peFormValues.setOpen(false)}>Tamam</Button></DialogFooter></DialogContent>
+                    </ScrollArea>
+                    <DialogFooter className="p-3">
+                        <Button variant="outline" onClick={peFormValues.onExport} disabled={!peFormValues.filled}>Öyküye Aktar</Button>
+                        <Button onClick={() => peFormValues.setOpen(false)}>Tamam</Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Muayene Kaydı Silinsin mi?</DialogTitle>
+                        <DialogDescription>
+                            Muayene formu silinecek. Bu işlem geri alınamaz. Emin misiniz?
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 text-sm text-slate-600">
-                        Muayene formu silinecek. Bu işlem geri alınamaz. Eminmisin?
-                    </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>İptal</Button>
                         <Button className="bg-red-600 text-white hover:bg-red-700" onClick={onConfirmDelete}>Evet, Sil</Button>
@@ -261,7 +312,15 @@ export function ExaminationDialogs({
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isNoteOpen} onOpenChange={setIsNoteOpen}><DialogContent><div className="p-6">{appointmentNote}</div></DialogContent></Dialog>
+            <Dialog open={isNoteOpen} onOpenChange={setIsNoteOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Randevu Notu</DialogTitle>
+                        <DialogDescription className="sr-only">Randevu notu detayları</DialogDescription>
+                    </DialogHeader>
+                    <div className="p-6">{appointmentNote}</div>
+                </DialogContent>
+            </Dialog>
 
             <EDCFormModal isOpen={isEDCFormOpen} onOpenChange={setIsEDCFormOpen} onExport={(t) => setFormData((prev: ExaminationFormData) => ({ ...prev, oyku: prev.oyku + t }))} />
             <EDDrugsFormModal isOpen={isEDDrugsOpen} onOpenChange={setIsEDDrugsOpen} onDrugsSelected={(drugs) => setFormData((prev: ExaminationFormData) => ({ ...prev, kullandigi_ilaclar: prev.kullandigi_ilaclar + ", " + drugs.join(", ") }))} onExport={(t) => setFormData((prev: ExaminationFormData) => ({ ...prev, oyku: prev.oyku + t }))} />

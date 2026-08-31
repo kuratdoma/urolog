@@ -4,6 +4,8 @@ import React, { useState, useMemo } from "react";
 import {
     Dialog,
     DialogContent,
+    DialogTitle,
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { Activity, ClipboardCheck, Trash2, Send, Zap, CheckCircle2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -195,6 +197,8 @@ export const PEFormModal: React.FC<PEFormModalProps> = ({ isOpen, onOpenChange, 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent showCloseButton={false} className="p-0 overflow-hidden bg-white shadow-2xl rounded-xl border-0 flex flex-col gap-0 h-[90vh] max-h-[90vh] w-auto aspect-video max-w-[95vw] lg:max-w-[1200px]">
+                <DialogTitle className="sr-only">FM: Hızlı Giriş</DialogTitle>
+                <DialogDescription className="sr-only">Fizik muayene hızlı giriş ve şablon değerlendirme formu</DialogDescription>
                 {/* Header */}
                 <header className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
