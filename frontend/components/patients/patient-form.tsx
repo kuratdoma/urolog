@@ -15,6 +15,15 @@ import { useState, useEffect } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { CreateAppointmentDialog } from '@/components/appointments/create-appointment-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { formatPhoneNumber } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -108,6 +117,7 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
     const router = useRouter();
     const [editMode, setEditMode] = useState(!initialData || isEditing);
     const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false);
+    const [contactWarningOpen, setContactWarningOpen] = useState(false);
 
 
 
@@ -144,9 +154,9 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
             kimlik_notlar: '',
             is_passport: sanitizedInitialData?.tc_kimlik ? !validateTCKN(String(sanitizedInitialData.tc_kimlik)) : false,
             // Defaults
-            sms_izin: 'Evet',
-            arama_izni: 'Evet',
-            email_izin: 'Evet',
+            sms_izin: '',
+            arama_izni: '',
+            email_izin: '',
             iletisim_kaynagi: '',
             iletisim_tercihi: '',
             kayit_notu: '',
@@ -222,6 +232,25 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
         // You might want to show a toast here if errors are not obvious
     };
 
+    const hasContactPreference = () => {
+        const values = form.getValues();
+        return Boolean(
+            values.iletisim_tercihi ||
+            values.arama_izni ||
+            values.sms_izin ||
+            values.email_izin ||
+            values.iletisim_kaynagi
+        );
+    };
+
+    const handleFormSubmit = (data: PatientFormValues) => {
+        if (!patientId && !hasContactPreference()) {
+            setContactWarningOpen(true);
+            return;
+        }
+        handleSubmit(data);
+    };
+
     return (
         <div className="space-y-6">
             {/* Top Action Bar */}
@@ -245,6 +274,10 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
                         disabled={isSubmitting}
                         onClick={() => {
                             if (editMode) {
+                                if (!patientId && !hasContactPreference()) {
+                                    setContactWarningOpen(true);
+                                    return;
+                                }
                                 form.handleSubmit(handleSubmit, onError)();
                             } else {
                                 setEditMode(true);
@@ -291,7 +324,7 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
 
             {/* Main Form */}
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
                     {/* Command Center (Operational Metadata) - Single Row, No Header, Color-Coded */}
                     <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden mb-6">
                         <div className="px-4 py-2 flex flex-row items-center justify-between gap-x-8 gap-y-2 flex-wrap lg:flex-nowrap">
@@ -742,6 +775,20 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
                 patientId={patientId || initialData?.hasta_rec_id}
                 patientName={patientName || (initialData ? `${initialData.ad} ${initialData.soyad}` : undefined)}
             />
+
+            <AlertDialog open={contactWarningOpen} onOpenChange={setContactWarningOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>İletişim Tercihi Eksik</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Lütfen İletişim, Arama, SMS, Email ve Kaynak seçeneklerinden en az birini işaretleyin.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setContactWarningOpen(false)}>Geri Dön</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div >
     );
 }
