@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 from app.models.base_class import Base
+from app.repositories.patient.models import Hasta
 import enum
 
 

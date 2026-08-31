@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill, Pencil, FileText } from 'lucide-react';
@@ -145,13 +146,35 @@ export function CalendarAgenda({
                                 </div>
 
                                 <div className="flex items-center justify-between pl-2 mb-2">
-                                    <h4 className="font-bold text-sm text-slate-800 leading-tight uppercase tracking-tight group-hover:text-blue-600 transition-colors">
-                                        {evt.title}
+                                    <h4 className="font-bold text-sm text-slate-800 leading-tight uppercase tracking-tight">
+                                        {(evt.resource?.hasta_id || evt.resource?.hasta?.id) ? (
+                                            <Link
+                                                href={`/patients/${evt.resource?.hasta_id || evt.resource?.hasta?.id}/examination`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCardClick(evt.resource);
+                                                }}
+                                                className="hover:text-blue-600 hover:underline transition-colors inline-block cursor-pointer"
+                                                title="Muayene Formunu Aç"
+                                            >
+                                                {evt.title}
+                                            </Link>
+                                        ) : (
+                                            evt.title
+                                        )}
                                     </h4>
                                     {(evt.resource?.hasta_id || evt.resource?.hasta?.id) && (
-                                        <span className="text-[10px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                                        <Link
+                                            href={`/patients/${evt.resource?.hasta_id || evt.resource?.hasta?.id}/examination`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleCardClick(evt.resource);
+                                            }}
+                                            className="text-[10px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 hover:underline transition-opacity flex items-center gap-0.5"
+                                            title="Muayene Formunu Aç"
+                                        >
                                             Muayene <ChevronRight className="w-3 h-3" />
-                                        </span>
+                                        </Link>
                                     )}
                                 </div>
 

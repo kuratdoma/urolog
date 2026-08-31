@@ -133,10 +133,14 @@ export function useAppointmentForm({
     useEffect(() => {
         if (isOpen) {
             if (appointment) {
-                setSelectedPatient({
-                    id: appointment.patient_id || (appointment.hasta ? String(appointment.hasta.id) : ''),
-                    name: appointment.title
-                });
+                const pId = appointment.hasta_id || appointment.patient_id || (appointment.hasta ? String(appointment.hasta.id) : '');
+                const pName = appointment.hasta
+                    ? `${appointment.hasta.ad} ${appointment.hasta.soyad}`
+                    : (appointment.title ? appointment.title.split(' - ')[0] : '');
+                setSelectedPatient(pId ? {
+                    id: String(pId),
+                    name: pName || appointment.title
+                } : null);
                 setStartDate(new Date(appointment.start));
                 setEndDate(new Date(appointment.end));
                 setSelectedServiceId(appointment.type || appointment.service_id || 'Muayene');
@@ -213,16 +217,17 @@ export function useAppointmentForm({
             return;
         }
 
+        const validPatientId = selectedPatient?.id && selectedPatient.id.trim() !== '' ? selectedPatient.id.trim() : null;
         const payload = {
-            hasta_id: selectedPatient?.id || null,
-            patient_id: selectedPatient?.id || null,
+            hasta_id: validPatientId,
+            patient_id: validPatientId,
             title: isBlockedMode
                 ? (blockedCategory === 'Ameliyat' && selectedPatient ? `[AMELİYAT] ${selectedPatient.name}` : `[BLOKE] ${blockedCategory}`)
-                : selectedPatient?.name,
+                : (selectedPatient?.name || ''),
             start: startDate.toISOString(),
             end: endDate.toISOString(),
-            type: isBlockedMode ? 'BLOCKED' : selectedServiceId,
-            service_id: isBlockedMode ? 'blocked' : selectedServiceId,
+            type: isBlockedMode ? 'BLOCKED' : (selectedServiceId || 'Muayene'),
+            service_id: isBlockedMode ? 'blocked' : (selectedServiceId || 'Muayene'),
             doctor_name: selectedDoctorName,
             status: isBlockedMode ? 'blocked' : 'scheduled',
             notes: notes || undefined,

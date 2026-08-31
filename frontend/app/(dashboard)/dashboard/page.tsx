@@ -465,74 +465,135 @@ export default function DashboardPage() {
                                                     </Button>
                                                 </div>
 
-                                                {/* Content Column */}
-                                                <div className="flex-1 min-w-0 p-3 flex items-start gap-3">
-                                                    <div className="mt-1">
-                                                        <Avatar className={cn("h-10 w-10 border border-slate-200", isPast ? "bg-slate-100" : "bg-white")}>
-                                                            <AvatarFallback className="text-xs font-bold text-slate-600">
-                                                                {apt.hasta ? `${apt.hasta.ad[0]}${apt.hasta.soyad[0]}` : apt.title.substring(0, 2).toUpperCase()}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                    </div>
+                                                    {/* Content Column */}
+                                                    {(() => {
+                                                        const patientId = apt.hasta_id || apt.hasta?.id;
+                                                        const displayName = apt.hasta ? `${apt.hasta.ad} ${apt.hasta.soyad}` : apt.title;
 
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <h4 className="text-sm font-bold text-slate-900 truncate">
-                                                                {apt.hasta ? (
-                                                                    <Link href={`/patients/${apt.hasta.id}/examination`} className="hover:text-indigo-600 hover:underline transition-colors">
-                                                                        {`${apt.hasta.ad} ${apt.hasta.soyad}`}
-                                                                    </Link>
-                                                                ) : (
-                                                                    apt.title
-                                                                )}
-                                                            </h4>
-                                                            <div className="flex items-center gap-1 shrink-0">
-                                                                <span title={getStatusLabel(apt.status)} aria-label={getStatusLabel(apt.status)}>
-                                                                    {getStatusIcon(apt.status)}
-                                                                </span>
+                                                        const onPatientClick = () => {
+                                                            if (!patientId) return;
+                                                            if (apt.hasta) {
+                                                                setActivePatient({
+                                                                    id: String(apt.hasta.id),
+                                                                    ad: apt.hasta.ad,
+                                                                    soyad: apt.hasta.soyad,
+                                                                    tc_kimlik: apt.hasta.tc_kimlik,
+                                                                });
+                                                            } else {
+                                                                const nameParts = (apt.title || '').trim().split(' ');
+                                                                const soyad = nameParts.length > 1 ? nameParts.pop() || '' : '';
+                                                                const ad = nameParts.join(' ') || apt.title;
+                                                                setActivePatient({
+                                                                    id: String(patientId),
+                                                                    ad,
+                                                                    soyad,
+                                                                });
+                                                            }
+                                                        };
 
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
-                                                                            <MoreHorizontal className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end" className="w-32">
-                                                                        <DropdownMenuItem onClick={() => handleEdit(apt)}>
-                                                                            <Edit2 className="mr-2 h-3.5 w-3.5" />
-                                                                            Düzenle
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem onClick={() => handleDelete(apt.id)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
-                                                                            <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                                                            Sil
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
+                                                        return (
+                                                            <div className="flex-1 min-w-0 p-3 flex items-start gap-3">
+                                                                <div className="mt-1">
+                                                                    {patientId ? (
+                                                                        <Link
+                                                                            href={`/patients/${patientId}/examination`}
+                                                                            onClick={onPatientClick}
+                                                                            title="Muayene Formunu Aç"
+                                                                            className="block rounded-full hover:ring-2 hover:ring-indigo-400 transition-all cursor-pointer"
+                                                                        >
+                                                                            <Avatar className={cn("h-10 w-10 border border-slate-200", isPast ? "bg-slate-100" : "bg-white")}>
+                                                                                <AvatarFallback className="text-xs font-bold text-slate-600">
+                                                                                    {apt.hasta ? `${apt.hasta.ad[0]}${apt.hasta.soyad[0]}` : apt.title.substring(0, 2).toUpperCase()}
+                                                                                </AvatarFallback>
+                                                                            </Avatar>
+                                                                        </Link>
+                                                                    ) : (
+                                                                        <Avatar className={cn("h-10 w-10 border border-slate-200", isPast ? "bg-slate-100" : "bg-white")}>
+                                                                            <AvatarFallback className="text-xs font-bold text-slate-600">
+                                                                                {apt.hasta ? `${apt.hasta.ad[0]}${apt.hasta.soyad[0]}` : apt.title.substring(0, 2).toUpperCase()}
+                                                                            </AvatarFallback>
+                                                                        </Avatar>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <h4 className="text-sm font-bold text-slate-900 truncate">
+                                                                            {patientId ? (
+                                                                                <Link
+                                                                                    href={`/patients/${patientId}/examination`}
+                                                                                    onClick={onPatientClick}
+                                                                                    className="hover:text-indigo-600 hover:underline transition-colors inline-flex items-center gap-1.5"
+                                                                                    title="Muayene Formunu Aç"
+                                                                                >
+                                                                                    <span>{displayName}</span>
+                                                                                    <Stethoscope className="w-3.5 h-3.5 text-indigo-500 opacity-60 hover:opacity-100 shrink-0" />
+                                                                                </Link>
+                                                                            ) : (
+                                                                                apt.title
+                                                                            )}
+                                                                        </h4>
+                                                                        <div className="flex items-center gap-1 shrink-0">
+                                                                            <span title={getStatusLabel(apt.status)} aria-label={getStatusLabel(apt.status)}>
+                                                                                {getStatusIcon(apt.status)}
+                                                                            </span>
+
+                                                                            <DropdownMenu>
+                                                                                <DropdownMenuTrigger asChild>
+                                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
+                                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </DropdownMenuTrigger>
+                                                                                <DropdownMenuContent align="end" className="w-36">
+                                                                                    {patientId && (
+                                                                                        <DropdownMenuItem asChild>
+                                                                                            <Link
+                                                                                                href={`/patients/${patientId}/examination`}
+                                                                                                onClick={onPatientClick}
+                                                                                                className="cursor-pointer font-medium text-indigo-600 focus:text-indigo-700 focus:bg-indigo-50"
+                                                                                            >
+                                                                                                <Stethoscope className="mr-2 h-3.5 w-3.5" />
+                                                                                                Muayene Formu
+                                                                                            </Link>
+                                                                                        </DropdownMenuItem>
+                                                                                    )}
+                                                                                    <DropdownMenuItem onClick={() => handleEdit(apt)}>
+                                                                                        <Edit2 className="mr-2 h-3.5 w-3.5" />
+                                                                                        Düzenle
+                                                                                    </DropdownMenuItem>
+                                                                                    <DropdownMenuItem onClick={() => handleDelete(apt.id)} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                                                                                        <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                                                        Sil
+                                                                                    </DropdownMenuItem>
+                                                                                </DropdownMenuContent>
+                                                                            </DropdownMenu>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+                                                                        {apt.doctor?.full_name && (
+                                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                                                                <User className="w-3.5 h-3.5 text-slate-400" />
+                                                                                <span>{apt.doctor.full_name}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {apt.type && (
+                                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                                                                                <span>{apt.type}</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {apt.notes && (
+                                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 max-w-full min-w-0 truncate bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                                                                                <AlertCircle className="w-3 h-3 text-slate-400" />
+                                                                                <span className="italic">{apt.notes}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </div>
-
-                                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
-                                                            {apt.doctor?.full_name && (
-                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                                                    <User className="w-3.5 h-3.5 text-slate-400" />
-                                                                    <span>{apt.doctor.full_name}</span>
-                                                                </div>
-                                                            )}
-                                                            {apt.type && (
-                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                                                                    <span>{apt.type}</span>
-                                                                </div>
-                                                            )}
-                                                            {apt.notes && (
-                                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 max-w-full min-w-0 truncate bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                                                                    <AlertCircle className="w-3 h-3 text-slate-400" />
-                                                                    <span className="italic">{apt.notes}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                        );
+                                                    })()}
                                             </div>
                                         );
                                     })

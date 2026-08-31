@@ -2,6 +2,7 @@ from .base_class import Base
 from .user import User
 from .documents import HastaDosya
 from .system import ICDTani, SablonTanim, EkipUyesi, Kurum, Hastane, Cerrah, AnesteziPersoneli, Hemsire
+from app.repositories.patient.models import Hasta
 from app.repositories.finance.models import (
     DuzenliGider,
     FinansKategori,

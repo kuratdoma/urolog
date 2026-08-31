@@ -392,54 +392,86 @@ export function CalendarEvent({
                     <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
                         {apt.status !== 'blocked' && (
                             <>
-                                {(apt.hasta_id || apt.hasta?.id) && (
-                                    <Button
-                                        onClick={() => {
-                                            setIsOpen(false);
-                                            const pId = apt.hasta_id || apt.hasta?.id;
-                                            if (pId) {
-                                                if (apt.hasta) {
-                                                    setActivePatient({
-                                                        id: String(apt.hasta.id),
-                                                        ad: apt.hasta.ad,
-                                                        soyad: apt.hasta.soyad,
-                                                        tc_kimlik: apt.hasta.tc_kimlik,
-                                                    });
-                                                } else {
-                                                    const nameParts = (apt.title || '').trim().split(' ');
-                                                    const soyad = nameParts.length > 1 ? nameParts.pop() || '' : '';
-                                                    const ad = nameParts.join(' ') || apt.title;
-                                                    setActivePatient({
-                                                        id: String(pId),
-                                                        ad,
-                                                        soyad,
-                                                    });
-                                                }
-                                                router.push(`/patients/${pId}/examination`);
-                                            }
-                                        }}
-                                        className="h-9 rounded-xl font-bold text-[11px] bg-blue-600 hover:bg-blue-700 text-white shadow-sm col-span-2 flex items-center justify-center gap-2"
-                                    >
-                                        <Stethoscope className="w-4 h-4" />
-                                        Muayene Formunu Aç
-                                    </Button>
-                                )}
-                                <Button
-                                    onClick={() => apt.hasta_id && onGoToPatient(String(apt.hasta_id))}
-                                    variant="secondary"
-                                    className="h-9 rounded-xl font-bold text-[11px] bg-slate-100 hover:bg-slate-200 border border-slate-200"
-                                >
-                                    <User className="w-3.5 h-3.5 mr-2 text-slate-500" />
-                                    Hasta Kartı
-                                </Button>
-                                <Button
-                                    onClick={() => apt.hasta_id && onSummary(String(apt.hasta_id), apt.title)}
-                                    variant="outline"
-                                    className="h-9 rounded-xl font-bold text-[11px] border-slate-200"
-                                >
-                                    <FileText className="w-3.5 h-3.5 mr-2 text-indigo-500" />
-                                    Klinik Özet
-                                </Button>
+                                {(() => {
+                                    const pId = apt.hasta_id || apt.hasta?.id;
+                                    return (
+                                        <>
+                                            {pId ? (
+                                                <Button
+                                                    onClick={() => {
+                                                        setIsOpen(false);
+                                                        if (apt.hasta) {
+                                                            setActivePatient({
+                                                                id: String(apt.hasta.id),
+                                                                ad: apt.hasta.ad,
+                                                                soyad: apt.hasta.soyad,
+                                                                tc_kimlik: apt.hasta.tc_kimlik,
+                                                            });
+                                                        } else {
+                                                            const nameParts = (apt.title || '').trim().split(' ');
+                                                            const soyad = nameParts.length > 1 ? nameParts.pop() || '' : '';
+                                                            const ad = nameParts.join(' ') || apt.title;
+                                                            setActivePatient({
+                                                                id: String(pId),
+                                                                ad,
+                                                                soyad,
+                                                            });
+                                                        }
+                                                        router.push(`/patients/${pId}/examination`);
+                                                    }}
+                                                    className="h-9 rounded-xl font-bold text-[11px] bg-blue-600 hover:bg-blue-700 text-white shadow-sm col-span-2 flex items-center justify-center gap-2"
+                                                >
+                                                    <Stethoscope className="w-4 h-4" />
+                                                    Muayene Formunu Aç
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => {
+                                                        setIsOpen(false);
+                                                        onEdit(apt);
+                                                    }}
+                                                    variant="outline"
+                                                    className="h-9 rounded-xl font-bold text-[11px] border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100 col-span-2 flex items-center justify-center gap-2"
+                                                >
+                                                    <User className="w-4 h-4 text-blue-600" />
+                                                    Hasta Bağla / Seç
+                                                </Button>
+                                            )}
+                                            <Button
+                                                onClick={() => {
+                                                    if (pId) {
+                                                        setIsOpen(false);
+                                                        onGoToPatient(String(pId));
+                                                    } else {
+                                                        setIsOpen(false);
+                                                        onEdit(apt);
+                                                    }
+                                                }}
+                                                variant="secondary"
+                                                className="h-9 rounded-xl font-bold text-[11px] bg-slate-100 hover:bg-slate-200 border border-slate-200"
+                                            >
+                                                <User className="w-3.5 h-3.5 mr-2 text-slate-500" />
+                                                Hasta Kartı
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    if (pId) {
+                                                        setIsOpen(false);
+                                                        onSummary(String(pId), apt.title);
+                                                    } else {
+                                                        setIsOpen(false);
+                                                        onEdit(apt);
+                                                    }
+                                                }}
+                                                variant="outline"
+                                                className="h-9 rounded-xl font-bold text-[11px] border-slate-200"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 mr-2 text-indigo-500" />
+                                                Klinik Özet
+                                            </Button>
+                                        </>
+                                    );
+                                })()}
                                 <Button
                                     onClick={() => {
                                         setIsOpen(false);

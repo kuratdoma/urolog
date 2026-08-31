@@ -772,7 +772,7 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
             <CreateAppointmentDialog
                 isOpen={appointmentDialogOpen}
                 onClose={() => setAppointmentDialogOpen(false)}
-                patientId={patientId || initialData?.hasta_rec_id}
+                patientId={patientId || (initialData?.id ? String(initialData.id) : undefined) || initialData?.hasta_rec_id}
                 patientName={patientName || (initialData ? `${initialData.ad} ${initialData.soyad}` : undefined)}
             />
 

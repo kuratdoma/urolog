@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from '@/lib/api';
 import { Card, CardContent } from "@/components/ui/card";
-import { Phone, Calendar, Stethoscope, ChevronRight, Maximize2, FlaskConical, Banknote } from "lucide-react";
+import { Phone, Calendar, Stethoscope, ChevronRight, Maximize2, FlaskConical, Banknote, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { differenceInYears, parseISO, format, isValid } from "date-fns";
 import Link from 'next/link';

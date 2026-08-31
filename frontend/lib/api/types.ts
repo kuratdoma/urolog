@@ -715,6 +715,8 @@ export interface ClinicalBrief {
     son_not_tarih?: string | null;
     son_not_icerik?: string | null;
     son_not_tip?: string | null;
+    is_new_patient?: boolean | null;
+    hasta_notu?: string | null;
 }
 
 export interface Appointment {

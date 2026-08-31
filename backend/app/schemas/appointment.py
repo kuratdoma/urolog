@@ -21,6 +21,7 @@ class RandevuCreate(RandevuBase):
 
 
 class RandevuUpdate(BaseModel):
+    hasta_id: Optional[UUID] = None
     title: Optional[str] = None
     type: Optional[str] = None
     start: Optional[datetime] = None

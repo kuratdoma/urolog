@@ -101,9 +101,26 @@ class AppointmentRepository:
 
         from app.repositories.clinical.models import TetkikSonuc, Muayene, KlinikNot
         from app.repositories.finance.models import FinansIslem
-        from sqlalchemy import cast, Date, text
+        from app.repositories.patient.models import Hasta
+        from sqlalchemy import cast, Date, text, func
         from app.schemas.appointment import ClinicalBriefSchema
         from uuid import UUID
+
+        # Auto-link appointments that are missing hasta_id if title matches a patient
+        unlinked = [a for a in appointments if not a.hasta_id and a.status != 'blocked' and a.title]
+        if unlinked:
+            for a in unlinked:
+                clean_title = a.title.split(' - ')[0].strip()
+                if clean_title:
+                    res = await self.db.execute(
+                        select(Hasta).filter(
+                            func.trim(func.concat(Hasta.ad, ' ', Hasta.soyad)).ilike(clean_title)
+                        ).limit(1)
+                    )
+                    matched_hasta = res.scalars().first()
+                    if matched_hasta:
+                        a.hasta_id = matched_hasta.id
+                        a.hasta = matched_hasta
 
         # Safely convert hasta_ids to UUID list
         hasta_ids = []
