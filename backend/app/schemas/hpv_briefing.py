@@ -34,6 +34,14 @@ class NuksAnalizi(BaseModel):
     trend: str = Field("yetersiz_veri", description="azalıyor / artıyor / stabil / yetersiz_veri")
 
 
+class MedikalTedavi(BaseModel):
+    """Hastaya verilen medikal tedavi, takviye ve bağışıklık güçlendirici ilaçlar."""
+    ilac_verildi: bool = Field(False, description="Hastaya ilaç/takviye reçete edildi veya verildi mi")
+    ilaclar: List[str] = Field(default_factory=list, description="Verilen ilaçlar veya takviyeler (örn: VELP, AHCC, Silvershell, Time Health, DeflaGyn vb.)")
+    kullanim_sekli: Optional[str] = Field(None, description="İlaç kullanım dozu ve süresi bilgisi")
+    notlar: Optional[str] = Field(None, description="Medikal tedavi ile ilgili ek notlar")
+
+
 class HPVBriefingResponse(BaseModel):
     """AI HPV/Kondilom Hasta Briefing tam yanıtı."""
 
@@ -58,6 +66,9 @@ class HPVBriefingResponse(BaseModel):
 
     # Aşı
     asi_durumu: AsiDurumu = Field(default_factory=AsiDurumu)
+
+    # Medikal Tedavi / İlaç & Takviye
+    medikal_tedavi: MedikalTedavi = Field(default_factory=MedikalTedavi)
 
     # Önemli Notlar
     onemli_notlar: List[str] = Field(default_factory=list, description="AI tarafından çıkarılan önemli notlar")

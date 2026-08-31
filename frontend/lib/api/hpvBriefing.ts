@@ -26,6 +26,13 @@ export interface NuksAnalizi {
     trend: 'azalıyor' | 'artıyor' | 'stabil' | 'yetersiz_veri';
 }
 
+export interface MedikalTedavi {
+    ilac_verildi: boolean;
+    ilaclar: string[];
+    kullanim_sekli?: string;
+    notlar?: string;
+}
+
 export interface HPVBriefingResponse {
     // Hasta Profili
     yas?: number;
@@ -48,6 +55,9 @@ export interface HPVBriefingResponse {
 
     // Aşı
     asi_durumu: AsiDurumu;
+
+    // Medikal Tedavi / İlaç & Takviye
+    medikal_tedavi?: MedikalTedavi;
 
     // Notlar
     onemli_notlar: string[];

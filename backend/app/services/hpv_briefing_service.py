@@ -33,6 +33,7 @@ from app.schemas.hpv_briefing import (
     TedaviKaydi,
     AsiDurumu,
     NuksAnalizi,
+    MedikalTedavi,
 )
 
 logger = logging.getLogger(__name__)
@@ -663,8 +664,13 @@ Bu verileri analiz ederek YAPILANDIRILMIŞ bir JSON briefing oluştur.
    - Lokasyon
    - Uygulanan yöntem (kriyoterapi, lazer vb.)
 5. **Aşı Durumu**: GARDASİL doz tarihlerini (1., 2., 3. doz) ve genel aşı durumunu notlardan çıkar.
-6. **Önemli Notlar**: Klinik açıdan dikkat çekici noktaları yaz.
-7. **Risk Faktörleri**: Sigara, çoklu partner, vb.
+6. **Medikal Tedavi / İlaç & Takviyeler**: Hastanın muayene (tedavi/reçete/öneriler) ve takip notlarında hastaya başlanan/verilen/önerilen takviye edici veya bağışıklık güçlendirici ilaçları analiz et:
+   - Örnekler: VELP, AHCC, Silvershell, Time Health, DeflaGyn, Papilocare, Çinko, İmmuneks, Beta Glukan, Propolis vb.
+   - İlaç/takviye verildiyse `ilac_verildi: true` yap, verilen ilaçların isimlerini `ilaclar` dizisine ekle.
+   - Kullanım şekli (günlük doz, süre vb.) varsa `kullanim_sekli` alanına yaz.
+   - Ek notları `notlar` alanına yaz.
+7. **Önemli Notlar**: Klinik açıdan dikkat çekici noktaları yaz.
+8. **Risk Faktörleri**: Sigara, çoklu partner, vb.
 
 ## ÇIKTI FORMATI (JSON)
 
@@ -699,6 +705,12 @@ Aşağıdaki yapıda **sadece JSON** döndür, markdown veya açıklama ekleme:
     "tamamlandi": false,
     "notlar": "..."
   }},
+  "medikal_tedavi": {{
+    "ilac_verildi": false,
+    "ilaclar": ["VELP", "AHCC", ...],
+    "kullanim_sekli": "...",
+    "notlar": "..."
+  }},
   "onemli_notlar": ["...", "..."],
   "risk_faktorleri": ["...", "..."]
 }}
@@ -721,6 +733,7 @@ Aşağıdaki yapıda **sadece JSON** döndür, markdown veya açıklama ekleme:
             "nuks": previous_briefing.get("nuks"),
             "tedavi_haritasi": previous_briefing.get("tedavi_haritasi"),
             "asi_durumu": previous_briefing.get("asi_durumu"),
+            "medikal_tedavi": previous_briefing.get("medikal_tedavi"),
             "onemli_notlar": previous_briefing.get("onemli_notlar"),
             "risk_faktorleri": previous_briefing.get("risk_faktorleri"),
         }
@@ -736,6 +749,7 @@ GÖREVİN:
 Önceki briefing özetini temel alarak, sadece yeni klinik kayıtlardaki bilgileri mevcut özete EKLE / GÜNCELLE.
 - Eğer yeni bir tedavi/lezyon varsa tedavi_haritasi listesine ekle ve nüks analizini (nuks_tarihleri, toplam_nuks, ortalama aralık, trend) güncelle.
 - Eğer aşı yapılmışsa veya aşı dozu bilgisi varsa asi_durumu alanını güncelle.
+- Eğer hastaya yeni ilaç, takviye veya bağışıklık güçlendirici (VELP, AHCC, Silvershell, Time Health vb.) başlandıysa veya değiştirildiyse medikal_tedavi alanını güncelle.
 - Sigara veya partner durumunda bir değişim varsa güncelle.
 - Önemli notları ve risk faktörlerini yeni bilgiler ışığında zenginleştir.
 - Tüm geçmiş kayıtları koru ve üzerine yeni kayıtları entegre et.
@@ -781,6 +795,12 @@ Sadece güncellenmiş eksiksiz JSON nesnesini döndür:
     "gardasil_doz2": "DD.MM.YYYY veya null",
     "gardasil_doz3": "DD.MM.YYYY veya null",
     "tamamlandi": false,
+    "notlar": "..."
+  }},
+  "medikal_tedavi": {{
+    "ilac_verildi": false,
+    "ilaclar": ["VELP", "AHCC", ...],
+    "kullanim_sekli": "...",
     "notlar": "..."
   }},
   "onemli_notlar": ["...", "..."],
@@ -862,6 +882,15 @@ Sadece güncellenmiş eksiksiz JSON nesnesini döndür:
             span = max(all_dates) - min(all_dates)
             takip_suresi = max(1, span.days // 30)
 
+        # Parse medikal tedavi / takviye ilaçları
+        med_raw = ai_data.get("medikal_tedavi", {})
+        medikal_tedavi = MedikalTedavi(
+            ilac_verildi=med_raw.get("ilac_verildi", False),
+            ilaclar=med_raw.get("ilaclar", []),
+            kullanim_sekli=med_raw.get("kullanim_sekli"),
+            notlar=med_raw.get("notlar"),
+        )
+
         return HPVBriefingResponse(
             yas=patient.get("yas"),
             cinsiyet=patient.get("cinsiyet"),
@@ -875,6 +904,7 @@ Sadece güncellenmiş eksiksiz JSON nesnesini döndür:
             nuks=nuks,
             tedavi_haritasi=tedavi_list,
             asi_durumu=asi,
+            medikal_tedavi=medikal_tedavi,
             onemli_notlar=ai_data.get("onemli_notlar", []),
             risk_faktorleri=ai_data.get("risk_faktorleri", []),
             created_at=datetime.now().strftime("%d.%m.%Y %H:%M"),

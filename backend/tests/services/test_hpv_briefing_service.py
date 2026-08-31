@@ -77,3 +77,23 @@ def test_parse_json_response_extracts_embedded_json():
     text = 'Sonuç:\n```json\n{"partner_durumu": "Bekar"}\n```\n'
     result = service._parse_json_response(text)
     assert result == {"partner_durumu": "Bekar"}
+
+
+def test_build_response_parses_medikal_tedavi():
+    service = HPVBriefingService()
+    context = _make_context()
+    ai_data = {
+        "partner_durumu": "Evli",
+        "sigara_durumu": "Kullanmıyor",
+        "medikal_tedavi": {
+            "ilac_verildi": True,
+            "ilaclar": ["VELP", "AHCC", "Silvershell"],
+            "kullanim_sekli": "Günde 1 kapsül x 3 ay",
+            "notlar": "Bağışıklık destekleyici takviye başlandı."
+        }
+    }
+    resp = service._build_response(ai_data, context)
+    assert resp.medikal_tedavi.ilac_verildi is True
+    assert resp.medikal_tedavi.ilaclar == ["VELP", "AHCC", "Silvershell"]
+    assert resp.medikal_tedavi.kullanim_sekli == "Günde 1 kapsül x 3 ay"
+    assert resp.medikal_tedavi.notlar == "Bağışıklık destekleyici takviye başlandı."

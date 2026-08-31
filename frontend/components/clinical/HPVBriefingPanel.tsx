@@ -11,7 +11,7 @@ import {
     Dna, Loader2, ChevronDown, ChevronRight,
     User, Calendar, RefreshCw,
     Syringe, AlertTriangle, TrendingDown, TrendingUp, Minus,
-    CheckCircle2, XCircle, Clock, FileText, Lightbulb
+    CheckCircle2, XCircle, Clock, FileText, Lightbulb, Pill
 } from 'lucide-react';
 
 interface HPVBriefingPanelProps {
@@ -327,6 +327,49 @@ export function HPVBriefingPanel({
                             </div>
                             {briefing.asi_durumu.notlar && (
                                 <p className="text-slate-500 text-xs mt-1 bg-white p-2 rounded border border-slate-100">{briefing.asi_durumu.notlar}</p>
+                            )}
+                        </div>
+                    </Section>
+
+                    {/* ── Medikal Tedavi (İlaç & Takviyeler) ── */}
+                    <Section title="Medikal Tedavi (İlaç & Takviye)" icon={<Pill className="h-4 w-4 text-purple-600" />} defaultOpen>
+                        <div className="bg-slate-50/50 border border-slate-100 rounded-lg p-3 space-y-2.5">
+                            <div className="flex items-center gap-2">
+                                {briefing.medikal_tedavi?.ilac_verildi ? (
+                                    <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200/50 hover:bg-emerald-50 text-xs">
+                                        <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" /> İlaç / Takviye Verildi
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-xs">
+                                        İlaç / Takviye Kaydı Yok
+                                    </Badge>
+                                )}
+                            </div>
+
+                            {briefing.medikal_tedavi?.ilaclar && briefing.medikal_tedavi.ilaclar.length > 0 && (
+                                <div className="space-y-1.5 pt-1">
+                                    <span className="text-xs font-semibold text-slate-600">Verilen İlaç ve Takviyeler:</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {briefing.medikal_tedavi.ilaclar.map((ilac, i) => (
+                                            <Badge key={i} className="bg-indigo-50 text-indigo-700 border border-indigo-200/60 text-xs px-2.5 py-0.5 font-semibold">
+                                                💊 {ilac}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {briefing.medikal_tedavi?.kullanim_sekli && (
+                                <div className="text-xs text-slate-700 bg-white p-2 rounded border border-slate-100">
+                                    <span className="font-semibold text-slate-600">Kullanım Şekli: </span>
+                                    <span>{briefing.medikal_tedavi.kullanim_sekli}</span>
+                                </div>
+                            )}
+
+                            {briefing.medikal_tedavi?.notlar && (
+                                <p className="text-slate-500 text-xs mt-1 bg-white p-2 rounded border border-slate-100 italic">
+                                    {briefing.medikal_tedavi.notlar}
+                                </p>
                             )}
                         </div>
                     </Section>
