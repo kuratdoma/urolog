@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple, Any
 from uuid import UUID
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.patient.models import Hasta
 from app.schemas.patient.demographics import (
@@ -34,32 +34,72 @@ class DemographicsRepository:
         search: str = None,
         ad: str = None,
         soyad: str = None,
-    ) -> List[Hasta]:
-        stmt = select(Hasta).where(
-            Hasta.is_deleted == False
-        )
+    ) -> List[Tuple[Hasta, Optional[Any], Optional[str]]]:
+        where_clauses = ["h.is_deleted = false"]
+        params = {"skip": skip, "limit": limit}
 
         if ad:
-            stmt = stmt.where(Hasta.ad.ilike(f"%{ad}%"))
+            where_clauses.append("h.ad ILIKE :ad")
+            params["ad"] = f"%{ad}%"
         if soyad:
-            stmt = stmt.where(Hasta.soyad.ilike(f"%{soyad}%"))
+            where_clauses.append("h.soyad ILIKE :soyad")
+            params["soyad"] = f"%{soyad}%"
         if search:
-            stmt = stmt.where(
-                or_(
-                    Hasta.ad.ilike(f"%{search}%"),
-                    Hasta.soyad.ilike(f"%{search}%"),
-                    Hasta.tc_kimlik.ilike(f"%{search}%"),
-                    Hasta.protokol_no.ilike(f"%{search}%"),
-                )
+            where_clauses.append(
+                "(h.ad ILIKE :search OR h.soyad ILIKE :search OR h.tc_kimlik ILIKE :search OR h.protokol_no ILIKE :search)"
             )
+            params["search"] = f"%{search}%"
 
-        stmt = (
-            stmt.order_by(Hasta.updated_at.desc().nulls_last())
-            .offset(skip)
-            .limit(limit)
+        where_sql = " AND ".join(where_clauses)
+        sql = f"""
+        WITH latest_activities AS (
+            SELECT h.id,
+                   GREATEST(
+                       h.created_at,
+                       COALESCE((SELECT MAX(COALESCE(tarih, created_at)) FROM muayeneler WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day'), '1970-01-01'::timestamptz),
+                       COALESCE((SELECT MAX(COALESCE(tarih, created_at)) FROM operasyonlar WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day'), '1970-01-01'::timestamptz),
+                       COALESCE((SELECT MAX(COALESCE(tarih, created_at)) FROM notlar WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day'), '1970-01-01'::timestamptz),
+                       COALESCE((SELECT MAX(COALESCE(tarih, created_at)) FROM tetkikler WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day'), '1970-01-01'::timestamptz)
+                   ) as son_islem_tarihi
+            FROM hastalar h
+            WHERE {where_sql}
+        ),
+        ranked_patients AS (
+            SELECT la.id, la.son_islem_tarihi
+            FROM latest_activities la
+            ORDER BY la.son_islem_tarihi DESC
+            OFFSET :skip LIMIT :limit
         )
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
+        SELECT 
+            h.id,
+            rp.son_islem_tarihi,
+            CASE
+                WHEN rp.son_islem_tarihi = (SELECT MAX(COALESCE(tarih, created_at)) FROM muayeneler WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day') THEN 'Muayene'
+                WHEN rp.son_islem_tarihi = (SELECT MAX(COALESCE(tarih, created_at)) FROM operasyonlar WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day') THEN 'Operasyon'
+                WHEN rp.son_islem_tarihi = (SELECT MAX(COALESCE(tarih, created_at)) FROM notlar WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day') THEN 'Takip Notu'
+                WHEN rp.son_islem_tarihi = (SELECT MAX(COALESCE(tarih, created_at)) FROM tetkikler WHERE hasta_id = h.id AND is_deleted = false AND tarih <= NOW() + interval '1 day') THEN 'Tetkik'
+                ELSE 'Yeni Kayıt'
+            END as son_islem_turu
+        FROM ranked_patients rp
+        JOIN hastalar h ON h.id = rp.id
+        ORDER BY rp.son_islem_tarihi DESC;
+        """
+        result = await self.session.execute(text(sql), params)
+        rows = result.fetchall()
+        if not rows:
+            return []
+
+        patient_ids = [r[0] for r in rows]
+        orm_stmt = select(Hasta).where(Hasta.id.in_(patient_ids))
+        orm_result = await self.session.execute(orm_stmt)
+        p_map = {p.id: p for p in orm_result.scalars().all()}
+
+        final_list = []
+        for pid, tarih, tur in rows:
+            if pid in p_map:
+                final_list.append((p_map[pid], tarih, tur))
+
+        return final_list
 
     @audited(action="PATIENT_CREATE", resource_type="patient")
     async def create(

@@ -68,6 +68,8 @@ export interface Patient {
     updated_at?: string;
     son_muayene_tarihi?: string;
     son_tani?: string;
+    son_islem_tarihi?: string;
+    son_islem_turu?: string;
 
     // New Fields
     referans?: string;

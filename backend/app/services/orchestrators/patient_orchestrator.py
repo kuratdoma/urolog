@@ -103,14 +103,14 @@ class PatientOrchestrator:
         Uses batch-fetching to avoid N+1 query problems.
         """
         # 1. Fetch patients
-        patients = await self.demographics_repo.get_multi(
+        patients_data = await self.demographics_repo.get_multi(
             skip=skip, limit=limit, search=search, ad=ad, soyad=soyad
         )
-        if not patients:
+        if not patients_data:
             return []
 
         # 2. Batch-fetch latest examinations and counts in parallel
-        patient_ids = [p.id for p in patients]
+        patient_ids = [item[0].id for item in patients_data]
 
         exam_task = self.clinical_repo.get_latest_examinations_for_patients(patient_ids)
         stats_task = self.stats_repo.get_counts_batch(patient_ids)
@@ -124,7 +124,7 @@ class PatientOrchestrator:
 
         # 4. Attach summaries and validate to domain DTO
         results = []
-        for p in patients:
+        for p, son_islem_tarihi, son_islem_turu in patients_data:
             exam = exam_map.get(p.id)
             stats = stats_map.get(p.id, {})
 
@@ -144,6 +144,12 @@ class PatientOrchestrator:
             profile = PatientFullProfile.model_validate(p)
             profile.son_tani = son_tani
             profile.son_muayene_tarihi = son_muayene_tarihi.date() if isinstance(son_muayene_tarihi, datetime) else son_muayene_tarihi
+            profile.son_islem_tarihi = son_islem_tarihi
+            profile.son_islem_turu = son_islem_turu
+
+            # If updated_at is None, fallback to son_islem_tarihi or created_at
+            if not profile.updated_at:
+                profile.updated_at = son_islem_tarihi or profile.created_at
 
             # Attach Batch Counts
             for k, v in stats.items():

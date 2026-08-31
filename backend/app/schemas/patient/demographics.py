@@ -127,6 +127,8 @@ class PatientFullProfile(PatientDemographics):
     son_muayene: Optional[dict] = None
     son_tani: Optional[str] = None
     son_muayene_tarihi: Optional[date] = None
+    son_islem_tarihi: Optional[datetime] = None
+    son_islem_turu: Optional[str] = None
 
     # Aggregate Counts
     muayene_count: int = 0

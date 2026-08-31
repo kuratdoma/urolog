@@ -250,7 +250,14 @@ export default function DashboardPage() {
                     <Card className="border-white shadow-sm border-t-4 border-t-blue-500 overflow-hidden">
                         <CardHeader className="bg-white border-b border-slate-50 pb-4">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="h-0 py-1 opacity-0 pointer-events-none" />
+                                <div>
+                                    <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+                                        <Users className="h-5 w-5 text-blue-600" /> Son Hareketler & Hastalar
+                                    </CardTitle>
+                                    <CardDescription className="text-xs font-medium text-slate-500 mt-1">
+                                        Son kayıt ve işlem yapılan hastalar
+                                    </CardDescription>
+                                </div>
                             </div>
                             <div className="flex flex-col lg:flex-row items-center gap-2 mt-2 px-1">
                                 <Input
@@ -278,12 +285,11 @@ export default function DashboardPage() {
                                     <Table>
                                         <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                                             <TableRow>
-                                                <TableHead className="w-[100px] font-semibold text-slate-500 text-xs">PROTOKOL</TableHead>
-                                                <TableHead className="flex-1 min-w-[200px] font-semibold text-slate-500 text-xs">HASTA</TableHead>
-                                                <TableHead className="w-[180px] font-semibold text-slate-500 text-xs">SON HAREKET (TANI)</TableHead>
-                                                <TableHead className="w-[120px] font-semibold text-slate-500 text-xs text-center">SON İŞLEM</TableHead>
-                                                <TableHead className="w-[110px] font-semibold text-slate-500 text-xs text-right">TELEFON</TableHead>
-                                                <TableHead className="w-[40px]"></TableHead>
+                                                <TableHead className="w-[95px] font-semibold text-slate-500 text-xs">PROTOKOL</TableHead>
+                                                <TableHead className="flex-1 min-w-[190px] font-semibold text-slate-500 text-xs">HASTA</TableHead>
+                                                <TableHead className="w-[220px] font-semibold text-slate-500 text-xs">TANI</TableHead>
+                                                <TableHead className="w-[110px] font-semibold text-slate-500 text-xs text-right">SON İŞLEM</TableHead>
+                                                <TableHead className="w-[35px]"></TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -295,61 +301,59 @@ export default function DashboardPage() {
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                         <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                                     </TableRow>
                                                 ))
                                             ) : patients?.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={7} className="text-center py-8 text-xs text-slate-400">Hasta bulunamadı.</TableCell>
+                                                    <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-400">Hasta bulunamadı.</TableCell>
                                                 </TableRow>
                                             ) : (
-                                                patients?.map((patient) => (
-                                                    <TableRow
-                                                        key={patient.id}
-                                                        className="cursor-pointer hover:bg-slate-50 transition-colors group"
-                                                        onClick={(e) => {
-                                                            setPopoverState({ x: e.clientX, y: e.clientY, patient: patient });
-                                                            setSelectedPatientId(patient.id);
-                                                            setActivePatient({
-                                                                id: patient.id,
-                                                                ad: patient.ad,
-                                                                soyad: patient.soyad,
-                                                                tc_kimlik: patient.tc_kimlik
-                                                            });
-                                                        }}
-                                                    >
-                                                        <TableCell>
-                                                            <span className="font-mono text-[11px] text-blue-600 font-bold uppercase">
-                                                                {patient.protokol_no || '-'}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex flex-col py-0.5">
-                                                                <span className="font-semibold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
-                                                                    {patient.ad} {patient.soyad}
+                                                patients?.map((patient) => {
+                                                    const lastActionDate = patient.son_islem_tarihi || patient.updated_at || patient.created_at;
+                                                    return (
+                                                        <TableRow
+                                                            key={patient.id}
+                                                            className="cursor-pointer hover:bg-slate-50 transition-colors group"
+                                                            onClick={(e) => {
+                                                                setPopoverState({ x: e.clientX, y: e.clientY, patient: patient });
+                                                                setSelectedPatientId(patient.id);
+                                                                setActivePatient({
+                                                                    id: patient.id,
+                                                                    ad: patient.ad,
+                                                                    soyad: patient.soyad,
+                                                                    tc_kimlik: patient.tc_kimlik
+                                                                });
+                                                            }}
+                                                        >
+                                                            <TableCell>
+                                                                <span className="font-mono text-[11px] text-blue-600 font-bold uppercase">
+                                                                    {patient.protokol_no || '-'}
                                                                 </span>
-                                                                <span className="text-[10px] text-slate-400 mt-0.5">
-                                                                    {patient.tc_kimlik || 'TC yok'}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex flex-col py-0.5">
+                                                                    <span className="font-semibold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
+                                                                        {patient.ad} {patient.soyad}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-slate-400 mt-0.5">
+                                                                        {patient.tc_kimlik || 'TC yok'}
+                                                                    </span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-slate-600 max-w-[220px] truncate">
+                                                                <IcdNameDisplay name={patient.son_tani ? (icdNameMap[patient.son_tani.toUpperCase()] || patient.son_tani) : undefined} />
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <span className="font-mono text-[11px] text-slate-600 font-medium">
+                                                                    {lastActionDate ? format(new Date(lastActionDate), 'dd.MM.yyyy', { locale: tr }) : '-'}
                                                                 </span>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-slate-600 max-w-[180px] truncate">
-                                                            <IcdNameDisplay name={patient.son_tani ? (icdNameMap[patient.son_tani.toUpperCase()] || patient.son_tani) : undefined} />
-                                                        </TableCell>
-                                                        <TableCell className="text-center font-medium text-slate-700 text-xs">
-                                                            <span className="text-[11px] text-slate-600">
-                                                                {patient.updated_at ? format(new Date(patient.updated_at), 'dd.MM.yyyy', { locale: tr }) : '-'}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell className="text-slate-600 text-[11px] font-mono text-right">
-                                                            {patient.cep_tel || '-'}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-blue-400 transition-all group-hover:translate-x-0.5" />
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-blue-400 transition-all group-hover:translate-x-0.5" />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })
                                             )}
                                         </TableBody>
                                     </Table>

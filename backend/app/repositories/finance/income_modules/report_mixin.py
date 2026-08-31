@@ -239,7 +239,7 @@ class IncomeReportMixin:
         bekleyen_borc = max(0.0, round(toplam_gider - odenen_gider, 2))
 
         kasa_res = await self.session.execute(
-            select(func.coalesce(func.sum(Kasa.bakiye), 0)).where(Kasa.is_active == True)
+            select(func.coalesce(func.sum(Kasa.bakiye), 0)).where(Kasa.aktif == True)
         )
         toplam_kasa = float(kasa_res.scalar() or 0)
 

@@ -65,7 +65,7 @@ class IncomeTransactionMixin:
         kasa = await self.session.get(Kasa, odeme_in.kasa_id)
         if not kasa:
             raise ValueError("Seçilen kasa bulunamadı")
-        if not kasa.is_active:
+        if not kasa.aktif:
             raise ValueError("Pasif kasaya ödeme yapılamaz")
 
         tarih = odeme_in.odeme_tarihi or date.today()

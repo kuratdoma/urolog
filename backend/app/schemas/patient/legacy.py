@@ -49,6 +49,8 @@ class PatientLegacyResponse(BaseModel):
     tani2: Optional[str] = None
     tani3: Optional[str] = None
     son_muayene_tarihi: Optional[date] = None
+    son_islem_tarihi: Optional[datetime] = None
+    son_islem_turu: Optional[str] = None
     telefon_gorusme_sayisi: int = 0
 
     # Batch counts

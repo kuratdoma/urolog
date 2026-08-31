@@ -57,6 +57,9 @@ class PatientController:
             data["tani1"] = None
             data["son_muayene_tarihi"] = None
 
+        data["son_islem_tarihi"] = getattr(profile, "son_islem_tarihi", None)
+        data["son_islem_turu"] = getattr(profile, "son_islem_turu", None)
+
         # 2. Map Booleans to Legacy "Evet"/"Hayır" Strings
         # This ensures the frontend dropdowns ('Evet'/'Hayır') match correctly
         if "sms_izin" in data:

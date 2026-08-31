@@ -106,6 +106,10 @@ class Kasa(Base):
     sira_no = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    @property
+    def is_active(self) -> bool:
+        return bool(self.aktif)
+
 
 class KasaHareket(Base):
     __tablename__ = "kasa_hareketleri"
