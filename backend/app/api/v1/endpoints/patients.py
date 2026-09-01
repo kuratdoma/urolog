@@ -398,15 +398,12 @@ from app.controllers.legacy_adapters.clinical_adapter import ClinicalLegacyAdapt
 
 class PatientBootstrapResponse(_BM):
     """
-    Hasta panelini açmak için gereken verileri tek HTTP yanıtında toplar.
-    Frontend bunu aldığında tekil query key'lere (patient, muayeneler,
-    appointments, patient-timeline) setQueryData ile dağıtır — diğer
-    sayfalar cache'ten anında okur, ağ isteği atmaz.
+    Hasta detay paneli için bootstrap verisi.
     """
-    patient: dict
-    muayeneler: List[dict]
-    appointments: List[dict]
-    timeline: List[dict]
+    patient: Any
+    muayeneler: List[Any]
+    appointments: List[Any]
+    timeline: List[Any]
 
 
 @router.get("/{id}/bootstrap", response_model=PatientBootstrapResponse)
@@ -418,14 +415,6 @@ async def get_patient_bootstrap(
 ) -> Any:
     """
     Hasta detay paneli için bootstrap verisi.
-    asyncio.gather ile 4 sorguyu paralel çalıştırır:
-      - Hasta profili
-      - Muayeneler
-      - Randevular
-      - Timeline
-
-    Toplam süre max(t_profil, t_muayene, t_randevu, t_timeline) olur,
-    dört sorgunun toplamı değil.
     """
     context = UserContext(
         user_id=getattr(request.state, "user_id", None),
@@ -438,12 +427,10 @@ async def get_patient_bootstrap(
     str_id = str(id)
 
     try:
-        patient, muayeneler, appointments, timeline = await asyncio.gather(
-            controller.get_patient_profile(id),
-            adapter.get_patient_muayeneler(str_id),
-            apt_repo.get_by_patient(str_id),
-            controller.get_timeline(id),
-        )
+        patient = await controller.get_patient_profile(id)
+        muayeneler = await adapter.get_patient_muayeneler(str_id)
+        appointments = await apt_repo.get_by_patient(str_id)
+        timeline = await controller.get_timeline(id)
     except Exception:
         import traceback
         traceback.print_exc()
@@ -452,12 +439,19 @@ async def get_patient_bootstrap(
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Pydantic model → dict dönüşümü (serializable)
     def _to_dict(obj):
+        if obj is None:
+            return None
+        if isinstance(obj, dict):
+            return obj
         if hasattr(obj, "model_dump"):
             return obj.model_dump()
         if hasattr(obj, "dict"):
             return obj.dict()
+        if hasattr(obj, "__table__"):
+            return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+        if hasattr(obj, "__dict__"):
+            return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
         return obj
 
     return PatientBootstrapResponse(
