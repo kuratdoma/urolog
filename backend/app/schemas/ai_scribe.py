@@ -111,6 +111,26 @@ class AIScribeResponse(BaseModel):
     extracted_keywords: Optional[List[str]] = Field(default_factory=list)
 
 
+class LetterPolishRequest(BaseModel):
+    """Serbest metin alanlarından birleştirilmiş bir taslak mektubun
+    dil bilgisi/akış düzeltmesi için istek. İçerik üretmez, sadece verilen
+    metni düzenler."""
+
+    text: str = Field(..., description="Düzenlenecek taslak mektup metni", min_length=10)
+    mode: AIScribeMode = Field(AIScribeMode.GEMINI, description="AI modu")
+
+
+class LetterPolishResponse(BaseModel):
+    """Dil bilgisi/akış düzeltmesi yapılmış mektup metni."""
+
+    polished_text: str = Field(..., description="Düzenlenmiş mektup metni")
+    mode_used: AIScribeMode = Field(..., description="Kullanılan AI modu")
+    fact_drift_warning: bool = Field(
+        False,
+        description="Taslakta geçen bir sayısal değer (doz, tarih, sonuç vb.) düzenlenmiş metinde bulunamadıysa true olur — klinik bir bilginin değişmiş olabileceğine dair uyarı.",
+    )
+
+
 class AIScribeStatusResponse(BaseModel):
     """AI Scribe servis durumu"""
 

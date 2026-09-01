@@ -101,6 +101,11 @@ services:
       - .env
     environment:
       - BACKEND_URL=http://backend:8000
+      # Android istemcisine (UroDroid) özel sunucu tarafı muayene PDF ucu.
+      # Kapalıyken /mobile-print/... 404 döner ve web hiç etkilenmez — tek düğmelik geri alma.
+      - MOBILE_PDF_ENABLED=${MOBILE_PDF_ENABLED:-false}
+      # Node tek iş parçacıklı: eşzamanlı render event loop'u bloklar. Sınır aşılınca 503.
+      - MOBILE_PDF_MAX_CONCURRENCY=${MOBILE_PDF_MAX_CONCURRENCY:-2}
     depends_on:
       - backend
     ports:

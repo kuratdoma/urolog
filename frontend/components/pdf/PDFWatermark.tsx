@@ -9,42 +9,47 @@ interface PDFWatermarkProps {
     };
 }
 
+// Seeded PRNG (mulberry32) — deterministic positions, random font sizes
+const WATERMARK_ITEMS = (() => {
+    let seed = 0xDEAD_BEEF;
+    const rand = () => {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    const items = [];
+    const rows = 3;
+    const cols = 3;
+    const cellW = 595 / cols;
+    const cellH = 842 / rows;
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            items.push({
+                top: r * cellH + rand() * cellH,
+                left: c * cellW + rand() * cellW * 0.4,
+                rotation: -44,
+                fontSize: rand() > 0.4 ? 12 : 30,
+                opacity: 0.06,
+            });
+        }
+    }
+    return items;
+})();
+
 export const PDFWatermark: React.FC<PDFWatermarkProps> = ({ patient }) => {
-    const tcKimlik = patient.tc_kimlik
-        ? patient.tc_kimlik.length === 11
-            ? "****" + patient.tc_kimlik.slice(4)
-            : patient.tc_kimlik
+    const tcStr = patient?.tc_kimlik != null ? String(patient.tc_kimlik).trim() : '';
+    const tcKimlik = tcStr
+        ? tcStr.length === 11
+            ? "****" + tcStr.slice(4)
+            : tcStr
         : "-";
 
-    // Seeded PRNG (mulberry32) — deterministic positions, random font sizes
-    const watermarks = React.useMemo(() => {
-        let seed = 0xDEAD_BEEF;
-        const rand = () => {
-            seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-            let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-
-        const items = [];
-        const rows = 3;
-        const cols = 3;
-        const cellW = 595 / cols;
-        const cellH = 842 / rows;
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                items.push({
-                    top: r * cellH + rand() * cellH,
-                    left: c * cellW + rand() * cellW * 0.4,
-                    rotation: -44,
-                    fontSize: rand() > 0.4 ? 12 : 30,
-                    opacity: 0.06,
-                });
-            }
-        }
-        return items;
-    }, []);
+    const watermarks = WATERMARK_ITEMS;
+    const ad = patient?.ad || '';
+    const soyad = patient?.soyad || '';
 
     return (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} fixed>
@@ -60,7 +65,7 @@ export const PDFWatermark: React.FC<PDFWatermarkProps> = ({ patient }) => {
                     }}
                 >
                     <Text style={{ fontSize: wm.fontSize, fontWeight: 'bold', textTransform: 'uppercase', color: '#000', textAlign: 'center' }}>
-                        {patient.ad} {patient.soyad}
+                        {ad} {soyad}
                     </Text>
                     <Text style={{ fontSize: wm.fontSize * 0.7, fontWeight: 'bold', color: '#000', textAlign: 'center', marginTop: 2 }}>
                         {tcKimlik}

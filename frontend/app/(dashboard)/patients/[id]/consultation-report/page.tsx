@@ -10,7 +10,11 @@ import {
     Search,
     Trash2,
     Printer,
-    RefreshCw
+    RefreshCw,
+    Sparkles,
+    AlertTriangle,
+    Check,
+    X
 } from "lucide-react";
 import { cn, formatToSentenceCasePreservingAbbreviations } from "@/lib/utils";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -64,6 +68,8 @@ export default function ConsultationReportPage() {
     const [aliskanliklar, setAliskanliklar] = useState("");
     const [raporMetni, setRaporMetni] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+    const [isPolishing, setIsPolishing] = useState(false);
+    const [pendingPolish, setPendingPolish] = useState<{ text: string; factDriftWarning: boolean } | null>(null);
 
     const loadData = async () => {
         try {
@@ -314,6 +320,37 @@ export default function ConsultationReportPage() {
         toast.info("Bilgiler son muayeneden getirildi.");
     };
 
+    const handlePolishLetter = async () => {
+        const draft = raporMetni || letterPreview;
+        setIsPolishing(true);
+        try {
+            const result = await api.clinical.polishConsultationLetter(draft);
+            // Metin otomatik olarak yerine yazılmaz — doktor eski/yeni metni
+            // yan yana görüp onaylamadan taslak değişmez (sessiz klinik veri
+            // kayması riskini önlemek için).
+            setPendingPolish({ text: result.polished_text, factDriftWarning: result.fact_drift_warning });
+            if (result.mode_used === "local") {
+                toast.info("Gemini kotası dolu, yerel AI ile düzenlendi. Lütfen inceleyin.");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("AI ile düzenleme başarısız oldu. Taslak metin değişmedi.");
+        } finally {
+            setIsPolishing(false);
+        }
+    };
+
+    const handleAcceptPolish = () => {
+        if (!pendingPolish) return;
+        setRaporMetni(pendingPolish.text);
+        setPendingPolish(null);
+        toast.success("AI önerisi kabul edildi.");
+    };
+
+    const handleRejectPolish = () => {
+        setPendingPolish(null);
+    };
+
     // Keyboard Shortcuts
     useKeyboardShortcuts({
         onSave: handleSave,
@@ -364,14 +401,24 @@ export default function ConsultationReportPage() {
         const aliskanliklarMetni = formatToSentenceCasePreservingAbbreviations(aliskanliklar) || "[Alışkanlıkları]";
         const doktorMetni = doktor || "[Doktor Adı]";
 
+        // Etiketli/yapılandırılmış paragraflar kullanılır: serbest metin
+        // alanları (öykü, özgeçmiş, tanı, talep vb.) kısa ibare veya tam
+        // cümle olarak girilmiş olsun, sabit bir cümlenin içine gramer
+        // bakımından bağımlı şekilde gömülmediği için doğal Türkçe akışı
+        // bozulmuyor.
         let letter = `Konu: Konsültasyon Talebi\n\n`;
         letter += `Sayın Dr. ${hitap},\n\n`;
-        letter += `Hastamız ${hastaAdi} bugün ${sikayetMetni} ile başvurdu. Hastamızda ${taniMetni} ön tanısı düşünülmüştür.\n\n`;
-        letter += `Hastamızın ${talepMetni} konusunda tarafınızca değerlendirilmesini ve\n`;
-        letter += `${sorularMetni} konusunda görüşlerinizin bildirilmesini rica ederim.\n\n`;
-        letter += `Hastamızın öyküsünde ${oykuMetni} vardı.\n\n`;
-        letter += `${sistemSorguMetni}\n\n`;
-        letter += `Özgeçmişinde ${ozgecmisMetni} vardı. Kullandığı ilaçları ${ilacMetni}. Alışkanlıkları: ${aliskanliklarMetni}.\n\n\n`;
+        letter += `Hastamız ${hastaAdi}, aşağıda bilgileri sunulan klinik durumu nedeniyle değerlendirilmek üzere kliniğinize yönlendirilmiştir.\n\n`;
+        letter += `Şikayet: ${sikayetMetni}\n`;
+        letter += `Ön Tanı: ${taniMetni}\n\n`;
+        letter += `Konsültasyon Talebi: ${talepMetni}\n`;
+        letter += `Konsültasyon Soruları: ${sorularMetni}\n\n`;
+        letter += `Öykü: ${oykuMetni}\n\n`;
+        letter += `Sistemlerin Sorgusu: ${sistemSorguMetni}\n\n`;
+        letter += `Özgeçmiş: ${ozgecmisMetni}\n`;
+        letter += `Kullandığı İlaçlar: ${ilacMetni}\n`;
+        letter += `Alışkanlıkları: ${aliskanliklarMetni}\n\n\n`;
+        letter += `Değerlendirmeniz ve görüşleriniz için teşekkür ederim.\n\n`;
         letter += `Saygılarımla,\n`;
         letter += `${doktorMetni}`;
 
@@ -622,21 +669,87 @@ export default function ConsultationReportPage() {
                             <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mektup Önizleme</Label>
                             <span className="text-[10px] text-slate-400">Aşağıdaki metni düzenleyerek özel metin girebilirsiniz</span>
                         </div>
-                        <Textarea
-                            value={raporMetni || letterPreview}
-                            onChange={e => setRaporMetni(e.target.value)}
-                            className="min-h-[300px] font-mono text-sm leading-relaxed bg-white"
-                            placeholder="Otomatik oluşturulan mektup metni burada görünecek..."
-                        />
-                        {raporMetni && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-[10px] text-slate-500 h-6"
-                                onClick={() => setRaporMetni("")}
-                            >
-                                Otomatik metne dön
-                            </Button>
+
+                        {pendingPolish ? (
+                            <div className="space-y-3">
+                                {pendingPolish.factDriftWarning && (
+                                    <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                                        <span>
+                                            Taslakta geçen bir sayısal değer (doz, tarih, sonuç vb.) AI önerisinde bulunamadı.
+                                            Kaydetmeden önce metni dikkatle karşılaştırın.
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold text-slate-400 uppercase">Mevcut Taslak</Label>
+                                        <Textarea
+                                            value={raporMetni || letterPreview}
+                                            readOnly
+                                            className="min-h-[300px] font-mono text-xs leading-relaxed bg-slate-50 text-slate-500"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] font-bold text-violet-500 uppercase">AI Önerisi</Label>
+                                        <Textarea
+                                            value={pendingPolish.text}
+                                            readOnly
+                                            className="min-h-[300px] font-mono text-xs leading-relaxed bg-violet-50/40 border-violet-200"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        className="h-7 px-3 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                        onClick={handleAcceptPolish}
+                                    >
+                                        <Check className="h-3 w-3" />
+                                        KABUL ET VE KULLAN
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-3 text-[10px] font-bold text-slate-500 gap-1"
+                                        onClick={handleRejectPolish}
+                                    >
+                                        <X className="h-3 w-3" />
+                                        VAZGEÇ
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <Textarea
+                                    value={raporMetni || letterPreview}
+                                    onChange={e => setRaporMetni(e.target.value)}
+                                    className="min-h-[300px] font-mono text-sm leading-relaxed bg-white"
+                                    placeholder="Otomatik oluşturulan mektup metni burada görünecek..."
+                                />
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 px-2 text-[10px] font-bold border-violet-200 text-violet-600 hover:bg-violet-50 bg-violet-50/30 gap-1"
+                                        onClick={handlePolishLetter}
+                                        disabled={isPolishing}
+                                    >
+                                        <Sparkles className="h-3 w-3" />
+                                        {isPolishing ? "DÜZENLENİYOR..." : "AI İLE DÜZENLE"}
+                                    </Button>
+                                    {raporMetni && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-[10px] text-slate-500 h-6"
+                                            onClick={() => setRaporMetni("")}
+                                        >
+                                            Otomatik metne dön
+                                        </Button>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>

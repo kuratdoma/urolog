@@ -7,6 +7,12 @@ import { format, parseISO } from "date-fns";
 import dynamic from "next/dynamic";
 import { ExaminationPDF } from "@/components/pdf/ExaminationPDF";
 import { FlaskConical, ScanLine } from "lucide-react";
+import {
+    parseSystemQuery,
+    buildIpssData,
+    buildIiefData,
+    buildSystemInquiry,
+} from "@/lib/pdf/examination-print-data";
 
 // Dynamic import for PDFViewer to avoid SSR issues
 const PDFViewer = dynamic(() => import("@react-pdf/renderer").then(mod => mod.PDFViewer), {
@@ -127,134 +133,13 @@ function PrintPageContent() {
         }
     }, [patient, exam]);
 
-    const sq = useMemo(() => {
-        if (!exam || !exam.sistem_sorgu) return {};
-        if (exam.sistem_sorgu.startsWith("{")) {
-            try { return JSON.parse(exam.sistem_sorgu); } catch { return {}; }
-        }
-        return {};
-    }, [exam]);
-
-    const ipssData = useMemo(() => {
-        if (!exam) return null;
-        const total = parseInt(exam.ipss_skor || "0");
-
-        const residivHissi = parseInt(exam.residiv_hissi || "0");
-        const kesikIdrar = parseInt(exam.kesik_idrar_yapma || "0");
-        const projeksiyon = parseInt(exam.projeksiyon_azalma || "0");
-        const baslamaZorluk = parseInt(exam.idrar_bas_zorluk || "0");
-        const pollakiuri = parseInt(exam.pollakiuri || "0");
-        const urgency = parseInt((exam as any).urgency || "0") || parseInt(sq.urgency || "0");
-        const nokturi = parseInt(exam.nokturi || "0");
-
-        if (total === 0 && residivHissi === 0 && pollakiuri === 0 && nokturi === 0 &&
-            kesikIdrar === 0 && projeksiyon === 0 && baslamaZorluk === 0 && urgency === 0) {
-            return null;
-        }
-
-        const obstructive = residivHissi + kesikIdrar + projeksiyon + baslamaZorluk;
-        const irritative = pollakiuri + urgency + nokturi;
-
-        const details: string[] = [];
-        if (residivHissi > 0) details.push(`Rezidü hissi ${residivHissi}`);
-        if (pollakiuri > 0) details.push(`pollakuri ${pollakiuri}`);
-        if (nokturi > 0) details.push(`nokturi ${nokturi}`);
-        if (kesikIdrar > 0) details.push(`kesik işeme ${kesikIdrar}`);
-        if (urgency > 0) details.push(`urgency ${urgency}`);
-        if (baslamaZorluk > 0) details.push(`ıkınma ${baslamaZorluk}`);
-        if (projeksiyon > 0) details.push(`projeksiyon ${projeksiyon}`);
-
-        const scoresSuffix = `IRR: ${irritative}, OBST: ${obstructive}, IPSS: ${total}`;
-        const detailText = details.length > 0
-            ? `${details.join(", ")}  ${scoresSuffix}`
-            : scoresSuffix;
-
-        return {
-            total,
-            obstructive,
-            irritative,
-            detailText,
-            individual: { residivHissi, kesikIdrar, projeksiyon, baslamaZorluk, pollakiuri, urgency, nokturi }
-        };
-    }, [exam, sq]);
-
-    const iiefData = useMemo(() => {
-        if (!exam) return null;
-        const score = parseInt((exam as any).iief_ef_skor || "0");
-        if (score === 0) return null;
-
-        let severity = "ED Yok";
-        let color = "emerald";
-        if (score <= 10) { severity = "Şiddetli ED"; color = "red"; }
-        else if (score <= 16) { severity = "Orta ED"; color = "orange"; }
-        else if (score <= 21) { severity = "Hafif-Orta ED"; color = "yellow"; }
-        else if (score <= 25) { severity = "Hafif ED"; color = "lime"; }
-
-        return { score, severity, color };
-    }, [exam]);
-
-    const systemInquiry = useMemo(() => {
-        if (!exam) return "";
-        const parts: string[] = [];
-        const lutsMapping: Record<string, { label: string, sqKeys: string[] }> = {
-            pollakiuri: { label: "Pollaküri", sqKeys: ["pollakiuri_text", "pollakiuri_sq"] },
-            nokturi: { label: "Noktüri", sqKeys: ["nokturi_text", "nokturi_sq"] },
-            projeksiyon_azalma: { label: "Zayıf Akım", sqKeys: ["projeksiyon_azalma_sq", "projeksiyon_azalma_text"] },
-            idrar_bas_zorluk: { label: "Başlama Zorluğu", sqKeys: ["idrar_bas_zorluk_text", "idrar_bas_zorluk_sq"] },
-            kesik_idrar_yapma: { label: "Kesik Kesik Yapma", sqKeys: ["kesik_idrar_yapma_text", "kesik_idrar_yapma_sq"] },
-            residiv_hissi: { label: "Tam Boşalamama", sqKeys: ["residu_hissi_text", "residiv_hissi_text", "residiv_hissi_sq"] },
-            urgency: { label: "Urgency", sqKeys: ["urgency"] },
-        };
-
-        const otherMapping: Record<string, string> = {
-            disuri: "Disüri",
-            hematuri: "Hematüri",
-            urgency: "Sıkışma",
-            catallanma: "Çatallanma",
-            kalibre_incelme: "Kalibre İncelme",
-            terminal_damlama: "Terminal Damlama",
-            inkontinans: "İnkontinans",
-            genital_akinti: "Genital Akıntı",
-            kabizlik: "Kabızlık",
-            tas_oyku: "Taş Öyküsü",
-            ates: "Ateş",
-            erektil_islev: "Erektil Disfonksiyon",
-            ejakulasyon: "Ejakülasyon",
-        };
-
-        Object.entries(lutsMapping).forEach(([key, info]) => {
-            let val = "";
-            for (const sqKey of info.sqKeys) {
-                if (sq[sqKey] && sq[sqKey] !== "Seçiniz...") {
-                    val = sq[sqKey];
-                    break;
-                }
-            }
-            if (!val) {
-                const examVal = (exam as any)[key];
-                if (examVal !== undefined && examVal !== null && examVal !== "" && examVal !== "Seçiniz...") {
-                    val = examVal;
-                }
-            }
-            if (val) {
-                const displayVal = (val === "Var" || val === "Evet" || val === "var" || val === "evet") ? "var" : val.toString().toLowerCase();
-                parts.push(`${info.label} ${displayVal}`);
-            }
-        });
-
-        Object.entries(otherMapping).forEach(([key, label]) => {
-            let val = (exam as any)[key];
-            if (!val || val === "Seçiniz...") {
-                val = sq[key] || sq[key + "_text"] || sq[key + "_sq"] || sq[key + "Text"] || sq[key + "SQ"];
-            }
-            if (val !== undefined && val !== null && val !== "" && val !== "Seçiniz...") {
-                const displayVal = (val === "Var" || val === "Evet" || val === "var" || val === "evet") ? "var" : val.toString().toLowerCase();
-                parts.push(`${label} ${displayVal}`);
-            }
-        });
-
-        return parts.join(", ");
-    }, [exam, sq]);
+    // Türev veri hesabı SUNUCU UCUYLA ORTAK modülden gelir
+    // (lib/pdf/examination-print-data.ts). Buradaki kopyası kaldırıldı: Android için
+    // sunucuda üretilen PDF ile bu sayfanın çıktısı ayrışmasın diye tek kaynak.
+    const sq = useMemo(() => parseSystemQuery(exam), [exam]);
+    const ipssData = useMemo(() => buildIpssData(exam, sq), [exam, sq]);
+    const iiefData = useMemo(() => buildIiefData(exam), [exam]);
+    const systemInquiry = useMemo(() => buildSystemInquiry(exam, sq), [exam, sq]);
 
     const activeLabs = useMemo(() => {
         return allLabs.filter(l => selectedLabIds.includes(l.id));

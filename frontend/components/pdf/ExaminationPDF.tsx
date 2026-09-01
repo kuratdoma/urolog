@@ -133,21 +133,23 @@ interface ExaminationPDFProps {
     selectedImaging?: any[];
 }
 
-export const ExaminationPDF: React.FC<ExaminationPDFProps> = ({ exam, patient, settings, computedData, selectedLabs, selectedImaging }) => {
-    const { sq, ipssData, iiefData, systemInquiry } = computedData;
-    const formattedDate = formatSafeDate(exam.tarih, "dd.MM.yyyy");
-    const maskedTc = patient.tc_kimlik ? `****${patient.tc_kimlik.substring(4)}` : "-";
+export const ExaminationPDF: React.FC<ExaminationPDFProps> = ({ exam = {}, patient = {}, settings = {}, computedData, selectedLabs, selectedImaging }) => {
+    const { sq = {}, ipssData, iiefData, systemInquiry } = computedData || ({} as any);
+    const formattedDate = formatSafeDate(exam?.tarih, "dd.MM.yyyy");
+    const tcStr = patient?.tc_kimlik != null ? String(patient.tc_kimlik).trim() : '';
+    const maskedTc = tcStr ? (tcStr.length >= 4 ? `****${tcStr.slice(4)}` : tcStr) : "-";
+    const fullName = `${patient?.ad || ''} ${patient?.soyad || ''}`.trim();
 
     return (
-        <Document title={`${patient.ad} ${patient.soyad} Muayene`}>
+        <Document title={`${fullName || 'Hasta'} Muayene`}>
             <Page size="A4" style={styles.page}>
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.headerTitle}>{settings["clinic_name"] || "UroLog Üroloji Kliniği"}</Text>
+                        <Text style={styles.headerTitle}>{settings?.["clinic_name"] || "UroLog Üroloji Kliniği"}</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ fontSize: 9, fontWeight: 'bold' }}>PROTOKOL NO: {patient.protokol_no || exam.id}</Text>
+                        <Text style={{ fontSize: 9, fontWeight: 'bold' }}>PROTOKOL NO: {patient?.protokol_no || exam?.id || '-'}</Text>
                         <Text style={{ fontSize: 9, fontWeight: 'bold' }}>TARİH: {formattedDate}</Text>
                     </View>
                 </View>
@@ -159,7 +161,7 @@ export const ExaminationPDF: React.FC<ExaminationPDFProps> = ({ exam, patient, s
                         <View style={{ width: '50%' }}>
                             <View style={styles.row}>
                                 <Text style={styles.label}>Adı Soyadı:</Text>
-                                <Text style={styles.value}>{patient.ad} {patient.soyad}</Text>
+                                <Text style={styles.value}>{fullName || "-"}</Text>
                             </View>
                             <View style={styles.row}>
                                 <Text style={styles.label}>TC Kimlik:</Text>
@@ -170,19 +172,19 @@ export const ExaminationPDF: React.FC<ExaminationPDFProps> = ({ exam, patient, s
                             <View style={styles.row}>
                                 <Text style={styles.label}>Doğum Tarihi:</Text>
                                 <Text style={styles.value}>
-                                    {formatSafeDate(patient.dogum_tarihi, "dd.MM.yyyy")}
+                                    {formatSafeDate(patient?.dogum_tarihi, "dd.MM.yyyy")}
                                 </Text>
                             </View>
                             <View style={styles.row}>
                                 <Text style={styles.label}>Cinsiyet:</Text>
-                                <Text style={styles.value}>{patient.cinsiyet || "-"}</Text>
+                                <Text style={styles.value}>{patient?.cinsiyet || "-"}</Text>
                             </View>
                         </View>
                     </View>
                 </View>
 
                 {/* Complaints & History */}
-                {exam.sikayet && (
+                {exam?.sikayet && (
                     <View style={styles.contentSection}>
                         <Text style={styles.contentHeader}>{trUpper("ŞİKAYET")}</Text>
                         <Text style={styles.contentText}>{exam.sikayet}</Text>
@@ -363,14 +365,14 @@ export const ExaminationPDF: React.FC<ExaminationPDFProps> = ({ exam, patient, s
                 {/* Footer */}
                 <View style={styles.footer} fixed>
                     <View style={{ width: '60%' }}>
-                        <Text style={styles.clinicName}>{settings["clinic_name"] || "UroLog"}</Text>
-                        <Text style={styles.clinicDetail}>{settings["clinic_address"] || "Rafet Karacan Blv. Ahmet Ergunes Sk. 21/12 Izmit-Kocaeli"}</Text>
-                        <Text style={styles.clinicDetail}>Tel: {settings["clinic_phone"] || "262 321 0141"}</Text>
+                        <Text style={styles.clinicName}>{settings?.["clinic_name"] || "UroLog"}</Text>
+                        <Text style={styles.clinicDetail}>{settings?.["clinic_address"] || "Rafet Karacan Blv. Ahmet Ergunes Sk. 21/12 Izmit-Kocaeli"}</Text>
+                        <Text style={styles.clinicDetail}>Tel: {settings?.["clinic_phone"] || "262 321 0141"}</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                         <Text style={{ fontSize: 8, color: '#000000', marginBottom: 2 }}>Sistem Çıktı Tarihi: {format(new Date(), "dd.MM.yyyy")}</Text>
                         <View style={{ marginTop: 10, alignItems: 'center' }}>
-                            <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#000000' }}>{exam.doktor || ""}</Text>
+                            <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#000000' }}>{exam?.doktor || ""}</Text>
                         </View>
                     </View>
                 </View>

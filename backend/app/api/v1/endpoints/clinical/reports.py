@@ -1,9 +1,15 @@
 from typing import Any, List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
+from app.core.config import settings
+from app.core.limiter import limiter
 from app.repositories.clinical.repository import ClinicalRepository
+from app.schemas.ai_scribe import LetterPolishRequest, LetterPolishResponse
+from app.services.ai_scribe_service import get_ai_scribe_service
+from app.services.audit_service import AuditService
+from app.models.user import User
 from app.schemas.clinical import (
     IstirahatRaporuCreate,
     IstirahatRaporuResponse,
@@ -123,6 +129,47 @@ async def read_consultation_report(
     if not result:
         raise HTTPException(status_code=404, detail="Consultation report not found")
     return result
+
+
+@router.post("/consultation-reports/polish-letter", response_model=LetterPolishResponse)
+@limiter.limit("20/minute")
+async def polish_consultation_letter(
+    request: Request,
+    payload: LetterPolishRequest,
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """Taslak konsültasyon mektubunun dil bilgisi/cümle akışını AI ile
+    düzeltir. İçerik üretmez/değiştirmez, sadece verilen metni düzenler."""
+    if not settings.AI_SCRIBE_ENABLED:
+        raise HTTPException(status_code=403, detail="AI Scribe özelliği devre dışı.")
+
+    service = get_ai_scribe_service()
+    try:
+        result = await service.polish_letter(
+            draft_text=payload.text, mode=payload.mode, db=db
+        )
+        # SEC: hasta verisine dokunan AI çağrısı — audit izi (mektup metni
+        # DEĞİL, sadece meta veriler loglanır; PHI audit tablosuna yazılmaz).
+        await AuditService.log(
+            db=db,
+            action="KONSULTASYON_MEKTUP_AI_DUZENLE",
+            user_id=current_user.id,
+            resource_type="consultation_report_letter",
+            resource_id=None,
+            details={
+                "mode_used": result.get("mode_used"),
+                "fact_drift_warning": result.get("fact_drift_warning", False),
+                "text_length": len(payload.text),
+            },
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="Mektup düzenleme sırasında bir hata oluştu."
+        )
 
 
 # --- DURUM BİLDİRİR RAPORLARI ---

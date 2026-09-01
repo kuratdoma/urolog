@@ -250,6 +250,95 @@ class AIScribeService:
             self._handle_analysis_error(e)
             raise
 
+    async def polish_letter(
+        self,
+        draft_text: str,
+        mode: AIScribeMode = AIScribeMode.GEMINI,
+        db: Optional[AsyncSession] = None,
+    ) -> Dict[str, Any]:
+        """Fix grammar/flow/redundancy in an already-composed consultation
+        letter draft (free-text fields stitched into template sentences).
+        Does NOT generate or alter clinical content — same quota-fallback
+        pattern as analyze_text."""
+        if db:
+            await self._ensure_api_key(db)
+
+        start_time = time.time()
+        scrubbed_text = self._sanitize_data(draft_text)
+        prompt = self._build_polish_prompt()
+        mode_used = mode
+
+        try:
+            if mode in (AIScribeMode.GEMINI, AIScribeMode.HYBRID_GOOGLE_GEMINI):
+                if not self.gemini_provider.is_available():
+                    raise ValueError("Google Gemini API is not configured.")
+                try:
+                    raw_data = await self.gemini_provider.analyze_text(scrubbed_text, prompt)
+                except Exception as gemini_err:
+                    if self._is_quota_exceeded(gemini_err):
+                        logger.warning(
+                            "Gemini quota exceeded, falling back to LOCAL mode for letter polish"
+                        )
+                        mode_used = AIScribeMode.LOCAL
+                        raw_data = await self.local_llm_provider.analyze_text(
+                            scrubbed_text, prompt
+                        )
+                    else:
+                        raise
+            else:
+                raw_data = await self.local_llm_provider.analyze_text(scrubbed_text, prompt)
+
+            polished_text = raw_data.get("polished_text") if isinstance(raw_data, dict) else None
+            if not polished_text:
+                raise ValueError("AI düzenlenmiş metin üretemedi.")
+
+            fact_drift = self._detect_fact_drift(draft_text, polished_text)
+            if fact_drift:
+                logger.warning(
+                    "Letter polish: possible fact drift detected (a numeric token from the "
+                    "draft — dose/date/result — is missing from the polished text)"
+                )
+
+            self._log_call_metric("letter_polish", mode_used, mode, start_time, True)
+            return {
+                "polished_text": polished_text,
+                "mode_used": mode_used,
+                "fact_drift_warning": fact_drift,
+            }
+        except Exception as e:
+            self._log_call_metric("letter_polish", mode_used, mode, start_time, False)
+            self._handle_analysis_error(e)
+            raise
+
+    _DIGIT_TOKEN_RE = re.compile(r"\d+(?:[.,]\d+)?")
+
+    def _detect_fact_drift(self, original: str, polished: str) -> bool:
+        """Heuristic safety net for the polish task: the prompt forbids the
+        LLM from touching clinical facts, but that's a prompt-level promise,
+        not a guarantee. A missing numeric token (dose, lab value, date,
+        ICD-code digits) between draft and polished text is a cheap,
+        reliable signal that something more than grammar changed — worth
+        surfacing to the doctor even though it can't catch a non-numeric
+        drift (e.g. a swapped drug name)."""
+        original_numbers = set(self._DIGIT_TOKEN_RE.findall(original))
+        polished_numbers = set(self._DIGIT_TOKEN_RE.findall(polished))
+        return not original_numbers.issubset(polished_numbers)
+
+    def _build_polish_prompt(self) -> str:
+        """Prompt for the letter-polish task: grammar/flow only, no
+        clinical-content generation, so a JSON-editor's rewrite can't drift
+        the letter's medical facts."""
+        return """Sen tıbbi metinleri düzenleyen kıdemli bir tıbbi editörsün. Sana bir konsültasyon mektubu taslağı verilecek. Görevin SADECE dil bilgisi, cümle akışı ve tekrarları düzeltmektir.
+
+## KESİN KURALLAR:
+1. Hiçbir tıbbi bilgi, tanı, ilaç adı, sayı, tarih, isim veya unvan EKLEME, ÇIKARMA ya da DEĞİŞTİRME.
+2. Sadece cümle yapısını, bağlaçları ve tekrar eden ifadeleri düzelt (örn: kelime tekrarları, çakışan fiil ekleri, bozuk cümle kurulumu).
+3. Mektubun paragraf sırasını, etiketlerini (örn: "Şikayet:", "Öykü:") ve genel yapısını (selamlama ile başlama, "Saygılarımla," ile bitme) KORU.
+4. Resmi, profesyonel hekim diliyle yaz. Emoji, madde işareti veya yorum ekleme.
+5. SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama ekleme:
+{"polished_text": "<düzenlenmiş tam mektup metni>"}
+"""
+
     def _normalize_symptoms_in_place(self, data: Dict[str, Any]):
         """Helper to normalize symptom fields in a dictionary"""
         symptom_fields = [

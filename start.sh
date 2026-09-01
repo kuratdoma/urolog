@@ -227,6 +227,7 @@ fi
 # Lokal geliştirme ortam değişkenleri
 export NEXT_PUBLIC_GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "dev")
 export BACKEND_URL="http://127.0.0.1:8000"
+export MOBILE_PDF_ENABLED="true"
 export ALLOWED_ORIGIN_HEADER="http://localhost:${FRONTEND_PORT}"
 
 echo ""

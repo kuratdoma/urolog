@@ -193,6 +193,11 @@ export const clinicalApi = {
             apiFetch<ConsultationReport>(`/api/v1/clinical/consultation-reports/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
         deleteConsultationReport: (id: string) =>
             apiFetch<void>(`/api/v1/clinical/consultation-reports/${id}`, { method: 'DELETE' }),
+        polishConsultationLetter: (text: string, mode: string = 'gemini') =>
+            apiFetch<{ polished_text: string; mode_used: string; fact_drift_warning: boolean }>('/api/v1/clinical/consultation-reports/polish-letter', {
+                method: 'POST',
+                body: JSON.stringify({ text, mode }),
+            }),
 
         // Status Reports (Durum Bildirir)
         getStatusReports: (patientId: string) =>
