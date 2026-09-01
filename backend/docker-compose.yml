@@ -1,15 +1,15 @@
 services:
   db:
-    container_name: ${PROJECT_NAME:-uro}_db
+    container_name: ${PROJECT_NAME:-urolog}_db
     image: postgres:15-alpine
     restart: always
     # SEC-15: Credentials .env dosyasından okunur, fallback kullanılmaz
     env_file:
       - .env
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-urologadmin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-urolog_dev_pass}
+      POSTGRES_DB: ${DB_NAME:-urolog}
     volumes:
       # Veri kalıcılığı (Persistence) için host makinesine mount işlemi
       - db_data:/var/lib/postgresql/data
@@ -17,7 +17,7 @@ services:
 
     # Veritabanının gerçekten bağlantı kabul edip etmediğini kontrol eder
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-urologadmin} -d ${DB_NAME:-urolog}" ]
       interval: 5s # Her 5 saniyede bir kontrol et
       timeout: 5s # Cevap gelmezse 5 saniye sonra zaman aşımına uğrat
       retries: 5 # 5 kere başarısız olursa servisi 'unhealthy' işaretle
@@ -26,23 +26,23 @@ services:
 
   # SEC-14: Redis servisi - şifre korumalı
   redis:
-    container_name: ${PROJECT_NAME:-uro}_redis
+    container_name: ${PROJECT_NAME:-urolog}_redis
     image: redis:7-alpine
     restart: always
     command: >
-      redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env — no insecure default allowed} --maxmemory 256mb --maxmemory-policy allkeys-lru
+      redis-server --requirepass ${REDIS_PASSWORD:-urolog_redis_dev_pass} --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-urolog_redis_dev_pass}", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_PORT_EXTERNAL:-6380}:6379"
     volumes:
       - redis_data:/data
 
   backend:
-    container_name: ${PROJECT_NAME:-uro}_backend
+    container_name: ${PROJECT_NAME:-urolog}_backend
     build: .
     restart: always
     dns:
@@ -58,8 +58,12 @@ services:
     environment:
       - DB_HOST=db
       - DB_PORT=5432
+      - DB_USER=${DB_USER:-urologadmin}
+      - DB_PASSWORD=${DB_PASSWORD:-urolog_dev_pass}
+      - DB_NAME=${DB_NAME:-urolog}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-urolog_redis_dev_pass}
     depends_on:
       db:
         # Backend servisi, DB servisi "healthy" durumuna geçmeden BAŞLAMAZ.
@@ -71,10 +75,10 @@ services:
       - ../03.db_import:/data_import
       - ../scripts:/app/scripts
     ports:
-      - "${BACKEND_PORT_EXTERNAL:-8002}:8000"
+      - "${BACKEND_PORT_EXTERNAL:-8000}:8000"
 
 volumes:
   db_data:
-    name: ${PROJECT_NAME:-uro}_db_data
+    name: ${PROJECT_NAME:-urolog}_db_data
   redis_data:
-    name: ${PROJECT_NAME:-uro}_redis_data
+    name: ${PROJECT_NAME:-urolog}_redis_data

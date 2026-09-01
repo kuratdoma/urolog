@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from typing import List, Optional, Sequence
 
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.personal_note import (
     NOTE_COLOR_PRIORITY,
+    AssignmentStatus,
     NoteColor,
     NoteReminderOccurrence,
     PersonalNote,
@@ -33,11 +34,45 @@ class PersonalNoteRepository:
         self.db = db
 
     async def list_notes(
-        self, user_id: int, include_done: bool = True, sort_by: str = "due_date"
+        self,
+        user_id: int,
+        include_done: bool = True,
+        sort_by: str = "due_date",
+        scope: str = "all",
     ) -> List[PersonalNote]:
-        conditions = [PersonalNote.user_id == user_id, PersonalNote.is_deleted == False]
+        conditions = [PersonalNote.is_deleted == False]
         if not include_done:
             conditions.append(PersonalNote.is_done == False)
+
+        if scope == "my_notes":
+            scope_cond = and_(
+                PersonalNote.user_id == user_id,
+                or_(PersonalNote.assigned_to_id.is_(None), PersonalNote.assigned_to_id == user_id),
+            )
+        elif scope == "assigned_to_me":
+            scope_cond = and_(
+                PersonalNote.assigned_to_id == user_id,
+                PersonalNote.user_id != user_id,
+            )
+        elif scope == "assigned_by_me":
+            scope_cond = and_(
+                PersonalNote.user_id == user_id,
+                PersonalNote.assigned_to_id.is_not(None),
+                PersonalNote.assigned_to_id != user_id,
+            )
+        else:  # "all"
+            scope_cond = or_(
+                and_(
+                    PersonalNote.user_id == user_id,
+                    or_(PersonalNote.assigned_to_id.is_(None), PersonalNote.assigned_to_id == user_id),
+                ),
+                and_(
+                    PersonalNote.assigned_to_id == user_id,
+                    PersonalNote.assignment_status.in_([AssignmentStatus.accepted, AssignmentStatus.pending]),
+                ),
+            )
+
+        conditions.append(scope_cond)
         query = select(PersonalNote).where(and_(*conditions))
         result = await self.db.execute(query)
         notes = list(result.scalars().all())
@@ -47,12 +82,37 @@ class PersonalNoteRepository:
         query = select(PersonalNote).where(
             and_(
                 PersonalNote.id == note_id,
-                PersonalNote.user_id == user_id,
+                or_(
+                    PersonalNote.user_id == user_id,
+                    PersonalNote.assigned_to_id == user_id,
+                ),
                 PersonalNote.is_deleted == False,
             )
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_pending_assignments(self, user_id: int) -> List[PersonalNote]:
+        query = select(PersonalNote).where(
+            and_(
+                PersonalNote.assigned_to_id == user_id,
+                PersonalNote.assignment_status == AssignmentStatus.pending,
+                PersonalNote.is_deleted == False,
+                PersonalNote.is_done == False,
+            )
+        ).order_by(PersonalNote.starts_at.asc())
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def mark_popup_shown(self, note_ids: List[int]) -> None:
+        if not note_ids:
+            return
+        await self.db.execute(
+            update(PersonalNote)
+            .where(PersonalNote.id.in_(note_ids))
+            .values(popup_shown=True)
+        )
+        await self.db.flush()
 
     async def create_note(self, note: PersonalNote) -> PersonalNote:
         self.db.add(note)

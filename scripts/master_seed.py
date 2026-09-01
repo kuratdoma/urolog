@@ -40,7 +40,6 @@ def load_json(path):
 
 # Kullanıcı seed'i kaldırıldı.
 # İlk kurulumda /setup sayfasını kullanın (GET /api/v1/setup/check → POST /api/v1/setup/initialize).
-    print("✅ Users synchronized.")
 
 async def upsert_system_definitions(session: AsyncSession):
     print(">>> Upserting system_definitions...")

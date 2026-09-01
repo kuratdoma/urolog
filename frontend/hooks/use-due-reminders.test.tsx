@@ -58,6 +58,7 @@ const occurrence = (id: number) => ({
         time_of_day: "09:00:00",
         starts_at: "2026-03-10T09:00:00Z",
         is_done: false,
+        assignment_status: "none" as const,
         created_at: "2026-03-01T00:00:00Z",
     },
 });

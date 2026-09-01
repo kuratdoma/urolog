@@ -101,12 +101,28 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
       let overrideDoctor = prefilled.saglik_kurulusu_adi;
 
       if (currentExamData) {
-        if (currentExamData.sikayet || currentExamData.oyku) {
-          overrideSikayet = `Şikayet: ${currentExamData.sikayet || ''}\nÖykü: ${currentExamData.oyku || ''}`.trim();
+        const sikayetParts: string[] = [];
+        if (currentExamData.sikayet && typeof currentExamData.sikayet === "string" && currentExamData.sikayet.trim()) {
+          sikayetParts.push(`Şikayet: ${currentExamData.sikayet.trim()}`);
         }
-        if (currentExamData.ozgecmis || currentExamData.kullandigi_ilaclar) {
-          overrideGecmis = `Özgeçmiş: ${currentExamData.ozgecmis || ''}\nİlaçlar: ${currentExamData.kullandigi_ilaclar || ''}`.trim();
+        if (currentExamData.oyku && typeof currentExamData.oyku === "string" && currentExamData.oyku.trim()) {
+          sikayetParts.push(`Öykü: ${currentExamData.oyku.trim()}`);
         }
+        if (sikayetParts.length > 0) {
+          overrideSikayet = sikayetParts.join("\n");
+        }
+
+        const gecmisParts: string[] = [];
+        if (currentExamData.ozgecmis && typeof currentExamData.ozgecmis === "string" && currentExamData.ozgecmis.trim()) {
+          gecmisParts.push(`Özgeçmiş: ${currentExamData.ozgecmis.trim()}`);
+        }
+        if (currentExamData.kullandigi_ilaclar && typeof currentExamData.kullandigi_ilaclar === "string" && currentExamData.kullandigi_ilaclar.trim()) {
+          gecmisParts.push(`İlaçlar: ${currentExamData.kullandigi_ilaclar.trim()}`);
+        }
+        if (gecmisParts.length > 0) {
+          overrideGecmis = gecmisParts.join("\n");
+        }
+
         if (currentExamData.fizik_muayene || currentExamData.bulgu_notu) {
           overrideFizik = currentExamData.fizik_muayene || currentExamData.bulgu_notu || "";
         }
@@ -119,7 +135,7 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
         if (currentExamData.tedavi || currentExamData.prosedur) {
           overrideTedavi = currentExamData.tedavi || currentExamData.prosedur || "";
         }
-        if (currentExamData.doktor && currentExamData.doktor.trim()) {
+        if (currentExamData.doktor && typeof currentExamData.doktor === "string" && currentExamData.doktor.trim()) {
           overrideDoctor = currentExamData.doktor.trim().toUpperCase();
         }
       }
@@ -129,8 +145,8 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
         ...prefilled,
         hasta_id: hastaId || prefilled.hasta_id,
         appointment_id: appointmentId || prefilled.appointment_id,
-        sikayet_oyku: overrideSikayet || prev.sikayet_oyku,
-        gecmis_oyku_ilaclar: overrideGecmis || prev.gecmis_oyku_ilaclar,
+        sikayet_oyku: overrideSikayet ?? prefilled.sikayet_oyku ?? prev.sikayet_oyku,
+        gecmis_oyku_ilaclar: overrideGecmis ?? prefilled.gecmis_oyku_ilaclar ?? prev.gecmis_oyku_ilaclar,
         fizik_muayene_bulgulari: overrideFizik || prev.fizik_muayene_bulgulari,
         on_tani_tani: overrideTani || prev.on_tani_tani,
         icd10_kodu: overrideIcd || prev.icd10_kodu,

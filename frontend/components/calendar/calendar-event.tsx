@@ -58,8 +58,8 @@ export function CalendarEvent({
     // Status Based Styling
     const statusStyles: Record<string, string> = {
         'scheduled': 'bg-blue-100 border-blue-600 text-blue-900 hover:bg-blue-200',
-        'confirmed': 'bg-emerald-100 border-emerald-600 text-emerald-900 hover:bg-emerald-200',
-        'unreachable': 'bg-orange-100 border-orange-600 text-orange-900 hover:bg-orange-200',
+        'confirmed': 'bg-emerald-100 border-emerald-600 text-emerald-950 hover:bg-emerald-200/90 font-semibold shadow-xs',
+        'unreachable': 'bg-amber-100 border-amber-500 text-amber-950 hover:bg-amber-200/90 font-semibold shadow-xs',
         'cancelled': 'bg-red-100 border-red-600 text-red-900 decoration-line-through opacity-70 hover:bg-red-200',
         'completed': 'bg-slate-100 border-slate-600 text-slate-900 hover:bg-slate-200',
         'blocked': 'bg-red-50 border-red-800 text-red-900 hover:bg-red-100 font-black',
@@ -68,22 +68,31 @@ export function CalendarEvent({
     const currentStyle = statusStyles[apt.status] || statusStyles['scheduled'];
 
     const statusDotColor = {
-        'scheduled': 'bg-red-500',
-        'confirmed': 'bg-emerald-500',
-        'unreachable': 'bg-orange-500',
+        'scheduled': 'bg-blue-500',
+        'confirmed': 'bg-emerald-600 ring-2 ring-emerald-300',
+        'unreachable': 'bg-amber-500 ring-2 ring-amber-300',
         'cancelled': 'bg-slate-400',
         'completed': 'bg-blue-500',
         'blocked': 'bg-red-800'
-    }[apt.status] || 'bg-red-500';
+    }[apt.status] || 'bg-blue-500';
 
     const renderContent = () => {
         const timeRange = `${format(event.start, 'HH:mm')}-${format(event.end, 'HH:mm')}`;
 
         if (view === Views.DAY) {
+            const isConfirmed = apt.status === 'confirmed';
+            const isUnreachable = apt.status === 'unreachable';
             return (
-                <div className="flex flex-col h-full pl-2 py-1 pr-1 border-slate-900/10 relative">
+                <div className={cn(
+                    "flex flex-col h-full pl-2 py-1 pr-1 border-slate-900/10 relative",
+                    isConfirmed && "bg-emerald-50/60",
+                    isUnreachable && "bg-amber-50/70"
+                )}>
                     <div className="flex items-center justify-between mb-0.5 min-w-0">
-                        <span className="text-[10px] font-black leading-none opacity-80 whitespace-nowrap bg-black/5 px-1 rounded">
+                        <span className={cn(
+                            "text-[10px] font-black leading-none opacity-80 whitespace-nowrap px-1 rounded",
+                            isConfirmed ? "bg-emerald-200/80 text-emerald-950" : isUnreachable ? "bg-amber-200/90 text-amber-950" : "bg-black/5"
+                        )}>
                             {timeRange}
                         </span>
                         <div className="flex items-center gap-1.5 mr-1">
@@ -109,8 +118,21 @@ export function CalendarEvent({
                         </span>
                         <div className="flex items-center gap-1.5 mt-0.5 overflow-hidden">
                             {apt.type && (
-                                <Badge variant="secondary" className="text-[9px] h-3.5 px-1 bg-white/40 text-current border-none font-bold uppercase">
+                                <Badge variant="secondary" className={cn(
+                                    "text-[9px] h-3.5 px-1 border-none font-bold uppercase",
+                                    isConfirmed ? "bg-emerald-200/90 text-emerald-950" : isUnreachable ? "bg-amber-200/90 text-amber-950" : "bg-white/40 text-current"
+                                )}>
                                     {apt.type}
+                                </Badge>
+                            )}
+                            {isConfirmed && (
+                                <Badge variant="outline" className="text-[9px] h-3.5 px-1 bg-emerald-600 text-white border-none font-bold">
+                                    ONAYLI
+                                </Badge>
+                            )}
+                            {isUnreachable && (
+                                <Badge variant="outline" className="text-[9px] h-3.5 px-1 bg-amber-500 text-white border-none font-bold">
+                                    ULAŞILAMADI
                                 </Badge>
                             )}
                             {apt.notes && (
@@ -123,10 +145,19 @@ export function CalendarEvent({
                 </div>
             );
         } else if (view === Views.WEEK) {
+            const isConfirmed = apt.status === 'confirmed';
+            const isUnreachable = apt.status === 'unreachable';
             return (
-                <div className="flex flex-col justify-center h-full pl-1 overflow-hidden space-y-0.5 relative">
+                <div className={cn(
+                    "flex flex-col justify-center h-full pl-1 overflow-hidden space-y-0.5 relative",
+                    isConfirmed && "bg-emerald-50/60",
+                    isUnreachable && "bg-amber-50/70"
+                )}>
                     <div className="flex items-center justify-between min-w-0 pr-1">
-                        <span className="text-[9px] font-bold opacity-80 whitespace-nowrap">
+                        <span className={cn(
+                            "text-[9px] font-bold opacity-80 whitespace-nowrap px-0.5 rounded",
+                            isConfirmed ? "bg-emerald-200/90 text-emerald-950" : isUnreachable ? "bg-amber-200/90 text-amber-950" : ""
+                        )}>
                             {timeRange}
                         </span>
                         <div className="flex items-center gap-1">
@@ -140,41 +171,64 @@ export function CalendarEvent({
                     </span>
                     <div className="flex items-center gap-1 mt-0.5">
                         {apt.type && (
-                            <span className="text-[9px] opacity-70 leading-tight font-medium bg-white/30 px-0.5 rounded">
+                            <span className={cn(
+                                "text-[9px] opacity-80 leading-tight font-medium px-0.5 rounded",
+                                isConfirmed ? "bg-emerald-200 text-emerald-950" : isUnreachable ? "bg-amber-200 text-amber-950" : "bg-white/30"
+                            )}>
                                 {apt.type}
+                            </span>
+                        )}
+                        {isConfirmed && (
+                            <span className="text-[8px] bg-emerald-600 text-white font-bold px-1 rounded">
+                                ONAYLI
+                            </span>
+                        )}
+                        {isUnreachable && (
+                            <span className="text-[8px] bg-amber-500 text-white font-bold px-1 rounded">
+                                ULAŞILAMADI
                             </span>
                         )}
                     </div>
                 </div>
             );
         } else {
+            const isConfirmed = apt.status === 'confirmed';
+            const isUnreachable = apt.status === 'unreachable';
             const statusTextColor = {
                 'scheduled': 'text-slate-900',
-                'confirmed': 'text-slate-900',
-                'unreachable': 'text-orange-700',
+                'confirmed': 'text-emerald-950 font-bold',
+                'unreachable': 'text-amber-950 font-bold',
                 'cancelled': 'text-red-400 line-through opacity-70',
                 'completed': 'text-blue-700',
                 'blocked': 'text-red-900 font-black',
             }[apt.status] || 'text-slate-900';
 
+            const statusBgColor = isConfirmed
+                ? 'bg-emerald-100/95 border border-emerald-400 text-emerald-950 font-bold shadow-2xs'
+                : isUnreachable
+                    ? 'bg-amber-100/95 border border-amber-400 text-amber-950 font-bold shadow-2xs'
+                    : apt.status === 'cancelled'
+                        ? 'bg-red-50/50 opacity-60'
+                        : 'bg-transparent hover:bg-slate-50/80';
+
             const doctorName = apt.doctor?.full_name || apt.doctor?.username;
             const details = [apt.type, doctorName].filter(Boolean).join(' - ');
 
             return (
-                <div className="flex items-center h-5 w-full bg-transparent hover:bg-slate-50/80 transition-colors group/event">
-                    <div className={cn("w-[2.5px] h-[14px] shrink-0 rounded-full ml-0.5", statusDotColor)} />
-                    <div className={cn("flex-1 flex items-center justify-between px-1.5 min-w-0 gap-1", statusTextColor)}>
+                <div className={cn("flex items-center h-5 w-full rounded px-1 transition-colors group/event", statusBgColor)}>
+                    <div className={cn("w-[3.5px] h-[13px] shrink-0 rounded-full mr-1", isConfirmed ? "bg-emerald-600" : isUnreachable ? "bg-amber-500" : statusDotColor)} />
+                    <div className={cn("flex-1 flex items-center justify-between min-w-0 gap-1", statusTextColor)}>
                         <div className="flex items-center gap-1 min-w-0 flex-1">
-                            <span className="font-semibold text-[10.5px] truncate leading-none">
+                            <span className="text-[10.5px] truncate leading-none">
                                 {event.title}
                             </span>
                             {details && (
-                                <span className="text-[9px] opacity-50 truncate leading-none font-medium">
+                                <span className={cn("text-[9px] opacity-60 truncate leading-none font-normal", isConfirmed ? "text-emerald-800 font-medium opacity-85" : isUnreachable ? "text-amber-800 font-medium opacity-85" : "")}>
                                     ({details})
                                 </span>
                             )}
                         </div>
-                        <span className="text-[9.5px] font-bold opacity-70 shrink-0 tabular-nums">
+                        <span className={cn("text-[9.5px] font-bold opacity-75 shrink-0 tabular-nums", isConfirmed ? "text-emerald-950 font-black opacity-100" : isUnreachable ? "text-amber-950 font-black opacity-100" : "")}>
                             {format(event.start, 'HH:mm')}
                         </span>
                     </div>
@@ -260,7 +314,8 @@ export function CalendarEvent({
                     "p-4 text-white relative",
                     apt.status === 'blocked' ? "bg-gradient-to-br from-red-600 to-red-800" :
                         apt.status === 'confirmed' ? "bg-gradient-to-br from-emerald-500 to-emerald-700" :
-                            "bg-gradient-to-br from-blue-600 to-blue-800"
+                            apt.status === 'unreachable' ? "bg-gradient-to-br from-amber-500 to-orange-600" :
+                                "bg-gradient-to-br from-blue-600 to-blue-800"
                 )}>
                     <div className="flex justify-between items-start mb-3 gap-2">
                         <div className="flex items-center gap-2 min-w-0 flex-wrap">

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill, Pencil, FileText } from 'lucide-react';
+import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill, Pencil, FileText, Check, PhoneOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,8 @@ interface CalendarAgendaProps {
 /** Truncate text to maxLen characters with ellipsis */
 function truncate(text: string | null | undefined, maxLen: number = 80): string {
     if (!text) return '';
-    return text.length > maxLen ? text.slice(0, maxLen) + '…' : text;
+    if (text.length <= maxLen) return text;
+    return text.substring(0, maxLen) + '...';
 }
 
 export function CalendarAgenda({
@@ -40,7 +41,6 @@ export function CalendarAgenda({
     const handleCardClick = (apt: Appointment) => {
         const patientId = apt.hasta_id || apt.hasta?.id;
         if (patientId) {
-            // Set active patient in global store
             if (apt.hasta) {
                 setActivePatient({
                     id: String(apt.hasta.id),
@@ -58,7 +58,6 @@ export function CalendarAgenda({
                     soyad: soyad,
                 });
             }
-            // Navigate directly to examination form
             router.push(`/patients/${patientId}/examination`);
         } else if (onEditAppointment) {
             onEditAppointment(apt);
@@ -94,6 +93,8 @@ export function CalendarAgenda({
                     appointments.map((evt) => {
                         const isPast = evt.end < new Date();
                         const isNow = evt.start <= new Date() && evt.end >= new Date();
+                        const isConfirmed = evt.resource.status === 'confirmed';
+                        const isUnreachable = evt.resource.status === 'unreachable';
                         const brief = evt.resource?.clinical_brief;
                         const hasPreviousBrief = brief && (brief.son_muayene_tani || brief.son_muayene_sikayet || brief.son_not_icerik || brief.son_muayene_sonuc || brief.son_muayene_tedavi);
                         const hasNotes = evt.resource.notes || brief?.hasta_notu;
@@ -104,15 +105,18 @@ export function CalendarAgenda({
                                 onClick={() => handleCardClick(evt.resource)}
                                 className={cn(
                                     "group flex flex-col p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-lg relative overflow-hidden",
-                                    evt.resource.status === 'blocked' ? "bg-red-50 border-red-100" : (isNow ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-100 hover:border-blue-300 hover:bg-slate-50/40"),
+                                    evt.resource.status === 'blocked' ? "bg-red-50 border-red-100" :
+                                        isConfirmed ? "bg-emerald-50/90 border-emerald-300 hover:bg-emerald-100/60 shadow-xs" :
+                                            isUnreachable ? "bg-amber-50/90 border-amber-300 hover:bg-amber-100/60 shadow-xs" :
+                                                (isNow ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-100 hover:border-blue-300 hover:bg-slate-50/40"),
                                     isPast && "opacity-60 bg-slate-50/50 grayscale-[0.5]"
                                 )}
                             >
                                 {/* Status Indicator Bar */}
                                 <div className={cn(
                                     "absolute left-0 top-0 bottom-0 w-1.5",
-                                    evt.resource.status === 'confirmed' ? "bg-emerald-500" :
-                                        evt.resource.status === 'unreachable' ? "bg-orange-500" :
+                                    isConfirmed ? "bg-emerald-500" :
+                                        isUnreachable ? "bg-amber-500" :
                                             evt.resource.status === 'cancelled' ? "bg-red-500" :
                                                 "bg-blue-500"
                                 )} />
@@ -126,6 +130,16 @@ export function CalendarAgenda({
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-1">
+                                        {isConfirmed && (
+                                            <Badge className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-emerald-100 text-emerald-800 border-emerald-300 shadow-2xs flex items-center gap-0.5">
+                                                <Check className="w-2.5 h-2.5" /> Onaylı
+                                            </Badge>
+                                        )}
+                                        {isUnreachable && (
+                                            <Badge className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-amber-100 text-amber-800 border-amber-300 shadow-2xs flex items-center gap-0.5">
+                                                <PhoneOff className="w-2.5 h-2.5" /> Ulaşılamadı
+                                            </Badge>
+                                        )}
                                         <Badge variant="outline" className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-white shadow-sm">
                                             {evt.resource.type || 'Muayene'}
                                         </Badge>

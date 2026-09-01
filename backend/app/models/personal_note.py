@@ -52,6 +52,13 @@ NOTE_COLOR_PRIORITY = {
 }
 
 
+class AssignmentStatus(str, enum.Enum):
+    none = "none"
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
+
+
 class PersonalNote(Base):
     __tablename__ = "personal_notes"
 
@@ -65,6 +72,20 @@ class PersonalNote(Base):
         default=NoteColor.default,
         nullable=False,
     )
+
+    # Ortak İş / Görev Atama Alanları
+    assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    assigned_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assignment_status = Column(
+        SQLEnum(AssignmentStatus, name="assignmentstatus", create_constraint=False, native_enum=False),
+        default=AssignmentStatus.none,
+        nullable=False,
+        index=True,
+    )
+    rejection_reason = Column(String, nullable=True)
+    assigned_at = Column(DateTime(timezone=True), nullable=True)
+    responded_at = Column(DateTime(timezone=True), nullable=True)
+    popup_shown = Column(Boolean, default=False, nullable=False)
 
     recurrence_type = Column(
         SQLEnum(RecurrenceType, name="recurrencetype", create_constraint=False, native_enum=False),
@@ -83,6 +104,10 @@ class PersonalNote(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    creator = relationship("User", foreign_keys=[user_id], lazy="joined")
+    assigned_to = relationship("User", foreign_keys=[assigned_to_id], lazy="joined")
+    assigned_by = relationship("User", foreign_keys=[assigned_by_id], lazy="joined")
 
     occurrences = relationship(
         "NoteReminderOccurrence",

@@ -72,14 +72,22 @@ async def get_insurance_provision_prefill(
     # Fetch Muayene: either specific exam_id or latest for patient
     latest_muayene = None
     if exam_id:
-        muayene_res = await db.execute(select(Muayene).where(Muayene.id == exam_id))
+        muayene_res = await db.execute(
+            select(Muayene).where(
+                Muayene.id == exam_id,
+                Muayene.is_deleted == False
+            )
+        )
         latest_muayene = muayene_res.scalars().first()
 
     if not latest_muayene:
         muayene_res = await db.execute(
             select(Muayene)
-            .where(Muayene.hasta_id == target_hasta_id)
-            .order_by(Muayene.tarih.desc())
+            .where(
+                Muayene.hasta_id == target_hasta_id,
+                Muayene.is_deleted == False
+            )
+            .order_by(Muayene.tarih.desc().nulls_last())
         )
         latest_muayene = muayene_res.scalars().first()
 
@@ -108,11 +116,29 @@ async def get_insurance_provision_prefill(
     else:
         mapped_cinsiyet = hasta.cinsiyet or ""
 
+    # Build clean sikayet_oyku
+    sikayet_oyku_parts = []
+    if latest_muayene:
+        if latest_muayene.sikayet and latest_muayene.sikayet.strip():
+            sikayet_oyku_parts.append(f"Şikayet: {latest_muayene.sikayet.strip()}")
+        if latest_muayene.oyku and latest_muayene.oyku.strip():
+            sikayet_oyku_parts.append(f"Öykü: {latest_muayene.oyku.strip()}")
+    sikayet_oyku_str = "\n".join(sikayet_oyku_parts)
+
+    # Build clean gecmis_oyku_ilaclar
+    gecmis_parts = []
+    if latest_muayene:
+        if latest_muayene.ozgecmis and latest_muayene.ozgecmis.strip():
+            gecmis_parts.append(f"Özgeçmiş: {latest_muayene.ozgecmis.strip()}")
+        if latest_muayene.kullandigi_ilaclar and latest_muayene.kullandigi_ilaclar.strip():
+            gecmis_parts.append(f"İlaçlar: {latest_muayene.kullandigi_ilaclar.strip()}")
+    gecmis_str = "\n".join(gecmis_parts)
+
     dto = InsuranceProvisionDTO(
         hasta_id=hasta.id,
         appointment_id=appointment_id,
         save_to_documents=True,
-        sigorta_sirketi="",
+        sigorta_sirketi=getattr(hasta, "ozelsigorta", "") or getattr(hasta, "sigorta", "") or "",
         provizyon_no="",
         irtibat_tel="",
         irtibat_faks="",
@@ -129,16 +155,10 @@ async def get_insurance_provision_prefill(
         eposta=hasta.email or "",
         basvuru_tarihi=basvuru_tarihi,
         planlanan_yatis_cikis_tarihi="",
-        sikayet_oyku=(
-            f"Şikayet: {latest_muayene.sikayet or ''} - Öykü: {latest_muayene.oyku or ''}".strip(" -")
-            if latest_muayene else ""
-        ),
+        sikayet_oyku=sikayet_oyku_str,
         sikayet_baslangic_tarihi="",
         daha_once_basvuru_var_mi="",
-        gecmis_oyku_ilaclar=(
-            f"Özgeçmiş: {latest_muayene.ozgecmis or ''} - İlaçlar: {latest_muayene.kullandigi_ilaclar or ''}".strip(" -")
-            if latest_muayene else ""
-        ),
+        gecmis_oyku_ilaclar=gecmis_str,
         fizik_muayene_bulgulari=latest_muayene.fizik_muayene or latest_muayene.bulgu_notu if latest_muayene else "",
         tetkikler_sonuclari="",
         giris_tipi="Poliklinik",

@@ -9,6 +9,7 @@ import { AIScribeAction } from '@/components/layout/ai-scribe-action';
 import { ReminderBell } from '@/components/notes/reminder-bell';
 import { NotesNavButton } from '@/components/notes/notes-nav-button';
 import { DailyDigestDialog } from '@/components/notes/daily-digest-dialog';
+import { TaskAssignmentPopup } from '@/components/notes/task-assignment-popup';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ export default function DashboardLayout({
     return (
         <AuthGuard>
             <DailyDigestDialog />
+            <TaskAssignmentPopup />
             <div className="flex h-screen">
                 <Sidebar isCalendarPage={isCalendarPage} />
                 <div className="flex-1 flex flex-col overflow-hidden">

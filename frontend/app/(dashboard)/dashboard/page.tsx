@@ -16,7 +16,8 @@ import {
     XCircle,
     ChevronRight,
     Wallet,
-    X
+    X,
+    PhoneOff
 } from "lucide-react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
@@ -41,7 +42,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { FileText, Stethoscope, Binoculars } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -187,10 +188,12 @@ export default function DashboardPage() {
             case 'confirmed':
             case 'completed':
                 return <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />;
+            case 'unreachable':
+                return <PhoneOff className="h-4 w-4 text-amber-500 shrink-0" />;
             case 'cancelled':
                 return <XCircle className="h-4 w-4 text-red-500 shrink-0" />;
             default:
-                return <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />;
+                return null;
         }
     };
 
@@ -538,9 +541,11 @@ export default function DashboardPage() {
                                                                             )}
                                                                         </h4>
                                                                         <div className="flex items-center gap-1 shrink-0">
-                                                                            <span title={getStatusLabel(apt.status)} aria-label={getStatusLabel(apt.status)}>
-                                                                                {getStatusIcon(apt.status)}
-                                                                            </span>
+                                                                            {getStatusIcon(apt.status) && (
+                                                                                <span title={getStatusLabel(apt.status)} aria-label={getStatusLabel(apt.status)}>
+                                                                                    {getStatusIcon(apt.status)}
+                                                                                </span>
+                                                                            )}
 
                                                                             <DropdownMenu>
                                                                                 <DropdownMenuTrigger asChild>
@@ -650,24 +655,26 @@ export default function DashboardPage() {
                     {briefAppointment && (
                         <>
                             {/* Modal Header */}
-                            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-5 text-white pr-12">
+                            <DialogHeader className="bg-gradient-to-r from-indigo-600 to-blue-600 p-5 text-white pr-12 text-left space-y-0">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2.5">
                                         <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl">
                                             <Stethoscope className="w-5 h-5 text-white" />
                                         </div>
                                         <div>
-                                            <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-100 block">Klinik Brief / Hızlı Bakış</span>
-                                            <h3 className="text-base font-black uppercase tracking-tight text-white truncate max-w-[320px]">
+                                            <DialogDescription className="text-[10px] uppercase font-bold tracking-wider text-indigo-100 block">
+                                                Klinik Brief / Hızlı Bakış
+                                            </DialogDescription>
+                                            <DialogTitle className="text-base font-black uppercase tracking-tight text-white truncate max-w-[320px]">
                                                 {briefAppointment.hasta ? `${briefAppointment.hasta.ad} ${briefAppointment.hasta.soyad}` : briefAppointment.title}
-                                            </h3>
+                                            </DialogTitle>
                                         </div>
                                     </div>
                                     <Badge className="bg-white/20 text-white hover:bg-white/20 border-none text-[10px] font-bold uppercase">
                                         {briefAppointment.type || 'Muayene'}
                                     </Badge>
                                 </div>
-                            </div>
+                            </DialogHeader>
 
                             {/* Modal Body */}
                             <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto bg-slate-50/40">

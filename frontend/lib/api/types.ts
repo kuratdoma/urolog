@@ -1662,10 +1662,26 @@ export type RecurrenceType = 'once' | 'daily' | 'weekly' | 'monthly';
 export type ReminderOccurrenceStatus = 'pending' | 'fired' | 'acknowledged' | 'snoozed' | 'missed';
 export type NoteColor = 'default' | 'green' | 'blue' | 'yellow' | 'red';
 export type NoteSortBy = 'due_date' | 'created_at' | 'importance';
+export type AssignmentStatus = 'none' | 'pending' | 'accepted' | 'rejected';
+export type NoteScope = 'all' | 'my_notes' | 'assigned_to_me' | 'assigned_by_me';
+
+export interface UserMini {
+    id: number;
+    username: string;
+    full_name?: string;
+    role?: string;
+}
 
 export interface PersonalNote {
     id: number;
     user_id: number;
+    assigned_to_id?: number;
+    assigned_by_id?: number;
+    assignment_status: AssignmentStatus;
+    rejection_reason?: string;
+    assigned_at?: string;
+    responded_at?: string;
+    popup_shown?: boolean;
     title: string;
     content?: string;
     color: NoteColor;
@@ -1677,12 +1693,16 @@ export interface PersonalNote {
     is_done: boolean;
     created_at: string;
     updated_at?: string;
+    creator?: UserMini;
+    assigned_to?: UserMini;
+    assigned_by?: UserMini;
 }
 
 export interface PersonalNoteCreate {
     title: string;
     content?: string;
     color?: NoteColor;
+    assigned_to_id?: number;
     recurrence_type: RecurrenceType;
     interval: number;
     time_of_day: string;

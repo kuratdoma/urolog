@@ -34,8 +34,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # --- VERİTABANI AYARLARI ---
-    # --- VERİTABANI AYARLARI ---
-    DB_USER: str = "emr_admin"
+    DB_USER: str = "urologadmin"
     DB_PASSWORD: str = ""
     DB_NAME: str = "urolog"
     DB_HOST: str = "db"
@@ -97,9 +96,6 @@ class Settings(BaseSettings):
     # --- CORS AYARLARI ---
     # Frontend uygulamasının (React, Vue, vb.) adresi buraya eklenmelidir.
     # Güvenlik nedeniyle Production'da "*" (tüm domainler) kullanılmamalıdır.
-    # --- CORS AYARLARI ---
-    # Frontend uygulamasının (React, Vue, vb.) adresi buraya eklenmelidir.
-    # Güvenlik nedeniyle Production'da "*" (tüm domainler) kullanılmamalıdır.
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
         "http://localhost:3000",
         "http://localhost:3001",
@@ -155,11 +151,12 @@ class Settings(BaseSettings):
         # If not in docker, and DB host is set to 'db' (the docker default), switch to localhost
         if not in_docker:
             if self.DB_HOST == "db":
+                db_ext_port = os.getenv("DB_PORT_EXTERNAL", "5434")
                 print(
-                    "Detected local environment (no /.dockerenv). Switching DB to localhost:5441"
+                    f"Detected local environment (no /.dockerenv). Switching DB to localhost:{db_ext_port}"
                 )
                 self.DB_HOST = "localhost"
-                self.DB_PORT = "5441"
+                self.DB_PORT = db_ext_port
             if self.REDIS_HOST == "redis":
                 print("Detected local environment. Switching Redis to localhost")
                 self.REDIS_HOST = "localhost"

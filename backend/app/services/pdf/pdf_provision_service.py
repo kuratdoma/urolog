@@ -66,20 +66,25 @@ class PDFProvisionFormService:
         if not text or not str(text).strip():
             return
         font = self.bold_font if bold else self.primary_font
-        # Replace newlines with spaces and normalize consecutive whitespace so text flows horizontally
-        clean_text = " ".join(str(text).strip().split())
-        
-        # Try inserting with requested fontsize, shrink if overflow occurs
-        curr_size = fontsize
-        while curr_size >= 6.0:
-            res = self.page.insert_textbox(rect, clean_text, fontname=font, fontsize=curr_size, color=color, align=align)
-            if res >= 0:
-                return
-            # If overflow (< 0), reduce fontsize and retry
-            curr_size -= 0.5
-        
-        # Fallback at minimum size
-        self.page.insert_textbox(rect, clean_text, fontname=font, fontsize=6.0, color=color, align=align)
+        # Clean whitespace per line but preserve line breaks
+        lines = [" ".join(line.strip().split()) for line in str(text).splitlines() if line.strip()]
+        clean_text = "\n".join(lines)
+        if not clean_text:
+            return
+
+        # Adaptive fontsize based on content length and box size
+        total_len = len(clean_text)
+        num_lines = len(lines)
+
+        chosen_size = fontsize
+        if num_lines >= 4 or total_len > 350:
+            chosen_size = min(chosen_size, 7.0)
+        elif num_lines >= 3 or total_len > 200:
+            chosen_size = min(chosen_size, 7.5)
+        elif num_lines >= 2 or total_len > 120:
+            chosen_size = min(chosen_size, 8.0)
+
+        self.page.insert_textbox(rect, clean_text, fontname=font, fontsize=chosen_size, color=color, align=align)
 
     def generate(self) -> io.BytesIO:
         """Draws the provision form and returns PDF BytesIO stream."""

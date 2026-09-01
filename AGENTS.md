@@ -30,8 +30,8 @@ This file provides guidance for AI coding agents working on the UroLOG EMR proje
 ### Docker (Backend + DB)
 
 - Navigate to the `backend/` directory.
-- Start services: `docker-compose up --build`.
-- Backend will be at `http://localhost:8000`, DB at `localhost:5440` (from host).
+- Start services: `docker compose up --build` or `./start.sh` from root.
+- Backend will be at `http://localhost:8000`, DB at `localhost:5434` (from host).
 
 ## Testing Instructions
 

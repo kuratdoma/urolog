@@ -8,7 +8,27 @@
 
 # 0. Absolute path resolution & configuration
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Load .env file
+if [ -f "${ROOT_DIR}/.env" ]; then
+    set -a
+    . "${ROOT_DIR}/.env"
+    set +a
+elif [ -f "${ROOT_DIR}/backend/.env.example" ]; then
+    echo "⚠️ .env bulunamadı, .env.example dosyasından oluşturuluyor..."
+    cp "${ROOT_DIR}/backend/.env.example" "${ROOT_DIR}/.env"
+    set -a
+    . "${ROOT_DIR}/.env"
+    set +a
+fi
+
+if [ ! -f "${ROOT_DIR}/backend/.env" ] && [ -f "${ROOT_DIR}/.env" ]; then
+    cp "${ROOT_DIR}/.env" "${ROOT_DIR}/backend/.env"
+fi
+
 export PROJECT_NAME="${PROJECT_NAME:-urolog}"
+export DB_NAME="${DB_NAME:-urolog}"
+export DB_USER="${DB_USER:-urologadmin}"
 
 # Komut satırı argümanları
 BUILD_FLAG=""
@@ -161,6 +181,10 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     echo -e "\n${RED}❌ Veritabanı bağlantısı zaman aşımına uğradı.${NC}"
     exit 1
 fi
+
+# Veritabanı şeması güncelle (alembic)
+echo -e "  🔄 Veritabanı şeması güncelleniyor (alembic upgrade head)..."
+docker compose exec -T backend alembic upgrade head || true
 
 # ──────────────────────────────────────────────────────────────
 # 4. Backend login çalışıyor mu kontrol

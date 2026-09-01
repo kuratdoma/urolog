@@ -50,7 +50,44 @@ def test_list_notes_returns_only_current_user_notes(mock_list_notes):
     response = client.get("/api/v1/notes")
 
     assert response.status_code == 200
-    mock_list_notes.assert_awaited_once_with(1, include_done=True, sort_by="due_date")
+    mock_list_notes.assert_awaited_once_with(1, include_done=True, sort_by="due_date", scope="all")
+
+
+@patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.list_colleagues")
+def test_list_colleagues_success(mock_colleagues):
+    mock_colleagues.return_value = [
+        User(id=2, username="hemsire_ayse", full_name="Ayşe Yılmaz", role=UserRole.NURSE)
+    ]
+
+    response = client.get("/api/v1/notes/colleagues")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["username"] == "hemsire_ayse"
+
+
+@patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.accept_assignment")
+def test_accept_task_success(mock_accept):
+    n = _note()
+    n.assigned_to_id = 1
+    mock_accept.return_value = n
+
+    response = client.post("/api/v1/notes/5/accept")
+
+    assert response.status_code == 200
+    mock_accept.assert_awaited_once()
+
+
+@patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.reject_assignment")
+def test_reject_task_success(mock_reject):
+    n = _note()
+    n.assigned_to_id = 1
+    mock_reject.return_value = n
+
+    response = client.post("/api/v1/notes/5/reject", json={"rejection_reason": "Müsait değilim"})
+
+    assert response.status_code == 200
+    mock_reject.assert_awaited_once()
 
 
 @patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.create_note")
@@ -74,8 +111,6 @@ def test_create_note_success(mock_create):
 
 @patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.update_note")
 def test_update_note_owned_by_other_user_returns_404(mock_update):
-    # Repository sorguları user_id ile scope'ludur; başka kullanıcının notu için
-    # servis None döner — endpoint bunu 404'e çevirir, var olan kaydı sızdırmaz.
     mock_update.return_value = None
 
     response = client.patch("/api/v1/notes/5", json={"title": "Değişti"})

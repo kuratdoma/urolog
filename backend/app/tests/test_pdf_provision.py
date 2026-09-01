@@ -51,3 +51,22 @@ def test_pdf_provision_turkish_characters_and_empty_fields():
 
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF")
+
+def test_pdf_provision_multiline_sikayet_oyku():
+    dto = InsuranceProvisionDTO(
+        sigorta_sirketi="Mapfre Sigorta",
+        sigortali_adi_soyadi="Mehmet Demir",
+        sikayet_oyku="Şikayet: Sol yan ağrısı ve hematüri\nÖykü: 3 gündür devam eden şiddetli kolik ağrı.",
+        gecmis_oyku_ilaclar="Özgeçmiş: Hipertansiyon\nİlaçlar: Norvasc 5mg",
+        fizik_muayene_bulgulari="Sol KVAH (+)",
+        on_tani_tani="Üreter Taşı",
+        icd10_kodu="N20.1",
+        save_to_documents=False
+    )
+    service = PDFProvisionFormService(dto)
+    pdf_stream = service.generate()
+    pdf_bytes = pdf_stream.getvalue()
+
+    assert len(pdf_bytes) > 0
+    assert pdf_bytes.startswith(b"%PDF")
+
