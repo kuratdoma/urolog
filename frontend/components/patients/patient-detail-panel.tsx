@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from '@/lib/api';
 import { Card, CardContent } from "@/components/ui/card";
-import { Phone, Calendar, Stethoscope, ChevronRight, Maximize2, FlaskConical, Banknote, FileText } from "lucide-react";
+import { Phone, Calendar, Stethoscope, ChevronRight, Maximize2, FlaskConical, Banknote, FileText, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { differenceInYears, parseISO, format, isValid } from "date-fns";
 import Link from 'next/link';
@@ -115,6 +115,17 @@ export function PatientDetailPanel({ patientId, onPatientDeleted }: { patientId:
                         <Phone className="w-4 h-4 text-slate-500" />
                         <span className="text-sm tracking-wide">{patient.cep_tel || '-'}</span>
                     </div>
+                    {patient.iletisim_yakini_tel && (
+                        <div className="flex items-center gap-2 text-slate-300 text-xs">
+                            <Users className="w-3.5 h-3.5 text-slate-500" />
+                            <span className="tracking-wide">{patient.iletisim_yakini_tel}</span>
+                            {patient.iletisim_yakini_iliski && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-900/40 text-blue-300 border border-blue-700/50">
+                                    {patient.iletisim_yakini_iliski}
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Extra info fields from HASTA.CSV */}

@@ -35,8 +35,11 @@ class PatientDemographicsBase(BaseModel):
     faks: Optional[str] = None
     sms_izin: Optional[Union[bool, str]] = True
     email_izin: Optional[Union[bool, str]] = True
+    arama_izni: Optional[str] = "Evet"
     iletisim_kaynagi: Optional[str] = None
     iletisim_tercihi: Optional[str] = None
+    iletisim_yakini_iliski: Optional[str] = None
+    iletisim_yakini_tel: Optional[str] = None
     indirim_grubu: Optional[str] = None
     dil: Optional[str] = "Türkçe"
     personel_ids: Optional[str] = None
@@ -99,8 +102,11 @@ class PatientDemographicsUpdate(BaseModel):
     faks: Optional[str] = None
     sms_izin: Optional[Union[bool, str]] = None
     email_izin: Optional[Union[bool, str]] = None
+    arama_izni: Optional[str] = None
     iletisim_kaynagi: Optional[str] = None
     iletisim_tercihi: Optional[str] = None
+    iletisim_yakini_iliski: Optional[str] = None
+    iletisim_yakini_tel: Optional[str] = None
     indirim_grubu: Optional[str] = None
     dil: Optional[str] = None
     personel_ids: Optional[str] = None

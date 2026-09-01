@@ -657,13 +657,16 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
 
                                 {/* İLETİŞİM TELEFONU */}
                                 <div className="space-y-1">
-                                    <div className="flex items-center gap-1.5">
-                                        <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">İLETİŞİM TELEFONU</FormLabel>
-                                        {form.watch('iletisim_yakini_iliski') && (
-                                            <span className="text-[8px] font-semibold text-slate-400 italic truncate">
-                                                ({form.watch('iletisim_yakini_iliski')})
-                                            </span>
-                                        )}
+                                    <input type="hidden" {...form.register('iletisim_yakini_iliski')} />
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">İLETİŞİM TELEFONU</FormLabel>
+                                            {form.watch('iletisim_yakini_iliski') && (
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                                    {form.watch('iletisim_yakini_iliski')}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <FormField control={form.control} name="iletisim_yakini_tel" render={({ field }) => (
                                         <div className="relative flex items-center">
@@ -672,31 +675,47 @@ export function PatientForm({ initialData, onSubmit, isEditing = false, onDelete
                                                 value={field.value ?? ''}
                                                 disabled={!editMode}
                                                 placeholder="+90 xxx xxx xx xx"
-                                                className="h-8 text-sm font-mono border-slate-200 bg-white pr-8 w-full leading-relaxed"
+                                                className="h-8 text-sm font-mono border-slate-200 bg-white pr-16 w-full leading-relaxed"
                                                 onChange={(e) => field.onChange(formatPhoneNumber(e.target.value))}
                                                 onFocus={(e) => {
                                                     if (editMode && !e.target.value) field.onChange('+90 ');
                                                 }}
                                             />
+                                            {!editMode && form.watch('iletisim_yakini_iliski') && (
+                                                <span className="absolute right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 pointer-events-none">
+                                                    {form.watch('iletisim_yakini_iliski')}
+                                                </span>
+                                            )}
                                             {editMode && (
                                                 <Popover>
                                                     <PopoverTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="absolute right-1 h-7 w-7 text-slate-400 hover:text-blue-500">
+                                                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 h-7 w-7 text-slate-400 hover:text-blue-500" title="Yakınlık Derecesi Seç">
                                                             <Users className="h-3.5 w-3.5" />
                                                         </Button>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-40 p-1 shadow-xl border-slate-100" align="end">
                                                         <div className="grid grid-cols-1 gap-1">
-                                                            {["Anne", "Baba", "Kardeş", "Oğlu", "Kızı", "Arkadaşı", "Diğer"].map((rel) => (
+                                                            {["Anne", "Baba", "Kardeş", "Eşi", "Oğlu", "Kızı", "Arkadaşı", "Diğer"].map((rel) => (
                                                                 <Button
                                                                     key={rel}
-                                                                    variant="ghost"
+                                                                    type="button"
+                                                                    variant={form.watch('iletisim_yakini_iliski') === rel ? "secondary" : "ghost"}
                                                                     className="h-7 text-[10px] justify-start font-medium hover:bg-blue-50 hover:text-blue-600 px-3"
                                                                     onClick={() => form.setValue('iletisim_yakini_iliski', rel, { shouldDirty: true })}
                                                                 >
                                                                     {rel}
                                                                 </Button>
                                                             ))}
+                                                            {form.watch('iletisim_yakini_iliski') && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    className="h-7 text-[10px] justify-start font-medium text-red-500 hover:bg-red-50 hover:text-red-600 px-3 border-t border-slate-100"
+                                                                    onClick={() => form.setValue('iletisim_yakini_iliski', '', { shouldDirty: true })}
+                                                                >
+                                                                    Temizle
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </PopoverContent>
                                                 </Popover>

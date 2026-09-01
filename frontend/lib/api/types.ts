@@ -87,8 +87,11 @@ export interface Patient {
     // Visual based new fields
     sms_izin?: string;
     email_izin?: string;
+    arama_izni?: string;
     iletisim_kaynagi?: string;
     iletisim_tercihi?: string;
+    iletisim_yakini_iliski?: string;
+    iletisim_yakini_tel?: string;
     indirim_grubu?: string;
     dil?: string;
     personel_ids?: string;
@@ -743,6 +746,8 @@ export interface Appointment {
         soyad: string;
         tc_kimlik?: string;
         cep_tel?: string;
+        iletisim_yakini_iliski?: string;
+        iletisim_yakini_tel?: string;
     };
     created_at?: string;
     updated_at?: string;

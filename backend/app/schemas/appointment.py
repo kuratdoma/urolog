@@ -41,6 +41,8 @@ class HastaBasic(BaseModel):
     soyad: str
     tc_kimlik: Optional[str] = None
     cep_tel: Optional[str] = None
+    iletisim_yakini_iliski: Optional[str] = None
+    iletisim_yakini_tel: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

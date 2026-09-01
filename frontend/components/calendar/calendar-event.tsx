@@ -278,6 +278,20 @@ export function CalendarEvent({
                                     {apt.hasta.cep_tel}
                                 </a>
                             )}
+                            {apt.hasta?.iletisim_yakini_tel && (
+                                <a
+                                    href={`tel:${apt.hasta.iletisim_yakini_tel}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    title={apt.hasta.iletisim_yakini_iliski ? `${apt.hasta.iletisim_yakini_iliski} Tel` : "İletişim Tel"}
+                                    className="flex items-center gap-1 text-[10px] font-bold text-white/90 tabular-nums hover:text-white transition-colors bg-white/15 px-1.5 py-0.5 rounded"
+                                >
+                                    <Phone className="w-2.5 h-2.5 shrink-0" />
+                                    {apt.hasta.iletisim_yakini_tel}
+                                    {apt.hasta.iletisim_yakini_iliski && (
+                                        <span className="text-[9px] text-white/70">({apt.hasta.iletisim_yakini_iliski})</span>
+                                    )}
+                                </a>
+                            )}
                         </div>
                         <div className="flex gap-1 shrink-0">
                             <Button

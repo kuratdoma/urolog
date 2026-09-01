@@ -32,8 +32,11 @@ class PatientLegacyResponse(BaseModel):
     cocuk_sayisi: Optional[str] = None
     sms_izin: Optional[str] = None
     email_izin: Optional[str] = None
+    arama_izni: Optional[str] = "Evet"
     iletisim_kaynagi: Optional[str] = None
     iletisim_tercihi: Optional[str] = None
+    iletisim_yakini_iliski: Optional[str] = None
+    iletisim_yakini_tel: Optional[str] = None
     indirim_grubu: Optional[str] = None
     dil: Optional[str] = "Türkçe"
     etiketler: Optional[str] = None
