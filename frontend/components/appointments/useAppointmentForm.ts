@@ -59,34 +59,28 @@ export function useAppointmentForm({
     const [services, setServices] = useState<any[]>([]);
     const [notes, setNotes] = useState('');
 
-    const { data: settings = [] } = useQuery({
-        queryKey: ['settings'],
-        queryFn: api.settings.getAll,
+    const { data: rawDoctors = [] } = useQuery({
+        queryKey: ['definitions', 'doktorlar'],
+        queryFn: () => api.definitions.doktorlar.list(),
     });
 
     const doctors = useMemo(() => {
-        const docSetting = settings.find(s => s.key === 'doktorlar');
-        if (docSetting && docSetting.value) {
-            try {
-                const parsed = JSON.parse(docSetting.value);
-                return Array.isArray(parsed) ? parsed : [];
-            } catch {
-                return [];
-            }
-        }
-        return [];
-    }, [settings]);
+        return rawDoctors
+            .filter((d: any) => d.aktif !== false)
+            .map((d: any) => d.ad_soyad)
+            .filter(Boolean);
+    }, [rawDoctors]);
 
     useEffect(() => {
         if (isOpen && doctors.length > 0) {
             if (appointment && appointment.doctor_name) {
                 setSelectedDoctorName(appointment.doctor_name);
-            } else if (!selectedDoctorName) {
-                const matched = doctors.find((d: string) => d.toLowerCase() === currentUser?.full_name?.toLowerCase());
-                setSelectedDoctorName(matched || doctors[0]);
+            } else if (!selectedDoctorName || !doctors.includes(selectedDoctorName)) {
+                // Tanımlı listede kronolojik olarak ilk tanımlanan doktor default seçili gelir
+                setSelectedDoctorName(doctors[0]);
             }
         }
-    }, [isOpen, doctors, appointment, currentUser, selectedDoctorName]);
+    }, [isOpen, doctors, appointment, selectedDoctorName]);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -167,6 +161,11 @@ export function useAppointmentForm({
         setSelectedPatient({ id: patient.id, name: `${patient.ad} ${patient.soyad}` });
         setSearchOpen(false);
         setSearchQuery('');
+        if (patient.doktor && doctors.includes(patient.doktor)) {
+            setSelectedDoctorName(patient.doktor);
+        } else if (!selectedDoctorName && doctors.length > 0) {
+            setSelectedDoctorName(doctors[0]);
+        }
     };
 
     const handleServiceSelect = (serviceId: string) => {

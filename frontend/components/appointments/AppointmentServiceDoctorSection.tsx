@@ -1,6 +1,13 @@
 import React from 'react';
-import { Stethoscope } from 'lucide-react';
+import { Stethoscope, User } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 
 interface AppointmentServiceDoctorSectionProps {
@@ -23,9 +30,9 @@ export function AppointmentServiceDoctorSection({
     handleDoctorSelect,
 }: AppointmentServiceDoctorSectionProps) {
     return (
-        <>
+        <div className="grid gap-3">
             {!isBlockedMode && (
-                <div className="grid gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
                     <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Randevu Tipi</Label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {services.map((s) => {
@@ -63,38 +70,30 @@ export function AppointmentServiceDoctorSection({
                 </div>
             )}
 
-            <div className="grid gap-3">
-                <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Hekim</Label>
-                <div className="flex flex-wrap gap-2">
-                    {doctors.map((doc: string) => {
-                        const isSelected = selectedDoctorName === doc;
-                        return (
-                            <button
-                                key={doc}
-                                type="button"
-                                onClick={() => handleDoctorSelect(doc)}
-                                className={cn(
-                                    "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium",
-                                    isSelected
-                                        ? "bg-blue-50 border-blue-200 text-blue-700 shadow-sm"
-                                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
-                                )}
-                            >
-                                <div className={cn(
-                                    "w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-colors",
-                                    isSelected ? "border-blue-500" : "border-slate-300"
-                                )}>
-                                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <Stethoscope className={cn("w-3.5 h-3.5", isSelected ? "text-blue-500" : "text-slate-400")} />
-                                    <span>{doc}</span>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
+            <div className="grid gap-1.5">
+                <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                    <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                    Hekim
+                </Label>
+                <Select
+                    value={selectedDoctorName || (doctors.length > 0 ? doctors[0] : "")}
+                    onValueChange={handleDoctorSelect}
+                >
+                    <SelectTrigger className="h-11 bg-white border-slate-200 focus:ring-2 focus:ring-blue-500/20 rounded-xl font-medium text-slate-800">
+                        <div className="flex items-center gap-2 truncate">
+                            <User className="w-4 h-4 text-blue-500 shrink-0" />
+                            <SelectValue placeholder="Hekim seçiniz" />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {doctors.map((doc: string) => (
+                            <SelectItem key={doc} value={doc} className="text-sm font-medium">
+                                {doc}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-        </>
+        </div>
     );
 }
