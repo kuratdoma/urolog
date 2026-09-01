@@ -72,9 +72,24 @@ export const useSystemDefinitions = (initialDoctor: string = "", onDoctorFound?:
         });
     }, [bootstrap?.recete_sablonlari]);
 
+    const mesleklerQuery = useQuery({
+        queryKey: ["definitions", "meslekler"],
+        queryFn: () => api.definitions.meslekler.list(),
+        staleTime: DEFINITIONS_STALE_TIME,
+        enabled,
+    });
+
     const drugList = Array.isArray(drugsQuery.data) ? drugsQuery.data : [];
     const institutions = Array.isArray(bootstrap?.kurumlar) ? bootstrap.kurumlar.map(i => i.ad) : [];
-    const occupations = Array.isArray(bootstrap?.meslekler) ? bootstrap.meslekler.map(o => o.ad) : [];
+    const occupations = useMemo(() => {
+        if (Array.isArray(bootstrap?.meslekler) && bootstrap.meslekler.length > 0) {
+            return bootstrap.meslekler.map(o => o.ad).filter(Boolean);
+        }
+        if (Array.isArray(mesleklerQuery.data) && mesleklerQuery.data.length > 0) {
+            return mesleklerQuery.data.map(o => o.ad).filter(Boolean);
+        }
+        return [];
+    }, [bootstrap?.meslekler, mesleklerQuery.data]);
     const insurances = Array.isArray(bootstrap?.sigortalar) ? bootstrap.sigortalar.map(i => i.ad) : [];
     const followUpSubjects = Array.isArray(bootstrap?.takip_konulari) ? bootstrap.takip_konulari.map(f => f.ad) : [];
     const appointmentTypes: RandevuTuru[] = Array.isArray(bootstrap?.randevu_turleri) ? bootstrap.randevu_turleri : [];
