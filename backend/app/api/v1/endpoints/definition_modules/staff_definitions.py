@@ -6,7 +6,6 @@ from app.api import deps
 from app.core.cache_invalidation import CacheNS, invalidate
 from app.models.user import User
 from app.repositories.definition_repository import DefinitionRepository
-from app.repositories.system_repository import SystemRepository
 from app.schemas.definition import (
     Definition,
     DefinitionCreate,
@@ -70,7 +69,7 @@ async def delete_doktor(id: int, db: AsyncSession = Depends(deps.get_db), curren
 # Cerrahlar
 @router.get("/cerrahlar", response_model=List[Definition])
 async def get_cerrahlar(db: AsyncSession = Depends(deps.get_db)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     return await repo.get_cerrahlar()
 
 
@@ -78,33 +77,37 @@ async def get_cerrahlar(db: AsyncSession = Depends(deps.get_db)):
 async def create_cerrah(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
-    return await repo.create_cerrah(ad=obj_in.ad, aktif=obj_in.aktif)
+    repo = DefinitionRepository(db)
+    result = await repo.create_cerrah(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/cerrahlar/{id}", response_model=Definition)
 async def update_cerrah(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     db_obj = await repo.update_cerrah(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Cerrah bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return db_obj
 
 
 @router.delete("/cerrahlar/{id}")
 async def delete_cerrah(id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.get_current_active_superuser)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     if not await repo.delete_cerrah(id):
         raise HTTPException(status_code=404, detail="Cerrah bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
 # Anestezi Personelleri
 @router.get("/anestezi-personelleri", response_model=List[Definition])
 async def get_anestezi_personelleri(db: AsyncSession = Depends(deps.get_db)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     return await repo.get_anestezi_personelleri()
 
 
@@ -112,33 +115,37 @@ async def get_anestezi_personelleri(db: AsyncSession = Depends(deps.get_db)):
 async def create_anestezi_personeli(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
-    return await repo.create_anestezi_personeli(ad=obj_in.ad, aktif=obj_in.aktif)
+    repo = DefinitionRepository(db)
+    result = await repo.create_anestezi_personeli(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/anestezi-personelleri/{id}", response_model=Definition)
 async def update_anestezi_personeli(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     db_obj = await repo.update_anestezi_personeli(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Anestezi personeli bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return db_obj
 
 
 @router.delete("/anestezi-personelleri/{id}")
 async def delete_anestezi_personeli(id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.get_current_active_superuser)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     if not await repo.delete_anestezi_personeli(id):
         raise HTTPException(status_code=404, detail="Anestezi personeli bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
 # Hemşireler
 @router.get("/hemsireler", response_model=List[Definition])
 async def get_hemsireler(db: AsyncSession = Depends(deps.get_db)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     return await repo.get_hemsireler()
 
 
@@ -146,33 +153,37 @@ async def get_hemsireler(db: AsyncSession = Depends(deps.get_db)):
 async def create_hemsire(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
-    return await repo.create_hemsire(ad=obj_in.ad, aktif=obj_in.aktif)
+    repo = DefinitionRepository(db)
+    result = await repo.create_hemsire(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/hemsireler/{id}", response_model=Definition)
 async def update_hemsire(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     db_obj = await repo.update_hemsire(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Hemşire bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return db_obj
 
 
 @router.delete("/hemsireler/{id}")
 async def delete_hemsire(id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.get_current_active_superuser)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     if not await repo.delete_hemsire(id):
         raise HTTPException(status_code=404, detail="Hemşire bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
 # Asistanlar
 @router.get("/asistanlar", response_model=List[Definition])
 async def get_asistanlar(db: AsyncSession = Depends(deps.get_db)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     return await repo.get_asistanlar()
 
 
@@ -180,24 +191,28 @@ async def get_asistanlar(db: AsyncSession = Depends(deps.get_db)):
 async def create_asistan(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
-    return await repo.create_asistan(ad=obj_in.ad, aktif=obj_in.aktif)
+    repo = DefinitionRepository(db)
+    result = await repo.create_asistan(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/asistanlar/{id}", response_model=Definition)
 async def update_asistan(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     db_obj = await repo.update_asistan(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Asistan bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return db_obj
 
 
 @router.delete("/asistanlar/{id}")
 async def delete_asistan(id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.get_current_active_superuser)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     if not await repo.delete_asistan(id):
         raise HTTPException(status_code=404, detail="Asistan bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return {"status": "success"}

@@ -142,13 +142,29 @@ async def get_anestezi_turleri(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_anestezi_turleri()
 
 
+@router.get("/anestezi-tipleri", response_model=List[Definition], include_in_schema=False)
+async def get_anestezi_tipleri_alias(db: AsyncSession = Depends(deps.get_db)):
+    repo = DefinitionRepository(db)
+    return await repo.get_anestezi_turleri()
+
+
 @router.post("/anestezi-turleri", response_model=Definition)
 async def create_anestezi_turu(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
     repo = DefinitionRepository(db)
     result = await repo.create_anestezi_turu(ad=obj_in.ad, aktif=obj_in.aktif)
-    await invalidate(CacheNS.ANESTEZI)
+    await invalidate(CacheNS.ANESTEZI, CacheNS.BOOTSTRAP)
+    return result
+
+
+@router.post("/anestezi-tipleri", response_model=Definition, include_in_schema=False)
+async def create_anestezi_tipi_alias(
+    obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
+):
+    repo = DefinitionRepository(db)
+    result = await repo.create_anestezi_turu(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.ANESTEZI, CacheNS.BOOTSTRAP)
     return result
 
 
@@ -160,7 +176,19 @@ async def update_anestezi_turu(
     db_obj = await repo.update_anestezi_turu(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Anestezi türü bulunamadı")
-    await invalidate(CacheNS.ANESTEZI)
+    await invalidate(CacheNS.ANESTEZI, CacheNS.BOOTSTRAP)
+    return db_obj
+
+
+@router.put("/anestezi-tipleri/{id}", response_model=Definition, include_in_schema=False)
+async def update_anestezi_tipi_alias(
+    id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
+):
+    repo = DefinitionRepository(db)
+    db_obj = await repo.update_anestezi_turu(id, ad=obj_in.ad, aktif=obj_in.aktif)
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Anestezi türü bulunamadı")
+    await invalidate(CacheNS.ANESTEZI, CacheNS.BOOTSTRAP)
     return db_obj
 
 
@@ -169,7 +197,16 @@ async def delete_anestezi_turu(id: int, db: AsyncSession = Depends(deps.get_db),
     repo = DefinitionRepository(db)
     if not await repo.delete_anestezi_turu(id):
         raise HTTPException(status_code=404, detail="Anestezi türü bulunamadı")
-    await invalidate(CacheNS.ANESTEZI)
+    await invalidate(CacheNS.ANESTEZI, CacheNS.BOOTSTRAP)
+    return {"status": "success"}
+
+
+@router.delete("/anestezi-tipleri/{id}", include_in_schema=False)
+async def delete_anestezi_tipi_alias(id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.get_current_active_superuser)):
+    repo = DefinitionRepository(db)
+    if not await repo.delete_anestezi_turu(id):
+        raise HTTPException(status_code=404, detail="Anestezi türü bulunamadı")
+    await invalidate(CacheNS.ANESTEZI, CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
@@ -258,7 +295,7 @@ async def delete_takip_konusu(id: int, db: AsyncSession = Depends(deps.get_db), 
 # Hastaneler
 @router.get("/hastaneler", response_model=List[Definition])
 async def get_hastaneler(db: AsyncSession = Depends(deps.get_db)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     return await repo.get_hastaneler()
 
 
@@ -266,26 +303,30 @@ async def get_hastaneler(db: AsyncSession = Depends(deps.get_db)):
 async def create_hastane(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
-    return await repo.create_hastane(ad=obj_in.ad, aktif=obj_in.aktif)
+    repo = DefinitionRepository(db)
+    result = await repo.create_hastane(ad=obj_in.ad, aktif=obj_in.aktif)
+    await invalidate(CacheNS.BOOTSTRAP)
+    return result
 
 
 @router.put("/hastaneler/{id}", response_model=Definition)
 async def update_hastane(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     db_obj = await repo.update_hastane(id, ad=obj_in.ad, aktif=obj_in.aktif)
     if not db_obj:
         raise HTTPException(status_code=404, detail="Hastane bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return db_obj
 
 
 @router.delete("/hastaneler/{id}")
 async def delete_hastane(id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.get_current_active_superuser)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     if not await repo.delete_hastane(id):
         raise HTTPException(status_code=404, detail="Hastane bulunamadı")
+    await invalidate(CacheNS.BOOTSTRAP)
     return {"status": "success"}
 
 
