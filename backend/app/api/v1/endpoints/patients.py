@@ -6,6 +6,7 @@ from app.core.limiter import limiter
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, cast, Date
+from sqlalchemy.exc import IntegrityError
 from fastapi.responses import StreamingResponse
 import csv
 import io
@@ -360,24 +361,39 @@ async def create_patient(
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """Create new patient."""
-    context = UserContext(user_id=current_user.id, username=current_user.username)
-    controller = PatientController(db, context)
-    patient_data = patient_in.model_dump()
-    controller_in = PatientDemographicsCreate(**patient_data)
-    patient = await controller.create_patient(controller_in)
     try:
-        patient_dict = patient.model_dump()
-        await AuditService.log(
-            db=db,
-            action="PATIENT_CREATE",
-            user_id=current_user.id,
-            resource_type="patient",
-            resource_id=str(patient_dict["id"]),
-            details={"status": "created"},
-        )
-    except Exception as e:
-        print(f"AUDIT LOG ERROR: {e}")
-    return patient
+        context = UserContext(user_id=current_user.id, username=current_user.username)
+        controller = PatientController(db, context)
+        patient_data = patient_in.model_dump()
+        controller_in = PatientDemographicsCreate(**patient_data)
+        patient = await controller.create_patient(controller_in)
+        try:
+            patient_dict = patient.model_dump()
+            await AuditService.log(
+                db=db,
+                action="PATIENT_CREATE",
+                user_id=current_user.id,
+                resource_type="patient",
+                resource_id=str(patient_dict["id"]),
+                details={"status": "created"},
+            )
+        except Exception as e:
+            print(f"AUDIT LOG ERROR: {e}")
+        return patient
+    except IntegrityError as ie:
+        await db.rollback()
+        err_msg = str(ie).lower()
+        if "tc_kimlik" in err_msg or "ix_hastalar_tc_kimlik" in err_msg:
+            raise HTTPException(status_code=400, detail="Bu T.C. Kimlik numarasına sahip başka bir hasta zaten kayıtlıdır.")
+        elif "protokol_no" in err_msg:
+            raise HTTPException(status_code=400, detail="Bu protokol numarasına sahip başka bir hasta zaten kayıtlıdır.")
+        raise HTTPException(status_code=400, detail="Mükerrer veya geçersiz veri girişi nedeniyle kayıt yapılamadı.")
+    except HTTPException as he:
+        raise he
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
 # --- INSTANCE ROUTES (DYNAMIC) ---
@@ -538,6 +554,14 @@ async def update_patient(
         except Exception:
             pass
         return updated_patient
+    except IntegrityError as ie:
+        await db.rollback()
+        err_msg = str(ie).lower()
+        if "tc_kimlik" in err_msg or "ix_hastalar_tc_kimlik" in err_msg:
+            raise HTTPException(status_code=400, detail="Bu T.C. Kimlik numarasına sahip başka bir hasta zaten kayıtlıdır.")
+        elif "protokol_no" in err_msg:
+            raise HTTPException(status_code=400, detail="Bu protokol numarasına sahip başka bir hasta zaten kayıtlıdır.")
+        raise HTTPException(status_code=400, detail="Mükerrer veya geçersiz veri girişi nedeniyle kayıt güncellenemedi.")
     except HTTPException as he:
         raise he
     except Exception:
