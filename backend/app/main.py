@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.core.config import settings
 from app.core.exceptions import AppError, app_error_handler
+import app.db.base
 
 from app.api.v1.endpoints import (
     auth,

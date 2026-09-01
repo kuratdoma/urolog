@@ -145,10 +145,11 @@ export default function OperationPage() {
     const templates = useMemo(() => {
         if (shardedTemplates.length > 0) {
             return shardedTemplates.map(t => {
-                const parts = t.icerik.split('|');
+                const icerik = t.icerik || '';
+                const parts = icerik.includes('|') ? icerik.split('|') : [];
                 return {
-                    name: t.kod || parts[0] || "Başlıksız",
-                    note: parts[1] || t.icerik
+                    name: t.kod || (parts.length > 1 ? parts[0] : "Başlıksız"),
+                    note: parts.length > 1 ? parts.slice(1).join('|') : icerik
                 };
             });
         }

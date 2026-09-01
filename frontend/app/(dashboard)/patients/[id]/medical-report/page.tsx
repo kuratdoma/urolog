@@ -149,10 +149,11 @@ export default function MedicalReportPage() {
     useEffect(() => {
         if (shardedTemplates.length > 0) {
             setTemplates(shardedTemplates.map(t => {
-                const parts = t.icerik.split('|');
+                const icerik = t.icerik || '';
+                const parts = icerik.includes('|') ? icerik.split('|') : [];
                 return {
-                    title: t.kod || parts[0] || "Başlıksız",
-                    text: parts[1] || t.icerik
+                    title: t.kod || (parts.length > 1 ? parts[0] : "Başlıksız"),
+                    text: parts.length > 1 ? parts.slice(1).join('|') : icerik
                 };
             }));
         } else {

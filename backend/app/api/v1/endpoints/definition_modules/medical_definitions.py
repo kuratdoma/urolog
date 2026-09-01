@@ -163,23 +163,24 @@ async def delete_recete_sablonu(id: int, db: AsyncSession = Depends(deps.get_db)
 # Genel Şablonlar
 @router.get("/sablonlar", response_model=List[SablonTanim])
 async def get_sablonlar(
-    alan: Optional[str] = Query(None, description="Filtrelenecek alan/modül adı (örn. 'sikayet', 'oyku')"),
+    grup: Optional[str] = Query(None, description="Filtrelenecek grup (örn. 'operation_note', 'medical_intervention')"),
+    alan: Optional[str] = Query(None, description="Grup takma adı"),
     db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
-    return await repo.get_sablonlar(alan=alan)
+    repo = DefinitionRepository(db)
+    target_group = grup or alan
+    return await repo.get_sablonlar(grup=target_group)
 
 
 @router.post("/sablonlar", response_model=SablonTanim)
 async def create_sablon(
     obj_in: SablonTanimCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     return await repo.create_sablon(
-        alan=obj_in.alan,
-        baslik=obj_in.baslik,
+        grup=obj_in.grup,
         icerik=obj_in.icerik,
-        sira=obj_in.sira,
+        kod=obj_in.kod,
         aktif=obj_in.aktif
     )
 
@@ -188,13 +189,12 @@ async def create_sablon(
 async def update_sablon(
     id: int, obj_in: SablonTanimCreate, db: AsyncSession = Depends(deps.get_db)
 ):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     db_obj = await repo.update_sablon(
         id,
-        alan=obj_in.alan,
-        baslik=obj_in.baslik,
+        grup=obj_in.grup,
         icerik=obj_in.icerik,
-        sira=obj_in.sira,
+        kod=obj_in.kod,
         aktif=obj_in.aktif
     )
     if not db_obj:
@@ -204,7 +204,7 @@ async def update_sablon(
 
 @router.delete("/sablonlar/{id}")
 async def delete_sablon(id: int, db: AsyncSession = Depends(deps.get_db), current_user: User = Depends(deps.get_current_active_superuser)):
-    repo = SystemRepository(db)
+    repo = DefinitionRepository(db)
     if not await repo.delete_sablon(id):
         raise HTTPException(status_code=404, detail="Şablon bulunamadı")
     return {"status": "success"}
