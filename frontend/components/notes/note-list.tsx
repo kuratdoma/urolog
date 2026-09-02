@@ -14,8 +14,9 @@ import {
 import {
     Tabs, TabsList, TabsTrigger,
 } from '@/components/ui/tabs';
-import { Check, X, User, Send, Clock, CheckCircle2, XCircle, Plus } from 'lucide-react';
+import { Check, X, User, Send, Clock, CheckCircle2, XCircle, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { api, PersonalNote, PersonalNoteCreate, RecurrenceType, NoteSortBy, NoteScope } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { NoteFormDialog } from './note-form-dialog';
 import { NOTE_COLOR_CARD_BG } from './note-colors';
@@ -33,8 +34,48 @@ const SORT_LABELS: Record<NoteSortBy, string> = {
     importance: 'Öneme göre',
 };
 
+export function ExpandableNoteContent({ content, isDone }: { content: string; isDone: boolean }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Derived detection: check if content exceeds ~3 lines (either by 3+ line breaks or >150 chars)
+    const lineBreaks = (content.match(/\n/g) || []).length;
+    const isLong = lineBreaks >= 3 || content.length > 150;
+
+    return (
+        <div className="space-y-1">
+            <p
+                className={cn(
+                    'text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words transition-all',
+                    isLong && !isExpanded && 'line-clamp-3',
+                    isDone && 'line-through text-muted-foreground'
+                )}
+            >
+                {content}
+            </p>
+            {isLong && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsExpanded((prev) => !prev);
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors py-0.5 cursor-pointer select-none group"
+                >
+                    <span>{isExpanded ? 'Daha az göster' : 'Daha fazla göster'}</span>
+                    {isExpanded ? (
+                        <ChevronUp className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5" />
+                    ) : (
+                        <ChevronDown className="h-3.5 w-3.5 transition-transform group-hover:translate-y-0.5" />
+                    )}
+                </button>
+            )}
+        </div>
+    );
+}
+
 export function NoteList() {
     const queryClient = useQueryClient();
+    const currentUser = useAuthStore((state) => state.user);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingNote, setEditingNote] = useState<PersonalNote | null>(null);
     const [sortBy, setSortBy] = useState<NoteSortBy>('due_date');
@@ -69,8 +110,9 @@ export function NoteList() {
             }
             setDialogOpen(false);
             invalidate();
-        } catch (e: any) {
-            toast.error(e.message || 'Bir hata oluştu');
+        } catch (e: unknown) {
+            const err = e as { message?: string };
+            toast.error(err.message || 'Bir hata oluştu');
         }
     };
 
@@ -79,8 +121,9 @@ export function NoteList() {
             await api.personalNotes.delete(note.id);
             toast.success('Not silindi');
             invalidate();
-        } catch (e: any) {
-            toast.error(e.message || 'Bir hata oluştu');
+        } catch (e: unknown) {
+            const err = e as { message?: string };
+            toast.error(err.message || 'Bir hata oluştu');
         }
     };
 
@@ -88,8 +131,9 @@ export function NoteList() {
         try {
             await api.personalNotes.update(note.id, { is_done: checked });
             invalidate();
-        } catch (e: any) {
-            toast.error(e.message || 'Bir hata oluştu');
+        } catch (e: unknown) {
+            const err = e as { message?: string };
+            toast.error(err.message || 'Bir hata oluştu');
         }
     };
 
@@ -99,8 +143,9 @@ export function NoteList() {
             await api.personalNotes.accept(note.id);
             toast.success(`"${note.title}" görevi kabul edildi.`);
             invalidate();
-        } catch (e: any) {
-            toast.error(e.message || 'Görev kabul edilirken hata oluştu.');
+        } catch (e: unknown) {
+            const err = e as { message?: string };
+            toast.error(err.message || 'Görev kabul edilirken hata oluştu.');
         } finally {
             setActionLoadingId(null);
         }
@@ -112,8 +157,9 @@ export function NoteList() {
             await api.personalNotes.reject(note.id);
             toast.info(`"${note.title}" görevi reddedildi.`);
             invalidate();
-        } catch (e: any) {
-            toast.error(e.message || 'Görev reddedilirken hata oluştu.');
+        } catch (e: unknown) {
+            const err = e as { message?: string };
+            toast.error(err.message || 'Görev reddedilirken hata oluştu.');
         } finally {
             setActionLoadingId(null);
         }
@@ -154,7 +200,7 @@ export function NoteList() {
                     <TabsTrigger value="all">Tümü</TabsTrigger>
                     <TabsTrigger value="my_notes">Kişisel</TabsTrigger>
                     <TabsTrigger value="assigned_to_me">Bana Atananlar</TabsTrigger>
-                    <TabsTrigger value="assigned_by_me">Atadıklarım</TabsTrigger>
+                    <TabsTrigger value="assigned_by_me">Başkalarına Atanan</TabsTrigger>
                 </TabsList>
             </Tabs>
 
@@ -168,7 +214,10 @@ export function NoteList() {
 
             <div className="space-y-2.5">
                 {notes.map((note) => {
-                    const isPendingForMe = note.assignment_status === 'pending' && note.assigned_to_id;
+                    const isPendingForMe =
+                        note.assignment_status === 'pending' &&
+                        note.assigned_to_id &&
+                        (!currentUser || note.assigned_to_id === currentUser.id);
                     const hasAssignment = note.assigned_to_id && note.user_id !== note.assigned_to_id;
 
                     return (
@@ -232,9 +281,7 @@ export function NoteList() {
                                     </div>
 
                                     {note.content && (
-                                        <p className={cn('text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap', note.is_done && 'line-through text-muted-foreground')}>
-                                            {note.content}
-                                        </p>
+                                        <ExpandableNoteContent content={note.content} isDone={note.is_done} />
                                     )}
 
                                     <p className="text-xs text-muted-foreground">

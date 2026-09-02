@@ -53,6 +53,17 @@ def test_list_notes_returns_only_current_user_notes(mock_list_notes):
     mock_list_notes.assert_awaited_once_with(1, include_done=True, sort_by="due_date", scope="all")
 
 
+@pytest.mark.parametrize("scope", ["all", "my_notes", "assigned_to_me", "assigned_by_me"])
+@patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.list_notes")
+def test_list_notes_with_different_scopes(mock_list_notes, scope):
+    mock_list_notes.return_value = [_note(user_id=1)]
+
+    response = client.get(f"/api/v1/notes?scope={scope}")
+
+    assert response.status_code == 200
+    mock_list_notes.assert_awaited_once_with(1, include_done=True, sort_by="due_date", scope=scope)
+
+
 @patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.list_colleagues")
 def test_list_colleagues_success(mock_colleagues):
     mock_colleagues.return_value = [

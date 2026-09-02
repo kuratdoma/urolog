@@ -4,16 +4,24 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill, Pencil, FileText, Check, PhoneOff } from 'lucide-react';
+import { Calendar as CalendarIcon, X, ChevronRight, User, FlaskConical, Stethoscope, ClipboardList, Pill, Pencil, Check, PhoneOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/lib/api';
 import { usePatientStore } from '@/stores/patient-store';
 
+export interface CalendarAgendaEvent {
+    id: string;
+    title: string;
+    start: Date;
+    end: Date;
+    resource: Appointment;
+}
+
 interface CalendarAgendaProps {
     date: Date;
-    appointments: any[];
+    appointments: CalendarAgendaEvent[];
     showSidebar: boolean;
     toggleSidebar: () => void;
     onAppointmentClick?: (apt: Appointment) => void;
@@ -92,7 +100,6 @@ export function CalendarAgenda({
                 ) : (
                     appointments.map((evt) => {
                         const isPast = evt.end < new Date();
-                        const isNow = evt.start <= new Date() && evt.end >= new Date();
                         const isConfirmed = evt.resource.status === 'confirmed';
                         const isUnreachable = evt.resource.status === 'unreachable';
                         const brief = evt.resource?.clinical_brief;
@@ -105,20 +112,20 @@ export function CalendarAgenda({
                                 onClick={() => handleCardClick(evt.resource)}
                                 className={cn(
                                     "group flex flex-col p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-lg relative overflow-hidden",
-                                    evt.resource.status === 'blocked' ? "bg-red-50 border-red-100" :
-                                        isConfirmed ? "bg-emerald-50/90 border-emerald-300 hover:bg-emerald-100/60 shadow-xs" :
-                                            isUnreachable ? "bg-amber-50/90 border-amber-300 hover:bg-amber-100/60 shadow-xs" :
-                                                (isNow ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-100 hover:border-blue-300 hover:bg-slate-50/40"),
+                                    evt.resource.status === 'blocked' ? "bg-red-50 border-red-200" :
+                                        isConfirmed ? "bg-emerald-50/95 border-emerald-300 hover:bg-emerald-100/80 shadow-xs" :
+                                            isUnreachable ? "bg-amber-50/95 border-amber-300 hover:bg-amber-100/80 shadow-xs" :
+                                                "bg-blue-50/90 border-blue-300 hover:bg-blue-100/80 shadow-xs",
                                     isPast && "opacity-60 bg-slate-50/50 grayscale-[0.5]"
                                 )}
                             >
                                 {/* Status Indicator Bar */}
                                 <div className={cn(
                                     "absolute left-0 top-0 bottom-0 w-1.5",
-                                    isConfirmed ? "bg-emerald-500" :
+                                    isConfirmed ? "bg-emerald-600" :
                                         isUnreachable ? "bg-amber-500" :
                                             evt.resource.status === 'cancelled' ? "bg-red-500" :
-                                                "bg-blue-500"
+                                                "bg-blue-600"
                                 )} />
 
                                 <div className="flex justify-between items-start mb-2 pl-2">
@@ -131,16 +138,21 @@ export function CalendarAgenda({
                                     </div>
                                     <div className="flex items-center gap-1">
                                         {isConfirmed && (
-                                            <Badge className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-emerald-100 text-emerald-800 border-emerald-300 shadow-2xs flex items-center gap-0.5">
-                                                <Check className="w-2.5 h-2.5" /> Onaylı
+                                            <Badge className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-emerald-100 text-emerald-900 border-emerald-300 shadow-2xs flex items-center gap-1">
+                                                <Check className="w-2.5 h-2.5 text-emerald-600" /> Onaylı
                                             </Badge>
                                         )}
                                         {isUnreachable && (
-                                            <Badge className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-amber-100 text-amber-800 border-amber-300 shadow-2xs flex items-center gap-0.5">
-                                                <PhoneOff className="w-2.5 h-2.5" /> Ulaşılamadı
+                                            <Badge className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-amber-100 text-amber-900 border-amber-300 shadow-2xs flex items-center gap-1">
+                                                <PhoneOff className="w-2.5 h-2.5 text-amber-600" /> Ulaşılamadı
                                             </Badge>
                                         )}
-                                        <Badge variant="outline" className="text-[9px] font-bold py-0 h-4 uppercase tracking-tighter bg-white shadow-sm">
+                                        <Badge variant="outline" className={cn(
+                                            "text-[9px] font-bold py-0 h-4 uppercase tracking-tighter shadow-2xs",
+                                            isConfirmed ? "bg-emerald-100/80 text-emerald-900 border-emerald-300" :
+                                                isUnreachable ? "bg-amber-100/80 text-amber-900 border-amber-300" :
+                                                    "bg-blue-100/80 text-blue-900 border-blue-300"
+                                        )}>
                                             {evt.resource.type || 'Muayene'}
                                         </Badge>
                                         <Button
@@ -252,7 +264,7 @@ export function CalendarAgenda({
                                         </div>
                                         {hasNotes && (
                                             <p className="text-[10px] text-slate-600 italic leading-tight line-clamp-2 pl-4">
-                                                "{truncate(hasNotes, 80)}"
+                                                &ldquo;{truncate(hasNotes, 80)}&rdquo;
                                             </p>
                                         )}
                                     </div>

@@ -57,24 +57,15 @@ export function CalendarEvent({
 
     // Status Based Styling
     const statusStyles: Record<string, string> = {
-        'scheduled': 'bg-blue-100 border-blue-600 text-blue-900 hover:bg-blue-200',
-        'confirmed': 'bg-emerald-100 border-emerald-600 text-emerald-950 hover:bg-emerald-200/90 font-semibold shadow-xs',
-        'unreachable': 'bg-amber-100 border-amber-500 text-amber-950 hover:bg-amber-200/90 font-semibold shadow-xs',
+        'scheduled': 'bg-blue-100/95 border-blue-500 text-blue-950 hover:bg-blue-200/90 font-medium shadow-2xs',
+        'confirmed': 'bg-emerald-100/95 border-emerald-600 text-emerald-950 hover:bg-emerald-200/90 font-semibold shadow-xs',
+        'unreachable': 'bg-amber-100/95 border-amber-500 text-amber-950 hover:bg-amber-200/90 font-semibold shadow-xs',
         'cancelled': 'bg-red-100 border-red-600 text-red-900 decoration-line-through opacity-70 hover:bg-red-200',
         'completed': 'bg-slate-100 border-slate-600 text-slate-900 hover:bg-slate-200',
         'blocked': 'bg-red-50 border-red-800 text-red-900 hover:bg-red-100 font-black',
     };
 
     const currentStyle = statusStyles[apt.status] || statusStyles['scheduled'];
-
-    const statusDotColor = {
-        'scheduled': 'bg-blue-500',
-        'confirmed': 'bg-emerald-600 ring-2 ring-emerald-300',
-        'unreachable': 'bg-amber-500 ring-2 ring-amber-300',
-        'cancelled': 'bg-slate-400',
-        'completed': 'bg-blue-500',
-        'blocked': 'bg-red-800'
-    }[apt.status] || 'bg-blue-500';
 
     const renderContent = () => {
         const timeRange = `${format(event.start, 'HH:mm')}-${format(event.end, 'HH:mm')}`;
@@ -83,15 +74,11 @@ export function CalendarEvent({
             const isConfirmed = apt.status === 'confirmed';
             const isUnreachable = apt.status === 'unreachable';
             return (
-                <div className={cn(
-                    "flex flex-col h-full pl-2 py-1 pr-1 border-slate-900/10 relative",
-                    isConfirmed && "bg-emerald-50/60",
-                    isUnreachable && "bg-amber-50/70"
-                )}>
+                <div className="flex flex-col h-full pl-2 py-1 pr-1 border-slate-900/10 relative">
                     <div className="flex items-center justify-between mb-0.5 min-w-0">
                         <span className={cn(
-                            "text-[10px] font-black leading-none opacity-80 whitespace-nowrap px-1 rounded",
-                            isConfirmed ? "bg-emerald-200/80 text-emerald-950" : isUnreachable ? "bg-amber-200/90 text-amber-950" : "bg-black/5"
+                            "text-[10px] font-black leading-none opacity-90 whitespace-nowrap px-1 py-0.5 rounded",
+                            isConfirmed ? "bg-emerald-200 text-emerald-950" : isUnreachable ? "bg-amber-200 text-amber-950" : "bg-blue-200 text-blue-950"
                         )}>
                             {timeRange}
                         </span>
@@ -120,18 +107,18 @@ export function CalendarEvent({
                             {apt.type && (
                                 <Badge variant="secondary" className={cn(
                                     "text-[9px] h-3.5 px-1 border-none font-bold uppercase",
-                                    isConfirmed ? "bg-emerald-200/90 text-emerald-950" : isUnreachable ? "bg-amber-200/90 text-amber-950" : "bg-white/40 text-current"
+                                    isConfirmed ? "bg-emerald-200 text-emerald-950" : isUnreachable ? "bg-amber-200 text-amber-950" : "bg-blue-200 text-blue-900"
                                 )}>
                                     {apt.type}
                                 </Badge>
                             )}
                             {isConfirmed && (
-                                <Badge variant="outline" className="text-[9px] h-3.5 px-1 bg-emerald-600 text-white border-none font-bold">
+                                <Badge variant="outline" className="text-[9px] h-3.5 px-1.5 bg-emerald-600 text-white border-none font-bold shadow-xs">
                                     ONAYLI
                                 </Badge>
                             )}
                             {isUnreachable && (
-                                <Badge variant="outline" className="text-[9px] h-3.5 px-1 bg-amber-500 text-white border-none font-bold">
+                                <Badge variant="outline" className="text-[9px] h-3.5 px-1.5 bg-amber-500 text-white border-none font-bold shadow-xs">
                                     ULAŞILAMADI
                                 </Badge>
                             )}
@@ -148,15 +135,11 @@ export function CalendarEvent({
             const isConfirmed = apt.status === 'confirmed';
             const isUnreachable = apt.status === 'unreachable';
             return (
-                <div className={cn(
-                    "flex flex-col justify-center h-full pl-1 overflow-hidden space-y-0.5 relative",
-                    isConfirmed && "bg-emerald-50/60",
-                    isUnreachable && "bg-amber-50/70"
-                )}>
+                <div className="flex flex-col justify-center h-full pl-1 overflow-hidden space-y-0.5 relative">
                     <div className="flex items-center justify-between min-w-0 pr-1">
                         <span className={cn(
-                            "text-[9px] font-bold opacity-80 whitespace-nowrap px-0.5 rounded",
-                            isConfirmed ? "bg-emerald-200/90 text-emerald-950" : isUnreachable ? "bg-amber-200/90 text-amber-950" : ""
+                            "text-[9px] font-bold opacity-90 whitespace-nowrap px-1 py-0.5 rounded",
+                            isConfirmed ? "bg-emerald-200 text-emerald-950 font-black" : isUnreachable ? "bg-amber-200 text-amber-950 font-black" : "bg-blue-200 text-blue-950 font-bold"
                         )}>
                             {timeRange}
                         </span>
@@ -172,19 +155,19 @@ export function CalendarEvent({
                     <div className="flex items-center gap-1 mt-0.5">
                         {apt.type && (
                             <span className={cn(
-                                "text-[9px] opacity-80 leading-tight font-medium px-0.5 rounded",
-                                isConfirmed ? "bg-emerald-200 text-emerald-950" : isUnreachable ? "bg-amber-200 text-amber-950" : "bg-white/30"
+                                "text-[9px] leading-tight font-medium px-1 py-0.2 rounded",
+                                isConfirmed ? "bg-emerald-200 text-emerald-950 font-semibold" : isUnreachable ? "bg-amber-200 text-amber-950 font-semibold" : "bg-blue-200 text-blue-900"
                             )}>
                                 {apt.type}
                             </span>
                         )}
                         {isConfirmed && (
-                            <span className="text-[8px] bg-emerald-600 text-white font-bold px-1 rounded">
+                            <span className="text-[8px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded shadow-2xs">
                                 ONAYLI
                             </span>
                         )}
                         {isUnreachable && (
-                            <span className="text-[8px] bg-amber-500 text-white font-bold px-1 rounded">
+                            <span className="text-[8px] bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded shadow-2xs">
                                 ULAŞILAMADI
                             </span>
                         )}
@@ -195,40 +178,59 @@ export function CalendarEvent({
             const isConfirmed = apt.status === 'confirmed';
             const isUnreachable = apt.status === 'unreachable';
             const statusTextColor = {
-                'scheduled': 'text-slate-900',
+                'scheduled': 'text-blue-950 font-semibold',
                 'confirmed': 'text-emerald-950 font-bold',
                 'unreachable': 'text-amber-950 font-bold',
                 'cancelled': 'text-red-400 line-through opacity-70',
-                'completed': 'text-blue-700',
+                'completed': 'text-slate-700',
                 'blocked': 'text-red-900 font-black',
-            }[apt.status] || 'text-slate-900';
+            }[apt.status] || 'text-blue-950 font-semibold';
 
             const statusBgColor = isConfirmed
-                ? 'bg-emerald-100/95 border border-emerald-400 text-emerald-950 font-bold shadow-2xs'
+                ? 'bg-emerald-100 border border-emerald-400 text-emerald-950 font-bold shadow-2xs hover:bg-emerald-200'
                 : isUnreachable
-                    ? 'bg-amber-100/95 border border-amber-400 text-amber-950 font-bold shadow-2xs'
+                    ? 'bg-amber-100 border border-amber-400 text-amber-950 font-bold shadow-2xs hover:bg-amber-200'
                     : apt.status === 'cancelled'
                         ? 'bg-red-50/50 opacity-60'
-                        : 'bg-transparent hover:bg-slate-50/80';
+                        : apt.status === 'blocked'
+                            ? 'bg-red-100 border border-red-400 text-red-950 font-bold'
+                            : 'bg-blue-100 border border-blue-300 text-blue-950 font-semibold shadow-2xs hover:bg-blue-200';
 
             const doctorName = apt.doctor?.full_name || apt.doctor?.username;
             const details = [apt.type, doctorName].filter(Boolean).join(' - ');
 
             return (
                 <div className={cn("flex items-center h-5 w-full rounded px-1 transition-colors group/event", statusBgColor)}>
-                    <div className={cn("w-[3.5px] h-[13px] shrink-0 rounded-full mr-1", isConfirmed ? "bg-emerald-600" : isUnreachable ? "bg-amber-500" : statusDotColor)} />
+                    <div className={cn(
+                        "w-[3.5px] h-[13px] shrink-0 rounded-full mr-1",
+                        isConfirmed ? "bg-emerald-600" :
+                        isUnreachable ? "bg-amber-500" :
+                        apt.status === 'cancelled' ? "bg-red-400" :
+                        apt.status === 'blocked' ? "bg-red-700" :
+                        "bg-blue-600"
+                    )} />
                     <div className={cn("flex-1 flex items-center justify-between min-w-0 gap-1", statusTextColor)}>
                         <div className="flex items-center gap-1 min-w-0 flex-1">
                             <span className="text-[10.5px] truncate leading-none">
                                 {event.title}
                             </span>
                             {details && (
-                                <span className={cn("text-[9px] opacity-60 truncate leading-none font-normal", isConfirmed ? "text-emerald-800 font-medium opacity-85" : isUnreachable ? "text-amber-800 font-medium opacity-85" : "")}>
+                                <span className={cn(
+                                    "text-[9px] opacity-75 truncate leading-none font-normal",
+                                    isConfirmed ? "text-emerald-800 font-medium opacity-90" :
+                                    isUnreachable ? "text-amber-800 font-medium opacity-90" :
+                                    "text-blue-800 font-normal opacity-80"
+                                )}>
                                     ({details})
                                 </span>
                             )}
                         </div>
-                        <span className={cn("text-[9.5px] font-bold opacity-75 shrink-0 tabular-nums", isConfirmed ? "text-emerald-950 font-black opacity-100" : isUnreachable ? "text-amber-950 font-black opacity-100" : "")}>
+                        <span className={cn(
+                            "text-[9.5px] font-bold shrink-0 tabular-nums",
+                            isConfirmed ? "text-emerald-950 font-black opacity-100" :
+                            isUnreachable ? "text-amber-950 font-black opacity-100" :
+                            "text-blue-950 font-bold opacity-80"
+                        )}>
                             {format(event.start, 'HH:mm')}
                         </span>
                     </div>
@@ -245,7 +247,7 @@ export function CalendarEvent({
     };
 
     const baseClasses = "w-full h-full cursor-pointer relative group flex flex-col transition-all overflow-hidden";
-    const viewClasses = view === Views.MONTH ? "justify-center p-0.5" : "border-l-[4px] py-1 pr-1";
+    const viewClasses = view === Views.MONTH ? "justify-center p-0 bg-transparent border-0 shadow-none" : "border-l-[4px] py-1 pr-1";
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -557,9 +559,9 @@ export function CalendarEvent({
                                         onStatusChange(apt.id, 'unreachable');
                                     }}
                                     variant="outline"
-                                    className="h-9 rounded-xl border-orange-200 text-orange-700 font-bold text-[11px] hover:bg-orange-50"
+                                    className="h-9 rounded-xl border-amber-300 text-amber-900 bg-amber-50/80 hover:bg-amber-100 font-bold text-[11px]"
                                 >
-                                    <PhoneOff className="w-3.5 h-3.5 mr-2" />
+                                    <PhoneOff className="w-3.5 h-3.5 mr-2 text-amber-600" />
                                     Ulaşılamadı
                                 </Button>
                                 {/* Google Takvim'e ekleme kaldırıldı; daha önce

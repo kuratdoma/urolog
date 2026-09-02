@@ -62,14 +62,8 @@ class PersonalNoteRepository:
             )
         else:  # "all"
             scope_cond = or_(
-                and_(
-                    PersonalNote.user_id == user_id,
-                    or_(PersonalNote.assigned_to_id.is_(None), PersonalNote.assigned_to_id == user_id),
-                ),
-                and_(
-                    PersonalNote.assigned_to_id == user_id,
-                    PersonalNote.assignment_status.in_([AssignmentStatus.accepted, AssignmentStatus.pending]),
-                ),
+                PersonalNote.user_id == user_id,
+                PersonalNote.assigned_to_id == user_id,
             )
 
         conditions.append(scope_cond)

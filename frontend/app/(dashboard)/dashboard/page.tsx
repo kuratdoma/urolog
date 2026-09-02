@@ -454,9 +454,23 @@ export default function DashboardPage() {
                                         const startTime = parseISO(apt.start);
                                         const endTime = parseISO(apt.end);
                                         const isPast = new Date() > endTime;
+                                        const isConfirmed = apt.status === 'confirmed';
+                                        const isUnreachable = apt.status === 'unreachable';
+                                        const isCancelled = apt.status === 'cancelled';
+                                        const isBlocked = apt.status === 'blocked';
+
+                                        const statusBorderClass = isConfirmed
+                                            ? 'border-l-4 border-l-emerald-500 bg-emerald-50/70 hover:bg-emerald-100/70'
+                                            : isUnreachable
+                                                ? 'border-l-4 border-l-amber-500 bg-amber-50/70 hover:bg-amber-100/70'
+                                                : isCancelled
+                                                    ? 'border-l-4 border-l-red-400 bg-red-50/40'
+                                                    : isBlocked
+                                                        ? 'border-l-4 border-l-red-600 bg-red-50/40'
+                                                        : 'border-l-4 border-l-blue-500 bg-blue-50/70 hover:bg-blue-100/70';
 
                                         return (
-                                            <div key={apt.id} className={cn("flex group hover:bg-slate-50 transition-colors", isPast && "opacity-60")}>
+                                            <div key={apt.id} className={cn("flex group transition-colors", statusBorderClass, isPast && "opacity-60")}>
                                                 {/* Time Column */}
                                                 <div className="w-20 shrink-0 border-r border-slate-100 p-3 flex flex-col items-end gap-1 text-right bg-slate-50/30">
                                                     <span className="text-sm font-bold text-slate-700 font-mono">{format(startTime, 'HH:mm')}</span>
@@ -540,11 +554,26 @@ export default function DashboardPage() {
                                                                                 apt.title
                                                                             )}
                                                                         </h4>
-                                                                        <div className="flex items-center gap-1 shrink-0">
-                                                                            {getStatusIcon(apt.status) && (
-                                                                                <span title={getStatusLabel(apt.status)} aria-label={getStatusLabel(apt.status)}>
-                                                                                    {getStatusIcon(apt.status)}
-                                                                                </span>
+                                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                                            {isConfirmed && (
+                                                                                <Badge className="text-[10px] font-bold h-4.5 px-1.5 bg-emerald-100 text-emerald-900 border-emerald-300 shadow-2xs flex items-center gap-1">
+                                                                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Onaylı
+                                                                                </Badge>
+                                                                            )}
+                                                                            {isUnreachable && (
+                                                                                <Badge className="text-[10px] font-bold h-4.5 px-1.5 bg-amber-100 text-amber-900 border-amber-300 shadow-2xs flex items-center gap-1">
+                                                                                    <PhoneOff className="w-3 h-3 text-amber-600" /> Ulaşılamadı
+                                                                                </Badge>
+                                                                            )}
+                                                                            {isCancelled && (
+                                                                                <Badge className="text-[10px] font-bold h-4.5 px-1.5 bg-red-100 text-red-800 border-red-200 flex items-center gap-1">
+                                                                                    <XCircle className="w-3 h-3 text-red-600" /> İptal
+                                                                                </Badge>
+                                                                            )}
+                                                                            {!isConfirmed && !isUnreachable && !isCancelled && !isBlocked && (
+                                                                                <Badge variant="outline" className="text-[10px] font-bold h-4.5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
+                                                                                    Planlı
+                                                                                </Badge>
                                                                             )}
 
                                                                             <DropdownMenu>
