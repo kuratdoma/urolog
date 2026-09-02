@@ -60,6 +60,7 @@ class PersonalNoteResponse(PersonalNoteBase):
     responded_at: Optional[datetime] = None
     popup_shown: bool = False
     is_done: bool
+    completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

@@ -61,16 +61,15 @@ async def mark_popup_seen(
 
 @router.get("", response_model=list[PersonalNoteResponse])
 async def list_notes(
-    include_done: bool = True,
     sort_by: Literal["due_date", "created_at", "importance"] = "due_date",
-    scope: Literal["all", "my_notes", "assigned_to_me", "assigned_by_me"] = "all",
+    scope: Literal["all", "my_notes", "assigned_to_me", "assigned_by_me", "archive"] = "all",
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
+    """Aktif scope'lar tamamlanmamış işleri döner; tamamlananlar "archive"
+    scope'unda tutulur ve is_done=false yapılarak geri alınabilir."""
     service = PersonalNoteService(db)
-    return await service.list_notes(
-        current_user.id, include_done=include_done, sort_by=sort_by, scope=scope
-    )
+    return await service.list_notes(current_user.id, sort_by=sort_by, scope=scope)
 
 
 @router.post("/{note_id}/accept", response_model=PersonalNoteResponse)

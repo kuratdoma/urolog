@@ -221,3 +221,43 @@ async def _delete_with_mocked_audit(service, user, now):
 
     with patch("app.services.personal_note_service.AuditService.log", new=AsyncMock()):
         return await service.delete_note(user, 5, now)
+
+
+def test_marking_done_stamps_completed_at_for_the_archive():
+    service, repo = _service_with_mock_repo()
+    user = _user()
+    note = PersonalNote(id=5, user_id=1, title="Reçete yenile", is_done=False, completed_at=None)
+    repo.get_note = AsyncMock(return_value=note)
+
+    result = asyncio.run(_update_with_mocked_audit(service, user, 5, {"is_done": True}))
+
+    assert result.is_done is True
+    assert result.completed_at is not None
+
+
+def test_restoring_from_archive_clears_completed_at():
+    service, repo = _service_with_mock_repo()
+    user = _user()
+    note = PersonalNote(
+        id=5, user_id=1, title="Reçete yenile",
+        is_done=True, completed_at=datetime(2026, 3, 10, tzinfo=UTC),
+    )
+    repo.get_note = AsyncMock(return_value=note)
+
+    result = asyncio.run(_update_with_mocked_audit(service, user, 5, {"is_done": False}))
+
+    assert result.is_done is False
+    assert result.completed_at is None
+
+
+def test_unrelated_update_does_not_touch_completed_at():
+    """Arşivdeki bir kaydın başlığı değişse bile tamamlanma damgası korunmalı."""
+    service, repo = _service_with_mock_repo()
+    user = _user()
+    stamped = datetime(2026, 3, 10, tzinfo=UTC)
+    note = PersonalNote(id=5, user_id=1, title="Eski", is_done=True, completed_at=stamped)
+    repo.get_note = AsyncMock(return_value=note)
+
+    result = asyncio.run(_update_with_mocked_audit(service, user, 5, {"is_done": True, "title": "Yeni"}))
+
+    assert result.completed_at == stamped

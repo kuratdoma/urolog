@@ -99,6 +99,9 @@ class PersonalNote(Base):
     ends_at = Column(DateTime(timezone=True), nullable=True)
 
     is_done = Column(Boolean, nullable=False, default=False)
+    # Tamamlanan not aktif listelerden çıkıp arşive düşer; completed_at arşivi
+    # en son tamamlanandan geriye sıralamak ve kartta tarihi göstermek için tutulur.
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     # Base zaten is_deleted sağlıyor; deleted_at ne zaman silindiğini audit için tutar
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
