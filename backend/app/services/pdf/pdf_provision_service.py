@@ -72,17 +72,20 @@ class PDFProvisionFormService:
         if not clean_text:
             return
 
-        # Adaptive fontsize based on content length and box size
-        total_len = len(clean_text)
-        num_lines = len(lines)
-
+        # Adaptive fontsize calculation: test from fontsize down to 5.5 to guarantee no overflow
         chosen_size = fontsize
-        if num_lines >= 4 or total_len > 350:
-            chosen_size = min(chosen_size, 7.0)
-        elif num_lines >= 3 or total_len > 200:
-            chosen_size = min(chosen_size, 7.5)
-        elif num_lines >= 2 or total_len > 120:
-            chosen_size = min(chosen_size, 8.0)
+        temp_doc = fitz.open()
+        temp_page = temp_doc.new_page()
+        current_fs = fontsize
+        while current_fs >= 5.5:
+            rc = temp_page.insert_textbox(rect, clean_text, fontname="Helvetica", fontsize=current_fs)
+            if rc >= 0:
+                chosen_size = current_fs
+                break
+            current_fs -= 0.5
+        else:
+            chosen_size = 5.5
+        temp_doc.close()
 
         self.page.insert_textbox(rect, clean_text, fontname=font, fontsize=chosen_size, color=color, align=align)
 
@@ -151,16 +154,15 @@ class PDFProvisionFormService:
         self._insert_text((content1_l + 5, 128), "Sigortalının Adı-Soyadı", bold=True, color=(0.8, 0, 0))
         self._insert_text((content1_l + 130, 128), f": {self.data.sigortali_adi_soyadi or ''}", bold=True)
 
-        # Row 3: Doğum Tarihi | Cinsiyet (Bay/Bayan Checkbox)
+        # Row 3: Doğum Tarihi | Cinsiyet (Erkek/Kadın Checkbox)
         self._insert_text((content1_l + 5, 156), "Doğum Tarihi", bold=True)
         self._insert_text((content1_l + 130, 156), f": {self.data.dogum_tarihi or ''}")
-
         self._insert_text((430, 156), "Cinsiyet :", bold=True)
         cinsiyet = (self.data.cinsiyet or "").lower()
-        bay_cb = "[X]" if any(k in cinsiyet for k in ["bay", "erkek", "e", "male"]) and "bayan" not in cinsiyet else "[  ]"
-        bayan_cb = "[X]" if any(k in cinsiyet for k in ["bayan", "kadin", "kadın", "k", "female"]) else "[  ]"
-        self._insert_text((475, 151), f"{bay_cb} Bay", fontsize=8.5)
-        self._insert_text((475, 163), f"{bayan_cb} Bayan", fontsize=8.5)
+        erkek_cb = "[X]" if any(k in cinsiyet for k in ["erkek", "bay", "e", "male"]) and "kad" not in cinsiyet and "bayan" not in cinsiyet else "[  ]"
+        kadin_cb = "[X]" if any(k in cinsiyet for k in ["kadin", "kadın", "bayan", "k", "female"]) else "[  ]"
+        self._insert_text((475, 151), f"{erkek_cb} Erkek", fontsize=8.5)
+        self._insert_text((475, 163), f"{kadin_cb} Kadın", fontsize=8.5)
 
         # Row 4: Poliçe No | Kart / Müşteri No
         self._insert_text((content1_l + 5, 184), "Poliçe No", bold=True)
@@ -181,72 +183,88 @@ class PDFProvisionFormService:
         self._insert_text((485, 244), f"{self.data.planlanan_yatis_cikis_tarihi or ''}")
 
         # 5. Muayene Eden Hekim Tarafından Doldurulacak Bölüm
-        # Y: 270 -> 720
-        sec2_rect = fitz.Rect(margin_l, 270, margin_r, 720)
+        # Y: 268 -> 722
+        sec2_rect = fitz.Rect(margin_l, 268, margin_r, 722)
         self._draw_rect(sec2_rect)
 
         # Sidebar 2
-        sidebar2_rect = fitz.Rect(margin_l, 270, margin_l + 15, 720)
+        sidebar2_rect = fitz.Rect(margin_l, 268, margin_l + 15, 722)
         self._draw_rect(sidebar2_rect, fill=(0.95, 0.95, 0.95))
         self.page.insert_text(
             (margin_l + 3, 360), "M\nu\na\ny\ne\nn\ne\n \nH\ne\nk\ni\nm", fontname=self.bold_font, fontsize=7.5
         )
 
         content2_l = margin_l + 15  # 40.0
-        # Rows Y-coords inside Section 2 (Daha önce başvuru removed, allocated space to complaints & history)
-        r2_y = [270, 335, 370, 435, 495, 555, 600, 645, 720]
+        # Rows Y-coords inside Section 2
+        r2_y = [268, 315, 362, 384, 440, 496, 556, 600, 646, 722]
         for y_pos in r2_y[1:-1]:
             self._draw_line((content2_l, y_pos), (margin_r, y_pos))
 
-        # Row 1: Hastanın Şikâyeti / Öyküsü (270 -> 335)
-        self._insert_text((content2_l + 5, 281), "Hastanın Şikâyeti / Öyküsü", bold=True, fontsize=8)
-        self._insert_textbox(fitz.Rect(content2_l + 5, 284, margin_r - 5, 333), self.data.sikayet_oyku or "", fontsize=8.5)
+        # Determine sikayet and oyku texts (with fallback to composite sikayet_oyku)
+        sikayet_text = (self.data.sikayeti or "").strip()
+        oyku_text = (self.data.oykusu or "").strip()
+        if not sikayet_text and not oyku_text and self.data.sikayet_oyku:
+            raw_comp = self.data.sikayet_oyku.strip()
+            if "Öykü:" in raw_comp:
+                parts = raw_comp.split("Öykü:")
+                sikayet_text = parts[0].replace("Şikayet:", "").strip()
+                oyku_text = parts[1].strip()
+            else:
+                sikayet_text = raw_comp
 
-        # Row 2: Şikâyetin Başlangıç Tarihi (335 -> 370)
-        self._insert_text((content2_l + 5, 353), "Şikâyetin Başlangıç Tarihi :", bold=True, fontsize=8)
-        self._insert_text((content2_l + 130, 353), f"{self.data.sikayet_baslangic_tarihi or ''}", fontsize=8.5)
+        # Row 1a: Hastanın Şikâyeti (268 -> 315)
+        self._insert_text((content2_l + 5, 278), "Hastanın Şikâyeti", bold=True, fontsize=8)
+        self._insert_textbox(fitz.Rect(content2_l + 5, 280, margin_r - 5, 313), sikayet_text, fontsize=8.5)
 
-        # Row 3: Özgeçmiş / Kullandığı İlaçlar (370 -> 435)
-        self._insert_text((content2_l + 5, 381), "Özgeçmiş / Kullandığı İlaçlar", bold=True, fontsize=8)
-        self._insert_textbox(fitz.Rect(content2_l + 5, 384, margin_r - 5, 433), self.data.gecmis_oyku_ilaclar or "", fontsize=8.5)
+        # Row 1b: Hastanın Öyküsü (315 -> 362)
+        self._insert_text((content2_l + 5, 325), "Hastanın Öyküsü / Hikayesi", bold=True, fontsize=8)
+        self._insert_textbox(fitz.Rect(content2_l + 5, 327, margin_r - 5, 360), oyku_text, fontsize=8.5)
 
-        # Row 4: Fizik Muayene Bulguları (435 -> 495)
-        self._insert_text((content2_l + 5, 446), "Fizik Muayene Bulguları", bold=True, fontsize=8)
-        self._insert_textbox(fitz.Rect(content2_l + 5, 449, margin_r - 5, 493), self.data.fizik_muayene_bulgulari or "", fontsize=8.5)
+        # Row 2: Şikâyetin Başlangıç Tarihi (362 -> 384)
+        self._insert_text((content2_l + 5, 376), "Şikâyetin Başlangıç Tarihi :", bold=True, fontsize=8)
+        self._insert_text((content2_l + 130, 376), f"{self.data.sikayet_baslangic_tarihi or ''}", fontsize=8.5)
 
-        # Row 5: Tetkikler / Sonuçları & Giriş Tipi Checkbox Grid (495 -> 555)
+        # Row 3: Özgeçmiş / Kullandığı İlaçlar (384 -> 440)
+        self._insert_text((content2_l + 5, 394), "Özgeçmiş / Kullandığı İlaçlar", bold=True, fontsize=8)
+        self._insert_textbox(fitz.Rect(content2_l + 5, 396, margin_r - 5, 438), self.data.gecmis_oyku_ilaclar or "", fontsize=8.5)
+
+        # Row 4: Fizik Muayene Bulguları (440 -> 496)
+        self._insert_text((content2_l + 5, 450), "Fizik Muayene Bulguları", bold=True, fontsize=8)
+        self._insert_textbox(fitz.Rect(content2_l + 5, 452, margin_r - 5, 494), self.data.fizik_muayene_bulgulari or "", fontsize=8.5)
+
+        # Row 5: Tetkikler / Sonuçları & Giriş Tipi Checkbox Grid (496 -> 556)
         self._insert_text((content2_l + 5, 506), "Tetkikler / Sonuçları", bold=True, fontsize=8)
-        self._insert_textbox(fitz.Rect(content2_l + 5, 509, 440, 553), self.data.tetkikler_sonuclari or "", fontsize=8.5)
+        self._insert_textbox(fitz.Rect(content2_l + 5, 508, 440, 554), self.data.tetkikler_sonuclari or "", fontsize=8.5)
 
         # Checkbox Grid for Giriş Tipi on the right
-        self._draw_line((450, 495), (450, 555))
+        self._draw_line((450, 496), (450, 556))
         gt = (self.data.giris_tipi or "Poliklinik").lower()
         cb_poli = "[X]" if "poli" in gt else "[  ]"
         cb_cerrahi = "[X]" if "cerrahi" in gt else "[  ]"
         cb_acil = "[X]" if "acil" in gt else "[  ]"
         cb_dahili = "[X]" if "dahili" in gt else "[  ]"
 
-        self._insert_text((455, 507), f"{cb_poli} Poliklinik", bold="poli" in gt, color=(0.8,0,0) if "poli" in gt else (0,0,0), fontsize=8)
-        self._insert_text((455, 519), f"{cb_cerrahi} Cerrahi Yatış", bold="cerrahi" in gt, color=(0.8,0,0) if "cerrahi" in gt else (0,0,0), fontsize=8)
-        self._insert_text((455, 531), f"{cb_acil} Acil", bold="acil" in gt, color=(0.8,0,0) if "acil" in gt else (0,0,0), fontsize=8)
-        self._insert_text((455, 543), f"{cb_dahili} Dahili Yatış", bold="dahili" in gt, color=(0.8,0,0) if "dahili" in gt else (0,0,0), fontsize=8)
+        self._insert_text((455, 508), f"{cb_poli} Poliklinik", bold="poli" in gt, color=(0.8,0,0) if "poli" in gt else (0,0,0), fontsize=8)
+        self._insert_text((455, 520), f"{cb_cerrahi} Cerrahi Yatış", bold="cerrahi" in gt, color=(0.8,0,0) if "cerrahi" in gt else (0,0,0), fontsize=8)
+        self._insert_text((455, 532), f"{cb_acil} Acil", bold="acil" in gt, color=(0.8,0,0) if "acil" in gt else (0,0,0), fontsize=8)
+        self._insert_text((455, 544), f"{cb_dahili} Dahili Yatış", bold="dahili" in gt, color=(0.8,0,0) if "dahili" in gt else (0,0,0), fontsize=8)
 
-        # Row 6: Ön Tanı / Tanı | ICD 10 (555 -> 600)
-        self._insert_text((content2_l + 5, 570), "Ön Tanı / Tanı", bold=True)
-        self._insert_textbox(fitz.Rect(content2_l + 5, 574, 440, 597), self.data.on_tani_tani or "", fontsize=8.5)
+        # Row 6: Ön Tanı / Tanı | ICD 10 (556 -> 600)
+        self._insert_text((content2_l + 5, 568), "Ön Tanı / Tanı", bold=True)
+        self._insert_textbox(fitz.Rect(content2_l + 5, 570, 440, 598), self.data.on_tani_tani or "", fontsize=8.5)
 
-        self._draw_line((450, 555), (450, 600))
+        self._draw_line((450, 556), (450, 600))
         self._insert_text((455, 578), "ICD 10 :", bold=True)
         self._insert_text((500, 578), f"{self.data.icd10_kodu or ''}", fontsize=8.5)
 
-        # Row 7: Planlanan Tedavi / İşlem (600 -> 645)
-        self._insert_text((content2_l + 5, 615), "Planlanan Tedavi / İşlem", bold=True)
-        self._insert_textbox(fitz.Rect(content2_l + 5, 619, margin_r - 5, 642), self.data.planlanan_tedavi_islem or "", fontsize=8.5)
+        # Row 7: Planlanan Tedavi / İşlem (600 -> 646)
+        self._insert_text((content2_l + 5, 612), "Planlanan Tedavi / İşlem / Plan", bold=True)
+        self._insert_textbox(fitz.Rect(content2_l + 5, 614, margin_r - 5, 644), self.data.planlanan_tedavi_islem or "", fontsize=8.5)
 
-        # Row 8: Dr Kaşe İmza (%50) | Anlaşma Durumu | Operatör / Anestezi / Asistan (645 -> 720)
+        # Row 8: Dr Kaşe İmza (%50) | Anlaşma Durumu | Operatör / Anestezi / Asistan (646 -> 722)
         # Total width = 570 - 40 = 530. 50% = 265 -> x = 40 + 265 = 305
         stamp_split_x = 305.0
-        self._draw_line((stamp_split_x, 645), (stamp_split_x, 720))
+        self._draw_line((stamp_split_x, 646), (stamp_split_x, 722))
         self._insert_text((content2_l + 5, 660), "Dr. Kaşe İmza:", bold=True)
 
         # Anlaşma Durumu Box (305 to 385)

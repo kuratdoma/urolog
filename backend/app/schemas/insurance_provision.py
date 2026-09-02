@@ -23,7 +23,7 @@ class InsuranceProvisionDTO(BaseModel):
     # Sigortalı / Hasta Bilgileri
     sigortali_adi_soyadi: Optional[str] = ""
     dogum_tarihi: Optional[str] = ""
-    cinsiyet: Optional[str] = ""  # "Bay", "Bayan"
+    cinsiyet: Optional[str] = ""  # "Erkek", "Kadın"
     police_no: Optional[str] = ""
     kart_musteri_no: Optional[str] = ""
     tc_kimlik_no: Optional[str] = ""
@@ -32,7 +32,9 @@ class InsuranceProvisionDTO(BaseModel):
     planlanan_yatis_cikis_tarihi: Optional[str] = ""
 
     # Muayene Eden Hekim Tarafından Doldurulacak Bölüm
-    sikayet_oyku: Optional[str] = ""
+    sikayeti: Optional[str] = ""
+    oykusu: Optional[str] = ""
+    sikayet_oyku: Optional[str] = ""  # Geriye dönük uyumluluk için
     sikayet_baslangic_tarihi: Optional[str] = ""
     daha_once_basvuru_var_mi: Optional[str] = ""
     gecmis_oyku_ilaclar: Optional[str] = ""

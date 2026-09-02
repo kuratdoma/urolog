@@ -25,7 +25,8 @@ export interface InsuranceProvisionDTO {
     eposta?: string;
     basvuru_tarihi?: string;
     planlanan_yatis_cikis_tarihi?: string;
-
+    sikayeti?: string;
+    oykusu?: string;
     sikayet_oyku?: string;
     sikayet_baslangic_tarihi?: string;
     daha_once_basvuru_var_mi?: string;

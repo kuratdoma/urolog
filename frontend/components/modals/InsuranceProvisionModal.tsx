@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { insuranceProvisionApi, InsuranceProvisionDTO } from "@/lib/api/insuranceProvision";
 import { Printer, Eye, Loader2, FileText } from "lucide-react";
+import { ExaminationFormData } from "@/hooks/useExaminationPageLogic";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface InsuranceProvisionModalProps {
@@ -25,7 +27,7 @@ interface InsuranceProvisionModalProps {
   hastaId?: string;
   appointmentId?: number;
   examId?: string;
-  currentExamData?: any;
+  currentExamData?: Partial<ExaminationFormData> | null;
   onSaved?: () => void;
 }
 
@@ -51,13 +53,15 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
     faks_no: "",
     sigortali_adi_soyadi: "",
     dogum_tarihi: "",
-    cinsiyet: "",
+    cinsiyet: "Erkek",
     police_no: "",
     kart_musteri_no: "",
     tc_kimlik_no: "",
     eposta: "",
     basvuru_tarihi: "",
     planlanan_yatis_cikis_tarihi: "",
+    sikayeti: "",
+    oykusu: "",
     sikayet_oyku: "",
     sikayet_baslangic_tarihi: "",
     daha_once_basvuru_var_mi: "",
@@ -76,13 +80,7 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
     save_to_documents: true,
   });
 
-  useEffect(() => {
-    if (isOpen && (hastaId || appointmentId || examId)) {
-      loadPrefillData();
-    }
-  }, [isOpen, hastaId, appointmentId, examId]);
-
-  const loadPrefillData = async () => {
+  const loadPrefillData = React.useCallback(async () => {
     setLoading(true);
     try {
       const prefilled = await insuranceProvisionApi.getPrefill({
@@ -92,24 +90,22 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
       });
 
       // If active currentExamData is passed from open examination screen, merge unsaved text
-      let overrideSikayet = prefilled.sikayet_oyku;
+      let overrideSikayeti = prefilled.sikayeti || "";
+      let overrideOykusu = prefilled.oykusu || "";
       let overrideGecmis = prefilled.gecmis_oyku_ilaclar;
       let overrideFizik = prefilled.fizik_muayene_bulgulari;
+      let overrideTetkikler = prefilled.tetkikler_sonuclari;
       let overrideTani = prefilled.on_tani_tani;
       let overrideIcd = prefilled.icd10_kodu;
       let overrideTedavi = prefilled.planlanan_tedavi_islem;
       let overrideDoctor = prefilled.saglik_kurulusu_adi;
 
       if (currentExamData) {
-        const sikayetParts: string[] = [];
-        if (currentExamData.sikayet && typeof currentExamData.sikayet === "string" && currentExamData.sikayet.trim()) {
-          sikayetParts.push(`Şikayet: ${currentExamData.sikayet.trim()}`);
+        if (typeof currentExamData.sikayet === "string" && currentExamData.sikayet.trim()) {
+          overrideSikayeti = currentExamData.sikayet.trim();
         }
-        if (currentExamData.oyku && typeof currentExamData.oyku === "string" && currentExamData.oyku.trim()) {
-          sikayetParts.push(`Öykü: ${currentExamData.oyku.trim()}`);
-        }
-        if (sikayetParts.length > 0) {
-          overrideSikayet = sikayetParts.join("\n");
+        if (typeof currentExamData.oyku === "string" && currentExamData.oyku.trim()) {
+          overrideOykusu = currentExamData.oyku.trim();
         }
 
         const gecmisParts: string[] = [];
@@ -126,18 +122,43 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
         if (currentExamData.fizik_muayene || currentExamData.bulgu_notu) {
           overrideFizik = currentExamData.fizik_muayene || currentExamData.bulgu_notu || "";
         }
-        if (currentExamData.tani1 || currentExamData.tani_kesin) {
-          overrideTani = currentExamData.tani1 || currentExamData.tani_kesin || "";
+        if (currentExamData.sonuc || currentExamData.bulgu_notu) {
+          overrideTetkikler = currentExamData.sonuc || currentExamData.bulgu_notu || "";
+        }
+        if (currentExamData.tani1) {
+          overrideTani = currentExamData.tani1;
         }
         if (currentExamData.tani1_kodu) {
           overrideIcd = currentExamData.tani1_kodu;
         }
-        if (currentExamData.tedavi || currentExamData.prosedur) {
-          overrideTedavi = currentExamData.tedavi || currentExamData.prosedur || "";
+
+        // Build planned treatment from tedavi + oneriler (plan) + prosedur
+        const tedaviParts: string[] = [];
+        if (currentExamData.tedavi && typeof currentExamData.tedavi === "string" && currentExamData.tedavi.trim()) {
+          tedaviParts.push(currentExamData.tedavi.trim());
         }
+        if (currentExamData.oneriler && typeof currentExamData.oneriler === "string" && currentExamData.oneriler.trim()) {
+          tedaviParts.push(`Plan/Öneri: ${currentExamData.oneriler.trim()}`);
+        }
+        if (currentExamData.prosedur && typeof currentExamData.prosedur === "string" && currentExamData.prosedur.trim()) {
+          tedaviParts.push(`İşlem: ${currentExamData.prosedur.trim()}`);
+        }
+        if (tedaviParts.length > 0) {
+          overrideTedavi = tedaviParts.join("\n");
+        }
+
         if (currentExamData.doktor && typeof currentExamData.doktor === "string" && currentExamData.doktor.trim()) {
           overrideDoctor = currentExamData.doktor.trim().toUpperCase();
         }
+      }
+
+      // Map cinsiyet
+      let resolvedCinsiyet = prefilled.cinsiyet || "Erkek";
+      const rawCins = resolvedCinsiyet.toLowerCase();
+      if (rawCins.includes("kad") || rawCins.includes("bayan") || rawCins === "k" || rawCins === "female") {
+        resolvedCinsiyet = "Kadın";
+      } else {
+        resolvedCinsiyet = "Erkek";
       }
 
       setFormData((prev) => ({
@@ -145,23 +166,33 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
         ...prefilled,
         hasta_id: hastaId || prefilled.hasta_id,
         appointment_id: appointmentId || prefilled.appointment_id,
-        sikayet_oyku: overrideSikayet ?? prefilled.sikayet_oyku ?? prev.sikayet_oyku,
+        cinsiyet: resolvedCinsiyet,
+        sikayeti: overrideSikayeti || prefilled.sikayeti || prev.sikayeti,
+        oykusu: overrideOykusu || prefilled.oykusu || prev.oykusu,
         gecmis_oyku_ilaclar: overrideGecmis ?? prefilled.gecmis_oyku_ilaclar ?? prev.gecmis_oyku_ilaclar,
         fizik_muayene_bulgulari: overrideFizik || prev.fizik_muayene_bulgulari,
+        tetkikler_sonuclari: overrideTetkikler || prev.tetkikler_sonuclari,
         on_tani_tani: overrideTani || prev.on_tani_tani,
         icd10_kodu: overrideIcd || prev.icd10_kodu,
         planlanan_tedavi_islem: overrideTedavi || prev.planlanan_tedavi_islem,
-        saglik_kurulusu_adi: overrideDoctor || prev.saglik_kurulusu_adi,
+        saglik_kurulusu_adi: overrideDoctor || prefilled.saglik_kurulusu_adi || prev.saglik_kurulusu_adi,
         operator: currentExamData?.doktor || prefilled.operator || prev.operator,
       }));
-    } catch (err: any) {
-      toast.error("Form verileri yüklenirken hata oluştu: " + (err.message || ""));
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      toast.error("Form verileri yüklenirken hata oluştu: " + (errorObj.message || ""));
     } finally {
       setLoading(false);
     }
-  };
+  }, [hastaId, appointmentId, examId, currentExamData]);
 
-  const handleChange = (field: keyof InsuranceProvisionDTO, value: any) => {
+  useEffect(() => {
+    if (isOpen && (hastaId || appointmentId || examId)) {
+      loadPrefillData();
+    }
+  }, [isOpen, hastaId, appointmentId, examId, loadPrefillData]);
+
+  const handleChange = <K extends keyof InsuranceProvisionDTO>(field: K, value: InsuranceProvisionDTO[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -186,16 +217,19 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
 
       if (onSaved) onSaved();
       onClose();
-    } catch (err: any) {
-      toast.error("PDF oluşturma hatası: " + (err.message || ""));
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string };
+      toast.error("PDF oluşturma hatası: " + (errorObj.message || ""));
     } finally {
       setGenerating(false);
     }
   };
 
+  const girisTipleri = ["Poliklinik", "Cerrahi Yatış", "Acil", "Dahili Yatış"] as const;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[75vw] w-[75vw] max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="sm:max-w-[78vw] w-[78vw] max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-800">
             <FileText className="w-6 h-6 text-blue-600" />
@@ -209,15 +243,207 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
             <span className="ml-3 text-slate-600">Veriler yükleniyor...</span>
           </div>
         ) : (
-          <Tabs defaultValue="sigorta" className="w-full mt-2">
+          <Tabs defaultValue="tibbi" className="w-full mt-2">
             <TabsList className="grid grid-cols-4 mb-4">
-              <TabsTrigger value="sigorta">1. Sigorta & Genel</TabsTrigger>
+              <TabsTrigger value="tibbi">1. Tıbbi & Klinik</TabsTrigger>
               <TabsTrigger value="hasta">2. Hasta Bilgileri</TabsTrigger>
-              <TabsTrigger value="tibbi">3. Tıbbi & Klinik</TabsTrigger>
+              <TabsTrigger value="sigorta">3. Sigorta & Kurum</TabsTrigger>
               <TabsTrigger value="secenekler">4. Seçenekler & Ekip</TabsTrigger>
             </TabsList>
 
-            {/* TAB 1: Sigorta & Genel */}
+            {/* TAB 1: Tıbbi & Klinik (Primary) */}
+            <TabsContent value="tibbi" className="space-y-4">
+              {/* Giriş Tipi Hızlı Seçim Tuşları */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                <Label className="font-bold text-xs text-slate-700 uppercase tracking-wider">
+                  Giriş / Başvuru Tipi (Tek Tıkla Seçiniz)
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {girisTipleri.map((tip) => {
+                    const isSelected = formData.giris_tipi === tip;
+                    return (
+                      <Button
+                        key={tip}
+                        type="button"
+                        variant={isSelected ? "default" : "outline"}
+                        className={cn(
+                          "h-10 text-xs font-bold transition-all rounded-lg",
+                          isSelected
+                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm border-blue-600"
+                            : "bg-white text-slate-700 hover:bg-blue-50 hover:text-blue-700 border-slate-200"
+                        )}
+                        onClick={() => handleChange("giris_tipi", tip)}
+                      >
+                        {tip}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 1. Şikayet ve Öykü (2 Ayrı Alan) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-semibold text-slate-700">Hastanın Şikâyeti</Label>
+                  <Textarea
+                    rows={3}
+                    className="mt-1"
+                    value={formData.sikayeti || ""}
+                    onChange={(e) => handleChange("sikayeti", e.target.value)}
+                    placeholder="Hastanın birincil şikayeti..."
+                  />
+                </div>
+                <div>
+                  <Label className="font-semibold text-slate-700">Hastanın Öyküsü / Hikayesi</Label>
+                  <Textarea
+                    rows={3}
+                    className="mt-1"
+                    value={formData.oykusu || ""}
+                    onChange={(e) => handleChange("oykusu", e.target.value)}
+                    placeholder="Hastalığın gelişim öyküsü..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="font-semibold text-slate-700">Şikâyetin Başlangıç Tarihi</Label>
+                <Input
+                  className="mt-1"
+                  value={formData.sikayet_baslangic_tarihi || ""}
+                  onChange={(e) => handleChange("sikayet_baslangic_tarihi", e.target.value)}
+                  placeholder="Ör: 3 gün önce / 12.08.2026"
+                />
+              </div>
+
+              <div>
+                <Label className="font-semibold text-slate-700">Özgeçmiş / Kullandığı İlaçlar</Label>
+                <Textarea
+                  rows={2}
+                  className="mt-1"
+                  value={formData.gecmis_oyku_ilaclar || ""}
+                  onChange={(e) => handleChange("gecmis_oyku_ilaclar", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label className="font-semibold text-slate-700">Fizik Muayene Bulguları</Label>
+                <Textarea
+                  rows={2}
+                  className="mt-1"
+                  value={formData.fizik_muayene_bulgulari || ""}
+                  onChange={(e) => handleChange("fizik_muayene_bulgulari", e.target.value)}
+                />
+              </div>
+
+              {/* Tetkikler / Sonuçları Alanı */}
+              <div>
+                <Label className="font-semibold text-slate-700">Tetkikler / Sonuçları</Label>
+                <Textarea
+                  rows={2}
+                  className="mt-1"
+                  value={formData.tetkikler_sonuclari || ""}
+                  onChange={(e) => handleChange("tetkikler_sonuclari", e.target.value)}
+                  placeholder="Laboratuvar, radyoloji ve diğer tetkik bulguları..."
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <Label className="font-semibold text-slate-700">Ön Tanı / Tanı</Label>
+                  <Input
+                    className="mt-1"
+                    value={formData.on_tani_tani || ""}
+                    onChange={(e) => handleChange("on_tani_tani", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="font-semibold text-slate-700">ICD 10 Kodu</Label>
+                  <Input
+                    className="mt-1"
+                    value={formData.icd10_kodu || ""}
+                    onChange={(e) => handleChange("icd10_kodu", e.target.value)}
+                    placeholder="Ör: N40, N20.0"
+                  />
+                </div>
+              </div>
+
+              {/* Planlanan Tedavi / Plan Alanı */}
+              <div>
+                <Label className="font-semibold text-slate-700">Planlanan Tedavi / İşlem / Plan</Label>
+                <Textarea
+                  rows={2}
+                  className="mt-1"
+                  value={formData.planlanan_tedavi_islem || ""}
+                  onChange={(e) => handleChange("planlanan_tedavi_islem", e.target.value)}
+                  placeholder="Ör: Medikal tedavi, operasyon planı veya öneriler..."
+                />
+              </div>
+            </TabsContent>
+
+            {/* TAB 2: Hasta Bilgileri */}
+            <TabsContent value="hasta" className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Sigortalının Adı-Soyadı</Label>
+                  <Input
+                    value={formData.sigortali_adi_soyadi || ""}
+                    onChange={(e) => handleChange("sigortali_adi_soyadi", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>TC Kimlik No</Label>
+                  <Input
+                    value={formData.tc_kimlik_no || ""}
+                    onChange={(e) => handleChange("tc_kimlik_no", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Doğum Tarihi</Label>
+                  <Input
+                    value={formData.dogum_tarihi || ""}
+                    onChange={(e) => handleChange("dogum_tarihi", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Cinsiyet</Label>
+                  <Select
+                    value={formData.cinsiyet || "Erkek"}
+                    onValueChange={(val) => handleChange("cinsiyet", val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seçiniz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Erkek">Erkek</SelectItem>
+                      <SelectItem value="Kadın">Kadın</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Poliçe No</Label>
+                  <Input
+                    value={formData.police_no || ""}
+                    onChange={(e) => handleChange("police_no", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Kart / Müşteri No</Label>
+                  <Input
+                    value={formData.kart_musteri_no || ""}
+                    onChange={(e) => handleChange("kart_musteri_no", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>E-Posta Adresi</Label>
+                  <Input
+                    value={formData.eposta || ""}
+                    onChange={(e) => handleChange("eposta", e.target.value)}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* TAB 3: Sigorta & Kurum */}
             <TabsContent value="sigorta" className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -276,148 +502,6 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
               </div>
             </TabsContent>
 
-            {/* TAB 2: Hasta Bilgileri */}
-            <TabsContent value="hasta" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Sigortalının Adı-Soyadı</Label>
-                  <Input
-                    value={formData.sigortali_adi_soyadi || ""}
-                    onChange={(e) => handleChange("sigortali_adi_soyadi", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>TC Kimlik No</Label>
-                  <Input
-                    value={formData.tc_kimlik_no || ""}
-                    onChange={(e) => handleChange("tc_kimlik_no", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Doğum Tarihi</Label>
-                  <Input
-                    value={formData.dogum_tarihi || ""}
-                    onChange={(e) => handleChange("dogum_tarihi", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Cinsiyet</Label>
-                  <Select
-                    value={formData.cinsiyet || "Bay"}
-                    onValueChange={(val) => handleChange("cinsiyet", val)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seçiniz" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Bay">Bay</SelectItem>
-                      <SelectItem value="Bayan">Bayan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Poliçe No</Label>
-                  <Input
-                    value={formData.police_no || ""}
-                    onChange={(e) => handleChange("police_no", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Kart / Müşteri No</Label>
-                  <Input
-                    value={formData.kart_musteri_no || ""}
-                    onChange={(e) => handleChange("kart_musteri_no", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>E-Posta Adresi</Label>
-                  <Input
-                    value={formData.eposta || ""}
-                    onChange={(e) => handleChange("eposta", e.target.value)}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* TAB 3: Tıbbi & Klinik */}
-            <TabsContent value="tibbi" className="space-y-4">
-              <div>
-                <Label className="font-semibold text-slate-700">Hastanın Şikâyeti / Öyküsü</Label>
-                <Textarea
-                  rows={4}
-                  className="mt-1"
-                  value={formData.sikayet_oyku || ""}
-                  onChange={(e) => handleChange("sikayet_oyku", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label className="font-semibold text-slate-700">Şikâyetin Başlangıç Tarihi</Label>
-                <Input
-                  className="mt-1"
-                  value={formData.sikayet_baslangic_tarihi || ""}
-                  onChange={(e) => handleChange("sikayet_baslangic_tarihi", e.target.value)}
-                  placeholder="Ör: 3 gün önce / 12.08.2026"
-                />
-              </div>
-
-              <div>
-                <Label className="font-semibold text-slate-700">Özgeçmiş / Kullandığı İlaçlar</Label>
-                <Textarea
-                  rows={3}
-                  className="mt-1"
-                  value={formData.gecmis_oyku_ilaclar || ""}
-                  onChange={(e) => handleChange("gecmis_oyku_ilaclar", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label className="font-semibold text-slate-700">Fizik Muayene Bulguları</Label>
-                <Textarea
-                  rows={3}
-                  className="mt-1"
-                  value={formData.fizik_muayene_bulgulari || ""}
-                  onChange={(e) => handleChange("fizik_muayene_bulgulari", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label className="font-semibold text-slate-700">Tetkikler / Sonuçları</Label>
-                <Textarea
-                  rows={3}
-                  className="mt-1"
-                  value={formData.tetkikler_sonuclari || ""}
-                  onChange={(e) => handleChange("tetkikler_sonuclari", e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2">
-                  <Label>Ön Tanı / Tanı</Label>
-                  <Input
-                    value={formData.on_tani_tani || ""}
-                    onChange={(e) => handleChange("on_tani_tani", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>ICD 10 Kodu</Label>
-                  <Input
-                    value={formData.icd10_kodu || ""}
-                    onChange={(e) => handleChange("icd10_kodu", e.target.value)}
-                    placeholder="Ör: N40, N20.0"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label>Planlanan Tedavi / İşlem</Label>
-                <Input
-                  value={formData.planlanan_tedavi_islem || ""}
-                  onChange={(e) => handleChange("planlanan_tedavi_islem", e.target.value)}
-                />
-              </div>
-            </TabsContent>
-
             {/* TAB 4: Seçenekler & Ekip */}
             <TabsContent value="secenekler" className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -456,7 +540,7 @@ export const InsuranceProvisionModal: React.FC<InsuranceProvisionModalProps> = (
                 </div>
 
                 <div>
-                  <Label>Operatör</Label>
+                  <Label>Operatör / Hekim</Label>
                   <Input
                     value={formData.operator || ""}
                     onChange={(e) => handleChange("operator", e.target.value)}

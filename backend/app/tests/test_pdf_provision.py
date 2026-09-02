@@ -10,20 +10,21 @@ def test_pdf_provision_form_service_generate():
         sigortali_adi_soyadi="Ahmet Yılmaz",
         tc_kimlik_no="12345678901",
         dogum_tarihi="15.05.1980",
-        cinsiyet="Bay",
+        cinsiyet="Erkek",
         police_no="POL-998877",
         kart_musteri_no="KRT-5544",
         basvuru_tarihi="17.08.2026",
-        sikayet_oyku="Dysuria and lower back pain.",
+        sikayeti="İdrarda yanma ve sık idrara çıkma şikayeti.",
+        oykusu="Yaklaşık 3 gündür devam eden dizüri ve polaküri.",
         sikayet_baslangic_tarihi="3 gün",
         daha_once_basvuru_var_mi="Hayır",
-        gecmis_oyku_ilaclar="Hypertension - Arlevert",
-        fizik_muayene_bulgulari="Abdomen soft, non-tender",
-        tetkikler_sonuclari="PSA: 1.2, USG: Normal",
+        gecmis_oyku_ilaclar="Hipertansiyon - Norvasc 5mg",
+        fizik_muayene_bulgulari="Batın rahat, hassasiyet yok, KVAH (-/-)",
+        tetkikler_sonuclari="Tam İdrar Tahlili: Lökosit (+), Bakteri (+)",
         giris_tipi="Poliklinik",
-        on_tani_tani="BPH / Prostatit",
-        icd10_kodu="N40",
-        planlanan_tedavi_islem="Medical Therapy",
+        on_tani_tani="Akut Sistit / İdrar Yolu Enfeksiyonu",
+        icd10_kodu="N30.0",
+        planlanan_tedavi_islem="Oral antibiyotik ve bol sıvı alımı",
         anlasma_durumu="Anlaşmalı",
         operator="Prof. Dr. Tayyar Alp Özkan",
         tarih="17.08.2026"
@@ -33,6 +34,25 @@ def test_pdf_provision_form_service_generate():
     pdf_stream = service.generate()
 
     assert pdf_stream is not None
+    pdf_bytes = pdf_stream.getvalue()
+    assert len(pdf_bytes) > 0
+    assert pdf_bytes.startswith(b"%PDF")
+
+def test_pdf_provision_female_patient_and_separate_fields():
+    dto = InsuranceProvisionDTO(
+        sigorta_sirketi="Axa Sigorta",
+        sigortali_adi_soyadi="Ayşe Fatma Kaya",
+        cinsiyet="Kadın",
+        sikayeti="Sol yan ağrısı ve bulantı",
+        oykusu="Aniden başlayan sol flank ağrısı",
+        giris_tipi="Acil",
+        on_tani_tani="Üreter Taşı",
+        icd10_kodu="N20.1",
+        planlanan_tedavi_islem="İntravenöz hidrasyon, analjezik ve Üreterorenoskopi (URS)",
+        save_to_documents=False
+    )
+    service = PDFProvisionFormService(dto)
+    pdf_stream = service.generate()
     pdf_bytes = pdf_stream.getvalue()
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF")

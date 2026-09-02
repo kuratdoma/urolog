@@ -14,6 +14,7 @@ from app.api import deps
 from app.models.user import User
 from app.models.documents import HastaDosya
 from app.models.appointment import Randevu
+from app.models.system import SystemSetting
 from app.repositories.patient.models import Hasta
 from app.repositories.clinical.models import Muayene
 from app.schemas.insurance_provision import InsuranceProvisionDTO
@@ -34,7 +35,7 @@ async def get_insurance_provision_prefill(
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Prefills insurance provision form data from patient, appointment, and clinical examination records.
+    Prefills insurance provision form data from patient, appointment, settings, and clinical examination records.
     """
     target_hasta_id = hasta_id
     appointment_date_str = ""
@@ -96,6 +97,14 @@ async def get_insurance_provision_prefill(
         latest_muayene.tarih.strftime("%d.%m.%Y") if latest_muayene and latest_muayene.tarih else today_str
     )
 
+    # Fetch clinic settings (clinic_name, clinic_phone) from SystemSetting
+    settings_res = await db.execute(
+        select(SystemSetting).where(SystemSetting.key.in_(["clinic_name", "clinic_phone"]))
+    )
+    settings_map = {s.key: (s.value or "").strip() for s in settings_res.scalars().all()}
+    clinic_name_setting = settings_map.get("clinic_name", "")
+    clinic_phone_setting = settings_map.get("clinic_phone", "") or "262 321 0141"
+
     # Doctor selection: 1. latest_muayene.doktor, 2. hasta.doktor, 3. default
     selected_doctor = ""
     if latest_muayene and latest_muayene.doktor and latest_muayene.doktor.strip():
@@ -105,24 +114,27 @@ async def get_insurance_provision_prefill(
     else:
         selected_doctor = "Prof. Dr. Tayyar Alp Özkan"
 
-    kurulus_adi = selected_doctor.upper()
+    kurulus_adi = clinic_name_setting.upper() if clinic_name_setting else selected_doctor.upper()
 
-    # Map cinsiyet to standard options (Bay / Bayan)
+    # Map cinsiyet to standard options (Erkek / Kadın)
     raw_cins = (hasta.cinsiyet or "").strip().lower()
     if raw_cins in ["e", "erkek", "bay", "m", "male"]:
-        mapped_cinsiyet = "Bay"
+        mapped_cinsiyet = "Erkek"
     elif raw_cins in ["k", "kadın", "kadin", "bayan", "f", "female"]:
-        mapped_cinsiyet = "Bayan"
+        mapped_cinsiyet = "Kadın"
     else:
         mapped_cinsiyet = hasta.cinsiyet or ""
 
-    # Build clean sikayet_oyku
+    # Build separate sikayeti and oykusu
+    sikayeti_str = latest_muayene.sikayet.strip() if (latest_muayene and latest_muayene.sikayet) else ""
+    oykusu_str = latest_muayene.oyku.strip() if (latest_muayene and latest_muayene.oyku) else ""
+
+    # Legacy composite sikayet_oyku
     sikayet_oyku_parts = []
-    if latest_muayene:
-        if latest_muayene.sikayet and latest_muayene.sikayet.strip():
-            sikayet_oyku_parts.append(f"Şikayet: {latest_muayene.sikayet.strip()}")
-        if latest_muayene.oyku and latest_muayene.oyku.strip():
-            sikayet_oyku_parts.append(f"Öykü: {latest_muayene.oyku.strip()}")
+    if sikayeti_str:
+        sikayet_oyku_parts.append(f"Şikayet: {sikayeti_str}")
+    if oykusu_str:
+        sikayet_oyku_parts.append(f"Öykü: {oykusu_str}")
     sikayet_oyku_str = "\n".join(sikayet_oyku_parts)
 
     # Build clean gecmis_oyku_ilaclar
@@ -134,6 +146,20 @@ async def get_insurance_provision_prefill(
             gecmis_parts.append(f"İlaçlar: {latest_muayene.kullandigi_ilaclar.strip()}")
     gecmis_str = "\n".join(gecmis_parts)
 
+    # Build planlanan_tedavi_islem from tedavi + oneriler (plan) + prosedur
+    tedavi_parts = []
+    if latest_muayene:
+        if latest_muayene.tedavi and latest_muayene.tedavi.strip():
+            tedavi_parts.append(latest_muayene.tedavi.strip())
+        if latest_muayene.oneriler and latest_muayene.oneriler.strip():
+            tedavi_parts.append(f"Plan/Öneri: {latest_muayene.oneriler.strip()}")
+        if latest_muayene.prosedur and latest_muayene.prosedur.strip():
+            tedavi_parts.append(f"İşlem: {latest_muayene.prosedur.strip()}")
+    planlanan_tedavi_str = "\n".join(tedavi_parts)
+
+    # Tetkikler / Sonuç
+    tetkikler_str = (latest_muayene.sonuc or latest_muayene.bulgu_notu or "") if latest_muayene else ""
+
     dto = InsuranceProvisionDTO(
         hasta_id=hasta.id,
         appointment_id=appointment_id,
@@ -144,7 +170,7 @@ async def get_insurance_provision_prefill(
         irtibat_faks="",
         saglik_kurulusu_adi=kurulus_adi,
         kurum_kodu="",
-        telefon_no="262 321 0141",
+        telefon_no=clinic_phone_setting,
         faks_no=hasta.faks or "",
         sigortali_adi_soyadi=f"{hasta.ad} {hasta.soyad}".strip(),
         dogum_tarihi=hasta.dogum_tarihi.strftime("%d.%m.%Y") if hasta.dogum_tarihi else "",
@@ -155,16 +181,18 @@ async def get_insurance_provision_prefill(
         eposta=hasta.email or "",
         basvuru_tarihi=basvuru_tarihi,
         planlanan_yatis_cikis_tarihi="",
+        sikayeti=sikayeti_str,
+        oykusu=oykusu_str,
         sikayet_oyku=sikayet_oyku_str,
         sikayet_baslangic_tarihi="",
         daha_once_basvuru_var_mi="",
         gecmis_oyku_ilaclar=gecmis_str,
         fizik_muayene_bulgulari=latest_muayene.fizik_muayene or latest_muayene.bulgu_notu if latest_muayene else "",
-        tetkikler_sonuclari="",
+        tetkikler_sonuclari=tetkikler_str,
         giris_tipi="Poliklinik",
         on_tani_tani=latest_muayene.tani1 or latest_muayene.tani_kesin if latest_muayene else "",
         icd10_kodu=latest_muayene.tani1_kodu if latest_muayene else "",
-        planlanan_tedavi_islem=latest_muayene.tedavi or latest_muayene.prosedur if latest_muayene else "",
+        planlanan_tedavi_islem=planlanan_tedavi_str,
         anlasma_durumu="Anlaşmalı",
         operator=selected_doctor,
         anestezi="",
