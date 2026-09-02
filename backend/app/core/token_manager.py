@@ -8,7 +8,6 @@ Provides:
 
 Uses Redis with automatic TTL expiry (no manual cleanup needed).
 """
-import json
 import logging
 from typing import Optional
 from redis import asyncio as aioredis
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Prefix keys for clarity in Redis
 _USED_PREFIX = "rt:used:"       # Used refresh tokens (detect replay)
-_REVOKED_PREFIX = "rt:revoked:" # Revoked user sessions
+_REVOKED_PREFIX = "rt:revoked:"  # Revoked user sessions
 
 # TTL matches refresh token lifetime (7 days + 1 hour buffer)
 _TOKEN_TTL = 7 * 24 * 3600 + 3600  # 7 days + 1 hour

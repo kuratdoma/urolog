@@ -1,5 +1,5 @@
 from typing import Any
-from sqlalchemy import Column, String, Integer, Boolean, func
+from sqlalchemy import Column, Boolean
 from sqlalchemy.orm import DeclarativeBase, declared_attr, Mapper, RelationshipProperty
 from sqlalchemy import event
 

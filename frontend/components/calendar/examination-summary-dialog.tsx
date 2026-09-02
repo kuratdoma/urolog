@@ -88,7 +88,7 @@ export function ExaminationSummaryDialog({ isOpen, onClose, patientId, patientNa
                                 <div className="space-y-1">
                                     <h4 className="text-sm font-bold text-slate-900">Şikayet</h4>
                                     <p className="text-sm font-mono leading-relaxed text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
-                                        "{latestExam.sikayet}"
+                                        &quot;{latestExam.sikayet}&quot;
                                     </p>
                                 </div>
                             )}

@@ -183,7 +183,7 @@ class FinansOdeme(Base):
     tutar = Column(Numeric(12, 2), nullable=False)
     odeme_tarihi = Column(Date, nullable=False)
     taksit_sayisi = Column(Integer, default=1)
-    
+
     taksitler = relationship("FinansTaksit", backref=backref("odeme", lazy="selectin"), cascade="all, delete-orphan", lazy="raise")
 
 

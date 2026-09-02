@@ -526,7 +526,7 @@ export function ExaminationPrintDialog({
                                                         </div>
                                                         {img.sonuc && (
                                                             <p className="text-[11px] text-slate-600 mt-1 line-clamp-2 italic leading-relaxed">
-                                                                "{img.sonuc}"
+                                                                &quot;{img.sonuc}&quot;
                                                             </p>
                                                         )}
                                                     </div>

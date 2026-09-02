@@ -4,6 +4,7 @@ from datetime import date
 import json
 import random
 
+
 class ProtocolService:
     """
     Handles the generation of patient protocol numbers based on the year codes
@@ -60,5 +61,5 @@ class ProtocolService:
 
         # Format: CODE + Y + SEQ(padded to 4 digits)
         protocol_no = f"{code}{last_digit}{next_seq:04d}"
-        
+
         return protocol_no

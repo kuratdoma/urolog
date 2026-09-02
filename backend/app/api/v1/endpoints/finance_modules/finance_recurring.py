@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.core.permissions import UserRole
+from app.core.permissions import UserRole, Action
 from app.repositories.finance.recurring_repository import RecurringRepository
 from app.schemas.finance import (
     DuzenliGiderResponse,
@@ -18,11 +18,18 @@ from app.core.user_context import UserContext
 
 router = APIRouter()
 
+# RBAC: yetkiler PERMISSION_MATRIX["finance"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("finance", Action.READ)
+_create = deps.require_permission("finance", Action.CREATE)
+_update = deps.require_permission("finance", Action.UPDATE)
+
 
 # =============================================================================
 # DÜZENLİ GİDERLER
 # =============================================================================
-@router.get("/recurring-expenses", response_model=List[DuzenliGiderResponse])
+@router.get("/recurring-expenses", response_model=List[DuzenliGiderResponse], dependencies=[Depends(_read)])
 async def get_duzenli_giderler(
     aktif_only: bool = Query(False), db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -30,7 +37,7 @@ async def get_duzenli_giderler(
     return await RecurringRepository(db).list_templates(aktif_only=aktif_only)
 
 
-@router.post("/recurring-expenses", response_model=DuzenliGiderResponse)
+@router.post("/recurring-expenses", response_model=DuzenliGiderResponse, dependencies=[Depends(_create)])
 async def create_duzenli_gider(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -55,7 +62,8 @@ async def create_duzenli_gider(
 
 
 @router.get(
-    "/recurring-expenses/pending", response_model=List[BekleyenUretimResponse]
+    "/recurring-expenses/pending", response_model=List[BekleyenUretimResponse],
+    dependencies=[Depends(_read)],
 )
 async def get_bekleyen_uretimler(db: AsyncSession = Depends(deps.get_db)) -> Any:
     """
@@ -66,7 +74,7 @@ async def get_bekleyen_uretimler(db: AsyncSession = Depends(deps.get_db)) -> Any
     return await RecurringRepository(db).get_pending()
 
 
-@router.post("/recurring-expenses/generate", response_model=UretimSonucResponse)
+@router.post("/recurring-expenses/generate", response_model=UretimSonucResponse, dependencies=[Depends(_read)])
 async def uret_duzenli_giderler(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
@@ -94,7 +102,7 @@ async def uret_duzenli_giderler(
     return sonuc
 
 
-@router.put("/recurring-expenses/{sablon_id}", response_model=DuzenliGiderResponse)
+@router.put("/recurring-expenses/{sablon_id}", response_model=DuzenliGiderResponse, dependencies=[Depends(_update)])
 async def update_duzenli_gider(
     sablon_id: int,
     *,

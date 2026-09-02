@@ -189,10 +189,10 @@ class AIScribeService:
         self, text: str, request: AIScribeRequest, db: Optional[AsyncSession] = None
     ) -> AIScribeResponse:
         """Main analysis method for TEXT"""
-        
+
         if db:
             await self._ensure_api_key(db)
-            
+
         start_time = time.time()
         logger.info(
             f"Starting AI Scribe TEXT analysis - mode: {request.mode}, length: {len(text)} chars"
@@ -666,7 +666,6 @@ Bir üroloji uzmanı gözüyle değerlendir ve ICD-10 tanı kodları öner.
                     logger.error(f"Failed to read persona rules: {e}")
             return rules
         return "Standart resmi klinik üslup."
-
 
 
 # Singleton instance

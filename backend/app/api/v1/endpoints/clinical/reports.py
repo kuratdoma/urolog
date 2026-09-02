@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
+from app.core.permissions import Action
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.repositories.clinical.repository import ClinicalRepository
@@ -30,9 +31,19 @@ from app.schemas.clinical import (
 
 router = APIRouter(dependencies=[Depends(deps.get_current_user)])
 
+# RBAC: yetkiler PERMISSION_MATRIX["clinical"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("clinical", Action.READ)
+_create = deps.require_permission("clinical", Action.CREATE)
+_update = deps.require_permission("clinical", Action.UPDATE)
+_delete = deps.require_permission("clinical", Action.DELETE)
+
+
 # --- İSTİRAHAT RAPORLARI ---
 @router.get(
-    "/patients/{hasta_id}/rest-reports", response_model=List[IstirahatRaporuResponse]
+    "/patients/{hasta_id}/rest-reports", response_model=List[IstirahatRaporuResponse],
+    dependencies=[Depends(_read)],
 )
 async def read_rest_reports(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -40,14 +51,16 @@ async def read_rest_reports(
     repo = ClinicalRepository(db)
     return await repo.get_rest_reports_by_patient(hasta_id)
 
-@router.post("/rest-reports", response_model=IstirahatRaporuResponse)
+
+@router.post("/rest-reports", response_model=IstirahatRaporuResponse, dependencies=[Depends(_create)])
 async def create_rest_report(
     *, db: AsyncSession = Depends(deps.get_db), report_in: IstirahatRaporuCreate
 ) -> Any:
     repo = ClinicalRepository(db)
     return await repo.create_rest_report(report_in)
 
-@router.put("/rest-reports/{id}", response_model=IstirahatRaporuResponse)
+
+@router.put("/rest-reports/{id}", response_model=IstirahatRaporuResponse, dependencies=[Depends(_update)])
 async def update_rest_report(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -60,7 +73,8 @@ async def update_rest_report(
         raise HTTPException(status_code=404, detail="Rest report not found")
     return result
 
-@router.delete("/rest-reports/{id}")
+
+@router.delete("/rest-reports/{id}", dependencies=[Depends(_delete)])
 async def delete_rest_report(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -70,7 +84,8 @@ async def delete_rest_report(
         raise HTTPException(status_code=404, detail="Rest report not found")
     return {"status": "success", "id": id}
 
-@router.get("/rest-reports/{id}", response_model=IstirahatRaporuResponse)
+
+@router.get("/rest-reports/{id}", response_model=IstirahatRaporuResponse, dependencies=[Depends(_read)])
 async def read_rest_report(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     repo = ClinicalRepository(db)
     result = await repo.get_rest_report(id)
@@ -83,6 +98,7 @@ async def read_rest_report(*, db: AsyncSession = Depends(deps.get_db), id: UUID)
 @router.get(
     "/patients/{hasta_id}/consultation-reports",
     response_model=List[KonsultasyonRaporuResponse],
+    dependencies=[Depends(_read)],
 )
 async def read_consultation_reports(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -90,14 +106,16 @@ async def read_consultation_reports(
     repo = ClinicalRepository(db)
     return await repo.get_consultation_reports_by_patient(hasta_id)
 
-@router.post("/consultation-reports", response_model=KonsultasyonRaporuResponse)
+
+@router.post("/consultation-reports", response_model=KonsultasyonRaporuResponse, dependencies=[Depends(_create)])
 async def create_consultation_report(
     *, db: AsyncSession = Depends(deps.get_db), report_in: KonsultasyonRaporuCreate
 ) -> Any:
     repo = ClinicalRepository(db)
     return await repo.create_consultation_report(report_in)
 
-@router.put("/consultation-reports/{id}", response_model=KonsultasyonRaporuResponse)
+
+@router.put("/consultation-reports/{id}", response_model=KonsultasyonRaporuResponse, dependencies=[Depends(_update)])
 async def update_consultation_report(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -110,7 +128,8 @@ async def update_consultation_report(
         raise HTTPException(status_code=404, detail="Consultation report not found")
     return result
 
-@router.delete("/consultation-reports/{id}")
+
+@router.delete("/consultation-reports/{id}", dependencies=[Depends(_delete)])
 async def delete_consultation_report(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -120,7 +139,8 @@ async def delete_consultation_report(
         raise HTTPException(status_code=404, detail="Consultation report not found")
     return {"status": "success", "id": id}
 
-@router.get("/consultation-reports/{id}", response_model=KonsultasyonRaporuResponse)
+
+@router.get("/consultation-reports/{id}", response_model=KonsultasyonRaporuResponse, dependencies=[Depends(_read)])
 async def read_consultation_report(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -131,7 +151,7 @@ async def read_consultation_report(
     return result
 
 
-@router.post("/consultation-reports/polish-letter", response_model=LetterPolishResponse)
+@router.post("/consultation-reports/polish-letter", response_model=LetterPolishResponse, dependencies=[Depends(_create)])
 @limiter.limit("20/minute")
 async def polish_consultation_letter(
     request: Request,
@@ -176,6 +196,7 @@ async def polish_consultation_letter(
 @router.get(
     "/patients/{hasta_id}/status-reports",
     response_model=List[DurumBildirirRaporuResponse],
+    dependencies=[Depends(_read)],
 )
 async def read_status_reports(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -183,14 +204,16 @@ async def read_status_reports(
     repo = ClinicalRepository(db)
     return await repo.get_status_reports_by_patient(hasta_id)
 
-@router.post("/status-reports", response_model=DurumBildirirRaporuResponse)
+
+@router.post("/status-reports", response_model=DurumBildirirRaporuResponse, dependencies=[Depends(_create)])
 async def create_status_report(
     *, db: AsyncSession = Depends(deps.get_db), report_in: DurumBildirirRaporuCreate
 ) -> Any:
     repo = ClinicalRepository(db)
     return await repo.create_status_report(report_in)
 
-@router.put("/status-reports/{id}", response_model=DurumBildirirRaporuResponse)
+
+@router.put("/status-reports/{id}", response_model=DurumBildirirRaporuResponse, dependencies=[Depends(_update)])
 async def update_status_report(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -203,7 +226,8 @@ async def update_status_report(
         raise HTTPException(status_code=404, detail="Status report not found")
     return result
 
-@router.delete("/status-reports/{id}")
+
+@router.delete("/status-reports/{id}", dependencies=[Depends(_delete)])
 async def delete_status_report(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -213,7 +237,8 @@ async def delete_status_report(
         raise HTTPException(status_code=404, detail="Status report not found")
     return {"status": "success", "id": id}
 
-@router.get("/status-reports/{id}", response_model=DurumBildirirRaporuResponse)
+
+@router.get("/status-reports/{id}", response_model=DurumBildirirRaporuResponse, dependencies=[Depends(_read)])
 async def read_status_report(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -228,6 +253,7 @@ async def read_status_report(
 @router.get(
     "/patients/{hasta_id}/medical-reports",
     response_model=List[TibbiMudahaleRaporuResponse],
+    dependencies=[Depends(_read)],
 )
 async def read_medical_reports(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -235,14 +261,16 @@ async def read_medical_reports(
     repo = ClinicalRepository(db)
     return await repo.get_medical_reports_by_patient(hasta_id)
 
-@router.post("/medical-reports", response_model=TibbiMudahaleRaporuResponse)
+
+@router.post("/medical-reports", response_model=TibbiMudahaleRaporuResponse, dependencies=[Depends(_create)])
 async def create_medical_report(
     *, db: AsyncSession = Depends(deps.get_db), report_in: TibbiMudahaleRaporuCreate
 ) -> Any:
     repo = ClinicalRepository(db)
     return await repo.create_medical_report(report_in)
 
-@router.put("/medical-reports/{id}", response_model=TibbiMudahaleRaporuResponse)
+
+@router.put("/medical-reports/{id}", response_model=TibbiMudahaleRaporuResponse, dependencies=[Depends(_update)])
 async def update_medical_report(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -255,7 +283,8 @@ async def update_medical_report(
         raise HTTPException(status_code=404, detail="Medical report not found")
     return result
 
-@router.delete("/medical-reports/{id}")
+
+@router.delete("/medical-reports/{id}", dependencies=[Depends(_delete)])
 async def delete_medical_report(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -265,7 +294,8 @@ async def delete_medical_report(
         raise HTTPException(status_code=404, detail="Medical report not found")
     return {"status": "success", "id": id}
 
-@router.get("/medical-reports/{id}", response_model=TibbiMudahaleRaporuResponse)
+
+@router.get("/medical-reports/{id}", response_model=TibbiMudahaleRaporuResponse, dependencies=[Depends(_read)])
 async def read_medical_report(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -278,7 +308,8 @@ async def read_medical_report(
 
 # --- TRUS BİYOPSİ ---
 @router.get(
-    "/patients/{hasta_id}/trus-biopsies", response_model=List[TrusBiyopsiResponse]
+    "/patients/{hasta_id}/trus-biopsies", response_model=List[TrusBiyopsiResponse],
+    dependencies=[Depends(_read)],
 )
 async def read_trus_biopsies(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -286,14 +317,16 @@ async def read_trus_biopsies(
     repo = ClinicalRepository(db)
     return await repo.get_trus_biopsies_by_patient(hasta_id)
 
-@router.post("/trus-biopsies", response_model=TrusBiyopsiResponse)
+
+@router.post("/trus-biopsies", response_model=TrusBiyopsiResponse, dependencies=[Depends(_create)])
 async def create_trus_biopsy(
     *, db: AsyncSession = Depends(deps.get_db), report_in: TrusBiyopsiCreate
 ) -> Any:
     repo = ClinicalRepository(db)
     return await repo.create_trus_biopsy(report_in)
 
-@router.put("/trus-biopsies/{id}", response_model=TrusBiyopsiResponse)
+
+@router.put("/trus-biopsies/{id}", response_model=TrusBiyopsiResponse, dependencies=[Depends(_update)])
 async def update_trus_biopsy(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID, report_in: TrusBiyopsiUpdate
 ) -> Any:
@@ -303,7 +336,8 @@ async def update_trus_biopsy(
         raise HTTPException(status_code=404, detail="Trus biopsy not found")
     return result
 
-@router.delete("/trus-biopsies/{id}")
+
+@router.delete("/trus-biopsies/{id}", dependencies=[Depends(_delete)])
 async def delete_trus_biopsy(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -313,7 +347,8 @@ async def delete_trus_biopsy(
         raise HTTPException(status_code=404, detail="Trus biopsy not found")
     return {"status": "success", "id": id}
 
-@router.get("/trus-biopsies/{id}", response_model=TrusBiyopsiResponse)
+
+@router.get("/trus-biopsies/{id}", response_model=TrusBiyopsiResponse, dependencies=[Depends(_read)])
 async def read_trus_biopsy(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     repo = ClinicalRepository(db)
     result = await repo.get_trus_biopsy(id)

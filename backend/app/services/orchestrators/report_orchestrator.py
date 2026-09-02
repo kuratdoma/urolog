@@ -5,11 +5,10 @@ Aggregates patient data from multiple shards for PDF report generation.
 Implements graceful degradation - continues with partial data if a shard fails.
 """
 
-import asyncio
 import logging
 from typing import Optional, List, Any
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -111,7 +110,7 @@ class ReportOrchestrator:
             lab_results=lab_results,
             finance_summary=finance_summary,
             warnings=warnings,
-            generated_at=datetime.now(),
+            generated_at=datetime.now(timezone.utc),
         )
 
     async def _fetch_demographics(

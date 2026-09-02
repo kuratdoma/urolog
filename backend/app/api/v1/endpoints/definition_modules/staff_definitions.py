@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_cache.decorator import cache
 from app.api import deps
+from app.core.permissions import Action
 from app.core.cache_invalidation import CacheNS, invalidate
 from app.models.user import User
 from app.repositories.definition_repository import DefinitionRepository
@@ -15,6 +16,16 @@ from app.schemas.definition import (
 
 router = APIRouter()
 
+# RBAC: yetkiler PERMISSION_MATRIX["definitions"] üzerinden işlem bazında uygulanır.
+# OKUMA kasıtlı olarak kapısız: tanımlar PHI değil, uygulama genelinde açılır
+# listeleri besleyen referans veridir. Matriste FRONTDESK/TECHNICIAN'ın
+# "definitions" okuma hakkı yok; kapı konsaydı randevu oluşturabilen FRONTDESK
+# randevu türlerini okuyamayıp 403 alırdı. Yazma uçları matrise bağlıdır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_create = deps.require_permission("definitions", Action.CREATE)
+_update = deps.require_permission("definitions", Action.UPDATE)
+
 
 # Doktorlar
 @router.get("/doktorlar", response_model=List[Doktor])
@@ -24,7 +35,7 @@ async def get_doktorlar(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_doktorlar()
 
 
-@router.post("/doktorlar", response_model=Doktor)
+@router.post("/doktorlar", response_model=Doktor, dependencies=[Depends(_create)])
 async def create_doktor(
     obj_in: DoktorCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -39,7 +50,7 @@ async def create_doktor(
     return result
 
 
-@router.put("/doktorlar/{id}", response_model=Doktor)
+@router.put("/doktorlar/{id}", response_model=Doktor, dependencies=[Depends(_update)])
 async def update_doktor(
     id: int, obj_in: DoktorCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -73,7 +84,7 @@ async def get_cerrahlar(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_cerrahlar()
 
 
-@router.post("/cerrahlar", response_model=Definition)
+@router.post("/cerrahlar", response_model=Definition, dependencies=[Depends(_create)])
 async def create_cerrah(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -83,7 +94,7 @@ async def create_cerrah(
     return result
 
 
-@router.put("/cerrahlar/{id}", response_model=Definition)
+@router.put("/cerrahlar/{id}", response_model=Definition, dependencies=[Depends(_update)])
 async def update_cerrah(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -111,7 +122,7 @@ async def get_anestezi_personelleri(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_anestezi_personelleri()
 
 
-@router.post("/anestezi-personelleri", response_model=Definition)
+@router.post("/anestezi-personelleri", response_model=Definition, dependencies=[Depends(_create)])
 async def create_anestezi_personeli(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -121,7 +132,7 @@ async def create_anestezi_personeli(
     return result
 
 
-@router.put("/anestezi-personelleri/{id}", response_model=Definition)
+@router.put("/anestezi-personelleri/{id}", response_model=Definition, dependencies=[Depends(_update)])
 async def update_anestezi_personeli(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -149,7 +160,7 @@ async def get_hemsireler(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_hemsireler()
 
 
-@router.post("/hemsireler", response_model=Definition)
+@router.post("/hemsireler", response_model=Definition, dependencies=[Depends(_create)])
 async def create_hemsire(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -159,7 +170,7 @@ async def create_hemsire(
     return result
 
 
-@router.put("/hemsireler/{id}", response_model=Definition)
+@router.put("/hemsireler/{id}", response_model=Definition, dependencies=[Depends(_update)])
 async def update_hemsire(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -187,7 +198,7 @@ async def get_asistanlar(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_asistanlar()
 
 
-@router.post("/asistanlar", response_model=Definition)
+@router.post("/asistanlar", response_model=Definition, dependencies=[Depends(_create)])
 async def create_asistan(
     obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -197,7 +208,7 @@ async def create_asistan(
     return result
 
 
-@router.put("/asistanlar/{id}", response_model=Definition)
+@router.put("/asistanlar/{id}", response_model=Definition, dependencies=[Depends(_update)])
 async def update_asistan(
     id: int, obj_in: DefinitionCreate, db: AsyncSession = Depends(deps.get_db)
 ):

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.core.permissions import Action
 from app.repositories.finance.accounts_repository import AccountsRepository
 from app.repositories.finance.income_repository import IncomeRepository
 from app.schemas.finance import (
@@ -17,11 +18,16 @@ from app.schemas.finance import (
 
 router = APIRouter()
 
+# RBAC: yetkiler PERMISSION_MATRIX["finance"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("finance", Action.READ)
+
 
 # =============================================================================
 # ÖZET VE RAPORLAR
 # =============================================================================
-@router.get("/summary", response_model=FinansOzetResponse)
+@router.get("/summary", response_model=FinansOzetResponse, dependencies=[Depends(_read)])
 async def get_finans_ozet(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
@@ -33,7 +39,7 @@ async def get_finans_ozet(
     return FinansOzetResponse(**summary)
 
 
-@router.get("/overdue", response_model=FinansIslemPaginationResponse)
+@router.get("/overdue", response_model=FinansIslemPaginationResponse, dependencies=[Depends(_read)])
 async def get_vadesi_gecmis_islemler(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, le=100),
@@ -48,7 +54,8 @@ async def get_vadesi_gecmis_islemler(
 
 
 @router.get(
-    "/reports/category-breakdown", response_model=List[KategoriKirilimResponse]
+    "/reports/category-breakdown", response_model=List[KategoriKirilimResponse],
+    dependencies=[Depends(_read)],
 )
 async def get_kategori_kirilimi(
     islem_tipi: str = Query("gelir", description="'gelir' veya 'gider'"),
@@ -67,7 +74,7 @@ async def get_kategori_kirilimi(
     )
 
 
-@router.get("/reports/aging", response_model=List[YaslandirmaKovaResponse])
+@router.get("/reports/aging", response_model=List[YaslandirmaKovaResponse], dependencies=[Depends(_read)])
 async def get_yaslandirma_raporu(db: AsyncSession = Depends(deps.get_db)) -> Any:
     """
     Tahsilat yaşlandırma: açık alacakların vade yaşına göre dağılımı.
@@ -78,7 +85,7 @@ async def get_yaslandirma_raporu(db: AsyncSession = Depends(deps.get_db)) -> Any
     return await repo.get_aging_report()
 
 
-@router.get("/summary/daily", response_model=GunlukOzetResponse)
+@router.get("/summary/daily", response_model=GunlukOzetResponse, dependencies=[Depends(_read)])
 async def get_gunluk_ozet(
     tarih: Optional[date] = Query(None),
     db: AsyncSession = Depends(deps.get_db),
@@ -96,7 +103,7 @@ async def get_gunluk_ozet(
     }
 
 
-@router.get("/summary/monthly", response_model=List[AylikOzetResponse])
+@router.get("/summary/monthly", response_model=List[AylikOzetResponse], dependencies=[Depends(_read)])
 async def get_aylik_ozet(
     yil: int = Query(None), db: AsyncSession = Depends(deps.get_db)
 ) -> Any:

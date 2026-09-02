@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from app.api import deps
+from app.core.permissions import Action
 from app.schemas.lab_analysis import LabTrendRequest, LabTrendResponse
 from app.services.lab_analysis_service import LabAnalysisService
 
@@ -11,8 +12,13 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["lab"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_create = deps.require_permission("lab", Action.CREATE)
 
-@router.post("/trends", response_model=List[LabTrendResponse])
+
+@router.post("/trends", response_model=List[LabTrendResponse], dependencies=[Depends(_create)])
 async def get_patient_lab_trends(
     request: LabTrendRequest,
     db: AsyncSession = Depends(deps.get_db),

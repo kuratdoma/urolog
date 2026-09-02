@@ -10,7 +10,7 @@ Complexity:
 """
 from typing import Optional, Dict, List
 from uuid import UUID
-from sqlalchemy import select, func, and_, union_all, literal, cast, String
+from sqlalchemy import select, func, and_, union_all, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.clinical.models import (
     Muayene,
@@ -94,7 +94,7 @@ class PatientStatsRepository:
     ) -> Dict[UUID, Dict[str, int]]:
         """
         Fetch clinical record counts for multiple patients in bulk.
-        
+
         Performance: Uses a single UNION ALL query instead of 6 sequential queries.
         Reduces DB round-trips from 6 to 1.
         Resilient: missing tables degrade gracefully to zero counts.
@@ -120,9 +120,9 @@ class PatientStatsRepository:
     ) -> Dict[UUID, Dict[str, int]]:
         """
         Single UNION ALL query that fetches all 6 count types at once.
-        
+
         SQL equivalent:
-          SELECT hasta_id, 'muayene' as entity, COUNT(*) as cnt 
+          SELECT hasta_id, 'muayene' as entity, COUNT(*) as cnt
             FROM muayeneler WHERE hasta_id IN (...) AND is_deleted=false GROUP BY hasta_id
           UNION ALL
           SELECT hasta_id, 'imaging', COUNT(*) FROM tetkikler WHERE ... AND kategori='Goruntuleme' GROUP BY hasta_id

@@ -242,7 +242,7 @@ export default function ConsultationReportPage() {
         }
 
         const getVal = (directVal: any, jsonVal: any) => {
-            let val = directVal || jsonVal;
+            const val = directVal || jsonVal;
             if (val === "0" || val === 0) return "yok";
             if (typeof val === "string") return val;
             return val ? String(val) : "";
@@ -273,7 +273,7 @@ export default function ConsultationReportPage() {
         const erektil = getVal(latestExam.erektil_islev, parsedSistemSorgu?.erektil_islev);
         const ejakulasyon = getVal(latestExam.ejakulasyon, parsedSistemSorgu?.ejakulasyon);
 
-        let sexualHealthParts: string[] = [];
+        const sexualHealthParts: string[] = [];
         if (erektil) {
             if (erektil === "yok") {
                 sexualHealthParts.push("Hastamızın erektil fonksiyon şikayeti yoktur.");

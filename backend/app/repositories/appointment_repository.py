@@ -39,7 +39,7 @@ class AppointmentRepository:
         query = query.order_by(Randevu.start.desc())
         result = await self.db.execute(query)
         appointments = result.scalars().all()
-        
+
         # Micro-data Enrichment Phase
         return await self._enrich_appointments(appointments, start, end)
 
@@ -72,14 +72,14 @@ class AppointmentRepository:
             tarihce_cond.append(RandevuTarihce.eski_end >= start)
         if end:
             tarihce_cond.append(RandevuTarihce.eski_start <= end)
-        
+
         tarihce_query = select(RandevuTarihce).options(selectinload(RandevuTarihce.hasta))
         if tarihce_cond:
             tarihce_query = tarihce_query.filter(and_(*tarihce_cond))
-            
+
         t_result = await self.db.execute(tarihce_query)
         tarihceler = t_result.scalars().all()
-        
+
         for t in tarihceler:
             transient = Randevu(
                 id=t.randevu_id,
@@ -88,7 +88,7 @@ class AppointmentRepository:
                 title=t.eski_title or "Tarihçe",
                 start=t.eski_start,
                 end=t.eski_end,
-                status="history", # Custom status to indicate ghost
+                status="history",  # Custom status to indicate ghost
                 is_deleted=2,     # Custom flag to indicate history event vs actual deleted (1)
             )
             appointments.append(transient)
@@ -102,7 +102,7 @@ class AppointmentRepository:
         from app.repositories.clinical.models import TetkikSonuc, Muayene, KlinikNot
         from app.repositories.finance.models import FinansIslem
         from app.repositories.patient.models import Hasta
-        from sqlalchemy import cast, Date, text, func
+        from sqlalchemy import cast, Date, func
         from app.schemas.appointment import ClinicalBriefSchema
         from uuid import UUID
 
@@ -143,9 +143,11 @@ class AppointmentRepository:
                 FinansIslem.is_deleted == False
             )
         )
-        if start: fin_query = fin_query.where(FinansIslem.tarih >= (start.date() if isinstance(start, datetime) else start))
-        if end: fin_query = fin_query.where(FinansIslem.tarih <= (end.date() if isinstance(end, datetime) else end))
-        
+        if start:
+            fin_query = fin_query.where(FinansIslem.tarih >= (start.date() if isinstance(start, datetime) else start))
+        if end:
+            fin_query = fin_query.where(FinansIslem.tarih <= (end.date() if isinstance(end, datetime) else end))
+
         fin_res = await self.db.execute(fin_query)
         # Map: (hasta_id, date) -> status
         pay_map = {}
@@ -169,7 +171,7 @@ class AppointmentRepository:
         if end:
             e_date = end.date() if isinstance(end, datetime) else end
             lab_query = lab_query.where(cast(TetkikSonuc.tarih, Date) <= e_date)
-        
+
         lab_res = await self.db.execute(lab_query)
         lab_set = {(str(row[0]), row[1]) for row in lab_res}
 
@@ -246,13 +248,16 @@ class AppointmentRepository:
         for apt in appointments:
             apt_date = apt.start.date() if isinstance(apt.start, datetime) else apt.start
             key = (str(apt.hasta_id), apt_date)
-            
+
             # Payment status mapping
             db_status = pay_map.get(key)
-            if db_status == "tamamlandi": apt.payment_status = "paid"
-            elif db_status == "bekliyor": apt.payment_status = "unpaid"
-            else: apt.payment_status = None
-            
+            if db_status == "tamamlandi":
+                apt.payment_status = "paid"
+            elif db_status == "bekliyor":
+                apt.payment_status = "unpaid"
+            else:
+                apt.payment_status = None
+
             # Lab status
             apt.has_lab_results = key in lab_set
 
@@ -261,10 +266,10 @@ class AppointmentRepository:
             if h_str:
                 exam_data = exam_map.get(h_str, {})
                 note_data = note_map.get(h_str, {})
-                
+
                 # Check if patient is a new patient (no prior exams/notes)
                 is_new = not bool(exam_data or note_data)
-                
+
                 hasta_obj = getattr(apt, 'hasta', None)
                 h_notu = None
                 if hasta_obj:
@@ -301,13 +306,13 @@ class AppointmentRepository:
             .order_by(Randevu.start.desc())
         )
         appointments = result.scalars().all()
-        
+
         if not appointments:
             return []
-            
+
         start_date = min(a.start for a in appointments)
         end_date = max(a.start for a in appointments)
-        
+
         return await self._enrich_appointments(appointments, start_date, end_date)
 
     async def create(self, obj_in: RandevuCreate, user_id: int = None, user_name: str = None) -> Randevu:
@@ -339,7 +344,7 @@ class AppointmentRepository:
             return None
 
         update_data = obj_in.model_dump(exclude_unset=True)
-        
+
         # Eğer tarih değişiyorsa tarihçeye ekle
         if "start" in update_data or "end" in update_data:
             from app.models.appointment import RandevuTarihce
@@ -386,12 +391,12 @@ class AppointmentRepository:
 
         db_obj.is_deleted = 1
         db_obj.delete_reason = reason
-        
+
         # Updated by bilgisini güncelle
         if user_id:
             db_obj.updated_by_id = user_id
             db_obj.updated_by_name = user_name
-        
+
         from app.models.appointment import RandevuTarihce
         tarihce = RandevuTarihce(
             randevu_id=db_obj.id,
@@ -405,6 +410,6 @@ class AppointmentRepository:
             degistiren_name=user_name
         )
         self.db.add(tarihce)
-        
+
         await self.db.flush()
         return True

@@ -419,7 +419,7 @@ class PDFLabParserService:
                     j += 1
                     lookahead += 1
                     continue
-                
+
                 # Continuation of reference on label lines (e.g. "Sınırda 200 - 239")
                 if ref_parts and re.match(r"^(Normal|Sınırda|Yüksek|Düşük)\s", nxt, re.IGNORECASE):
                     ref_parts.append(nxt)

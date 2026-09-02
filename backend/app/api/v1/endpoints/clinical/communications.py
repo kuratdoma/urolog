@@ -15,20 +15,29 @@ from app.schemas.clinical import (
     KisiselNotResponse,
     KisiselNotUpdate,
 )
-from app.core.permissions import UserRole
+from app.core.permissions import UserRole, Action
 from app.services.audit_service import AuditService
 from app.models.user import User
 
 router = APIRouter(dependencies=[Depends(deps.get_current_user)])
 
+# RBAC: yetkiler PERMISSION_MATRIX["clinical"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("clinical", Action.READ)
+_create = deps.require_permission("clinical", Action.CREATE)
+_update = deps.require_permission("clinical", Action.UPDATE)
+_delete = deps.require_permission("clinical", Action.DELETE)
+
+
 # --- TAKIP ---
-@router.get("/patients/{hasta_id}/takip", response_model=List[HastaNotuResponse])
+@router.get("/patients/{hasta_id}/takip", response_model=List[HastaNotuResponse], dependencies=[Depends(_read)])
 async def read_takip(hasta_id: str, db: AsyncSession = Depends(deps.get_db)) -> Any:
     repo = ClinicalRepository(db)
     return await repo.get_takip_by_patient(hasta_id)
 
 
-@router.get("/takip/{id}")
+@router.get("/takip/{id}", dependencies=[Depends(_read)])
 async def read_takip_note(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     repo = ClinicalRepository(db)
     result = await repo.get_takip_note(id)
@@ -46,7 +55,7 @@ async def read_takip_note(*, db: AsyncSession = Depends(deps.get_db), id: UUID) 
     }
 
 
-@router.post("/takip", response_model=HastaNotuResponse)
+@router.post("/takip", response_model=HastaNotuResponse, dependencies=[Depends(_create)])
 async def create_takip(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -67,7 +76,7 @@ async def create_takip(
     return result
 
 
-@router.put("/takip/{id}", response_model=HastaNotuResponse)
+@router.put("/takip/{id}", response_model=HastaNotuResponse, dependencies=[Depends(_update)])
 async def update_takip(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -91,7 +100,7 @@ async def update_takip(
     return result
 
 
-@router.delete("/takip/{id}")
+@router.delete("/takip/{id}", dependencies=[Depends(_delete)])
 async def delete_takip(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -113,9 +122,11 @@ async def delete_takip(
     )
     return {"status": "success", "id": id}
 
+
 # --- TELEFON GÖRÜŞMELERİ ---
 @router.get(
-    "/patients/{hasta_id}/phone-calls", response_model=List[TelefonGorusmesiResponse]
+    "/patients/{hasta_id}/phone-calls", response_model=List[TelefonGorusmesiResponse],
+    dependencies=[Depends(_read)],
 )
 async def read_phone_calls(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -124,7 +135,7 @@ async def read_phone_calls(
     return await repo.get_phone_calls_by_patient(hasta_id)
 
 
-@router.post("/phone-calls", response_model=TelefonGorusmesiResponse)
+@router.post("/phone-calls", response_model=TelefonGorusmesiResponse, dependencies=[Depends(_create)])
 async def create_phone_call(
     *, db: AsyncSession = Depends(deps.get_db), phone_call_in: TelefonGorusmesiCreate
 ) -> Any:
@@ -132,7 +143,7 @@ async def create_phone_call(
     return await repo.create_phone_call(phone_call_in)
 
 
-@router.put("/phone-calls/{id}", response_model=TelefonGorusmesiResponse)
+@router.put("/phone-calls/{id}", response_model=TelefonGorusmesiResponse, dependencies=[Depends(_update)])
 async def update_phone_call(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -146,7 +157,7 @@ async def update_phone_call(
     return result
 
 
-@router.delete("/phone-calls/{id}")
+@router.delete("/phone-calls/{id}", dependencies=[Depends(_delete)])
 async def delete_phone_call(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     repo = ClinicalRepository(db)
     result = await repo.delete_phone_call(id)

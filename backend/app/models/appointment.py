@@ -76,23 +76,22 @@ class RandevuTarihce(Base):
     id = Column(Integer, primary_key=True)
     randevu_id = Column(Integer, ForeignKey("randevular.id", ondelete="CASCADE"), index=True)
     hasta_id = Column(UUID(as_uuid=True), ForeignKey("hastalar.id"), nullable=True, index=True)
-    
+
     # Eski bilgiler
     eski_start = Column(DateTime(timezone=True), nullable=True)
     eski_end = Column(DateTime(timezone=True), nullable=True)
-    islem_tipi = Column(String, nullable=False) # 'update' or 'delete'
-    
+    islem_tipi = Column(String, nullable=False)  # 'update' or 'delete'
+
     # İsteğe bağlı ek eski bilgiler (title, status vs) tutulabilir
     eski_title = Column(String, nullable=True)
     eski_status = Column(String, nullable=True)
-    
+
     # Değişikliği yapan kullanıcı
     degistiren_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     degistiren_name = Column(String, nullable=True)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
-    
+
     # Relationship
     randevu = relationship("Randevu", backref=backref("tarihce_kayitlari", lazy="selectin"), lazy="selectin")
     hasta = relationship("Hasta", lazy="selectin")
-

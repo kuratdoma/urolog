@@ -121,7 +121,7 @@ class GeminiProvider(LLMProvider, MultimodalProvider):
                 raise ValueError("Gemini file processing failed")
 
             config = types.GenerateContentConfig(
-                response_mime_type="application/json", 
+                response_mime_type="application/json",
                 temperature=0.1,
                 safety_settings=[
                     types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_NONE"),

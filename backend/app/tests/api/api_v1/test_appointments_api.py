@@ -1,6 +1,5 @@
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -11,8 +10,10 @@ from app.schemas.appointment import RandevuResponse
 
 client = TestClient(app)
 
+
 def override_get_current_user():
     return User(id=1, email="doctor@urolog.com", username="dr_test", full_name="Dr. Test", is_active=True, is_superuser=True, role=UserRole.ADMIN)
+
 
 app.dependency_overrides[deps.get_current_user] = override_get_current_user
 

@@ -17,6 +17,11 @@ from app.schemas.personal_note import (
 )
 from app.services.personal_note_service import PersonalNoteService
 
+# RBAC: bu uçların PERMISSION_MATRIX'te bir modülü YOK ve olması da gerekmiyor.
+# Kişisel notlar rol bazlı değil SATIR bazlı yetkilendirilir: her sorgu
+# user_id / assigned_to_id üzerinden oturum sahibinin kendi kayıtlarına kısıtlanır
+# (bkz. PersonalNoteRepository.list_notes / get_note). Rol kapısı buraya yanlış
+# çözünürlükte bir kısıt koyardı.
 router = APIRouter(
     dependencies=[Depends(deps.get_current_user)],
     redirect_slashes=False,

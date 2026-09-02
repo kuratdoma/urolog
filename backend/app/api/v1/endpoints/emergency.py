@@ -84,7 +84,7 @@ async def drop_database(
         # We must connect to a different database to drop the target DB.
         # Connecting to the default 'postgres' database or 'template1'
         logger.warning(f"EMERGENCY DROP INITIATED FOR DB: {db_name_to_drop} BY USER: {current_user.email}")
-        
+
         conn = await asyncpg.connect(
             user=settings.DB_USER,
             password=settings.DB_PASSWORD,
@@ -95,8 +95,8 @@ async def drop_database(
 
         # Terminate all connections to the target DB
         terminate_query = """
-        SELECT pg_terminate_backend(pid) 
-        FROM pg_stat_activity 
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
         WHERE datname = $1 AND pid <> pg_backend_pid();
         """
         await conn.execute(terminate_query, db_name_to_drop)
@@ -106,7 +106,7 @@ async def drop_database(
         await conn.execute(drop_query)
 
         logger.critical(f"DATABASE {db_name_to_drop} DROPPED SUCCESSFULLY.")
-        
+
     except Exception as e:
         logger.error(f"Emergency Drop Failed: {e}")
         # The system might still be alive if drop failed, throw error

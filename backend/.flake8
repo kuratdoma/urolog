@@ -11,3 +11,5 @@ extend-ignore =
 per-file-ignores =
     __init__.py:F401,F403
     app/schemas/finance_schemas.py:F811
+    # SQLAlchemy/Alembic model kaydı: importlar yan etki içindir, kullanılmamaları normal.
+    app/db/base.py:F401

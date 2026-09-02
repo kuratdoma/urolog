@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, Union
+from typing import Optional
 from app.db.session import SessionLocal
 from app.models.audit import AuditLog
 
@@ -14,9 +14,11 @@ async def _save_audit_log_async(
     user_agent: Optional[str],
 ):
     try:
-        # Prevent mapper errors by importing repository-based models here
-        from app.repositories.patient.models import Hasta
-        from app.models.appointment import Randevu
+        # Prevent mapper errors by importing repository-based models here.
+        # Yan etki importu: isimler kullanılmıyor, SQLAlchemy mapper'ının
+        # çözülmesi için yüklenmeleri gerekiyor — silinmemeli.
+        from app.repositories.patient.models import Hasta  # noqa: F401
+        from app.models.appointment import Randevu  # noqa: F401
 
         async with SessionLocal() as session:
             if user_id:

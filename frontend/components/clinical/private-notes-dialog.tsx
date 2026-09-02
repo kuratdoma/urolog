@@ -131,7 +131,7 @@ export function PrivateNotesDialog({ patientId, protocolNo, autoShow = false }: 
                         notes.map((note) => (
                             <div key={note.id} className="group relative bg-slate-50 border border-slate-100 rounded-xl p-4 transition-all hover:border-yellow-200 hover:bg-yellow-50/20 shadow-sm hover:shadow">
                                 <p className="text-xs text-slate-700 leading-relaxed break-words whitespace-pre-wrap pr-8 italic">
-                                    "{note.icerik}"
+                                    &quot;{note.icerik}&quot;
                                 </p>
                                 <button 
                                     onClick={() => handleDeleteNote(note.id)}

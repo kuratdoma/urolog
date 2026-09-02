@@ -9,11 +9,10 @@ import asyncio
 import json
 import logging
 import re
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Dict, Any, List, Optional
-from uuid import UUID
 
-from sqlalchemy import select, or_, func, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.patient.models import Hasta
@@ -21,7 +20,6 @@ from app.repositories.clinical.models import (
     Muayene,
     Operasyon,
     KlinikNot,
-    FotografArsivi,
     TibbiMudahaleRaporu,
     HPVBriefingKaydi,
 )
@@ -230,7 +228,10 @@ class HPVBriefingService:
             if r.get("raw_date"):
                 dates.append(r["raw_date"])
 
-        return max(dates) if dates else datetime.now()
+        # Cutoff DB'den gelen aware UTC damgalarla karşılaştırılıyor (_filter_new_records
+        # iki tarafın da tzinfo'sunu atıyor). Naive yerel saat burada sunucu ofseti
+        # kadar ileri bir eşik üretip yeni kayıtları "eski" saydırıyordu.
+        return max(dates) if dates else datetime.now(timezone.utc)
 
     def _filter_new_records(
         self, context: Dict[str, Any], cutoff_date: Optional[datetime]
@@ -577,13 +578,20 @@ class HPVBriefingService:
             exam_texts = []
             for i, e in enumerate(exams, 1):
                 parts = [f"### Muayene {i} — {e.get('tarih', '?')}"]
-                if e.get('sikayet'): parts.append(f"Şikayet: {_truncate(e['sikayet'], 250)}")
-                if e.get('oyku'): parts.append(f"Öykü: {_truncate(e['oyku'], 400)}")
-                if e.get('fizik_muayene'): parts.append(f"Fizik Muayene: {_truncate(e['fizik_muayene'], 500)}")
-                if e.get('tani'): parts.append(f"Tanı: {e['tani']}")
-                if e.get('tedavi'): parts.append(f"Tedavi: {_truncate(e['tedavi'], 400)}")
-                if e.get('prosedur'): parts.append(f"Prosedür: {_truncate(e['prosedur'], 400)}")
-                if e.get('oneriler'): parts.append(f"Öneriler: {_truncate(e['oneriler'], 250)}")
+                if e.get('sikayet'):
+                    parts.append(f"Şikayet: {_truncate(e['sikayet'], 250)}")
+                if e.get('oyku'):
+                    parts.append(f"Öykü: {_truncate(e['oyku'], 400)}")
+                if e.get('fizik_muayene'):
+                    parts.append(f"Fizik Muayene: {_truncate(e['fizik_muayene'], 500)}")
+                if e.get('tani'):
+                    parts.append(f"Tanı: {e['tani']}")
+                if e.get('tedavi'):
+                    parts.append(f"Tedavi: {_truncate(e['tedavi'], 400)}")
+                if e.get('prosedur'):
+                    parts.append(f"Prosedür: {_truncate(e['prosedur'], 400)}")
+                if e.get('oneriler'):
+                    parts.append(f"Öneriler: {_truncate(e['oneriler'], 250)}")
                 exam_texts.append("\n".join(parts))
             sections.append(f"## MUAYENELER ({len(exams)} adet)\n" + "\n\n".join(exam_texts))
 
@@ -591,11 +599,16 @@ class HPVBriefingService:
             op_texts = []
             for i, o in enumerate(ops, 1):
                 parts = [f"### Operasyon {i} — {o.get('tarih', '?')}"]
-                if o.get('ameliyat'): parts.append(f"Ameliyat: {_truncate(o['ameliyat'], 200)}")
-                if o.get('notlar'): parts.append(f"Notlar: {_truncate(o['notlar'], 600)}")
-                if o.get('patoloji'): parts.append(f"Patoloji: {_truncate(o['patoloji'], 600)}")
-                if o.get('pre_op_tani'): parts.append(f"Pre-op tanı: {o['pre_op_tani']}")
-                if o.get('post_op_tani'): parts.append(f"Post-op tanı: {o['post_op_tani']}")
+                if o.get('ameliyat'):
+                    parts.append(f"Ameliyat: {_truncate(o['ameliyat'], 200)}")
+                if o.get('notlar'):
+                    parts.append(f"Notlar: {_truncate(o['notlar'], 600)}")
+                if o.get('patoloji'):
+                    parts.append(f"Patoloji: {_truncate(o['patoloji'], 600)}")
+                if o.get('pre_op_tani'):
+                    parts.append(f"Pre-op tanı: {o['pre_op_tani']}")
+                if o.get('post_op_tani'):
+                    parts.append(f"Post-op tanı: {o['post_op_tani']}")
                 op_texts.append("\n".join(parts))
             sections.append(f"## OPERASYONLAR ({len(ops)} adet)\n" + "\n\n".join(op_texts))
 
@@ -603,7 +616,8 @@ class HPVBriefingService:
             fu_texts = []
             for i, f in enumerate(followups, 1):
                 parts = [f"### Takip {i} — {f.get('tarih', '?')} [{f.get('tip', '')}]"]
-                if f.get('icerik'): parts.append(f"İçerik: {_truncate(f['icerik'], 500)}")
+                if f.get('icerik'):
+                    parts.append(f"İçerik: {_truncate(f['icerik'], 500)}")
                 fu_texts.append("\n".join(parts))
             sections.append(f"## TAKİP NOTLARI ({len(followups)} adet)\n" + "\n\n".join(fu_texts))
 
@@ -611,8 +625,10 @@ class HPVBriefingService:
             mr_texts = []
             for i, r in enumerate(med_reports, 1):
                 parts = [f"### Tıbbi Müdahale {i} — {r.get('tarih', '?')}"]
-                if r.get('islem_basligi'): parts.append(f"İşlem: {r['islem_basligi']}")
-                if r.get('islem_detayi'): parts.append(f"Detay: {_truncate(r['islem_detayi'], 500)}")
+                if r.get('islem_basligi'):
+                    parts.append(f"İşlem: {r['islem_basligi']}")
+                if r.get('islem_detayi'):
+                    parts.append(f"Detay: {_truncate(r['islem_detayi'], 500)}")
                 mr_texts.append("\n".join(parts))
             sections.append(f"## TIBBİ MÜDAHALE RAPORLARI ({len(med_reports)} adet)\n" + "\n\n".join(mr_texts))
 

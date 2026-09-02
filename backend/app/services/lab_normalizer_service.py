@@ -446,7 +446,6 @@ def clean_punctuation(name: str) -> str:
     return name.strip()
 
 
-
 def normalize_unit(unit: Optional[str]) -> Optional[str]:
     """
     Normalize a unit string to its canonical form.

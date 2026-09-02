@@ -29,10 +29,10 @@ export default function OperationsPage() {
                     </p>
 
                     <ol className="list-decimal list-inside space-y-2 text-slate-700 ml-4 font-medium">
-                        <li>"Hastalar" menüsüne gidiniz.</li>
+                        <li>&quot;Hastalar&quot; menüsüne gidiniz.</li>
                         <li>İşlem yapılacak hastayı arayıp seçiniz.</li>
-                        <li>Hasta detay ekranında <strong>"Operasyon"</strong> sekmesine tıklayınız.</li>
-                        <li>"Yeni Operasyon" butonunu kullanarak kaydı giriniz.</li>
+                        <li>Hasta detay ekranında <strong>&quot;Operasyon&quot;</strong> sekmesine tıklayınız.</li>
+                        <li>&quot;Yeni Operasyon&quot; butonunu kullanarak kaydı giriniz.</li>
                     </ol>
 
                     <div className="pt-4">

@@ -3,7 +3,7 @@ import json
 from datetime import date, datetime
 from uuid import UUID
 from decimal import Decimal
-from typing import Optional, Union
+from typing import Optional
 from app.tasks.audit_tasks import _save_audit_log_async
 
 # Sensitive keys that should NEVER be logged

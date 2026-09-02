@@ -14,7 +14,6 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -142,12 +141,12 @@ class ConsentFormService:
     def add_form(self, file_content: bytes, filename: str, display_name: str, category: str) -> dict:
         import uuid
         form_id = str(uuid.uuid4())
-        
+
         # Save file
         file_path = os.path.join(_CONSENT_FORMS_DIR, filename)
         with open(file_path, "wb") as f:
             f.write(file_content)
-            
+
         manifest = self._load_manifest()
         new_form = ConsentFormInfo(
             id=form_id,
@@ -159,7 +158,7 @@ class ConsentFormService:
         )
         manifest.append(new_form)
         self._save_manifest(manifest)
-        
+
         return {
             "id": new_form.id,
             "display_name": new_form.display_name,
@@ -179,7 +178,7 @@ class ConsentFormService:
                         os.remove(file_path)
                     except Exception as e:
                         logger.error(f"PDF silinirken hata: {e}")
-                
+
                 manifest.pop(i)
                 self._save_manifest(manifest)
                 return True
@@ -204,13 +203,13 @@ class ConsentFormService:
     def list_forms(self) -> List[dict]:
         """Mevcut onam formlarını listeler."""
         manifest = self._load_manifest()
-        
+
         def get_sort_key(f: ConsentFormInfo):
             priority = 0 if f.order_index > 0 else 1
             return (priority, f.order_index, -f.usage_count, f.display_name)
-            
+
         manifest.sort(key=get_sort_key)
-        
+
         return [
             {
                 "id": form.id,
@@ -230,17 +229,17 @@ class ConsentFormService:
                 form.usage_count += 1
                 self._save_manifest(manifest)
                 break
-                
+
     def update_order(self, orders: List[dict]) -> bool:
         """Formların order_index değerlerini topluca günceller."""
         manifest = self._load_manifest()
         # orders: [{"id": "...", "order_index": 1}, ...]
         order_map = {item["id"]: item.get("order_index", 0) for item in orders}
-        
+
         for form in manifest:
             if form.id in order_map:
                 form.order_index = order_map[form.id]
-                
+
         self._save_manifest(manifest)
         return True
 
@@ -278,7 +277,7 @@ class ConsentFormService:
         """
         matched_label = label
         rects = page.search_for(label)
-        
+
         if not rects and alt_labels:
             for alt in alt_labels:
                 rects = page.search_for(alt)
@@ -290,7 +289,7 @@ class ConsentFormService:
             return False
 
         rect = rects[0]
-        
+
         # Eğer etiket "Ad-Soyad" ise, muhtemelen altında veya yanında ":" vardır, biraz daha sağa yazalım
         current_offset_x = offset_x
         if matched_label == "Ad-Soyad":
@@ -368,32 +367,38 @@ class ConsentFormService:
             return False
 
         rect = rects[-1]
-        
+
         notes = []
-        if data.sikayet: notes.append(f"Şikayeti: {data.sikayet}")
-        if data.ozgecmis: notes.append(f"ÖzGeçmiş: {data.ozgecmis}")
-        if data.ilaclar: notes.append(f"İlaçlar: {data.ilaclar}")
-        if data.allerjiler: notes.append(f"Allerjiler: {data.allerjiler}")
-        if data.sigara_durumu: notes.append(f"Sigara durumu: {data.sigara_durumu}")
-        if data.karar: notes.append(f"Sonuç / KARAR: {data.karar}")
+        if data.sikayet:
+            notes.append(f"Şikayeti: {data.sikayet}")
+        if data.ozgecmis:
+            notes.append(f"ÖzGeçmiş: {data.ozgecmis}")
+        if data.ilaclar:
+            notes.append(f"İlaçlar: {data.ilaclar}")
+        if data.allerjiler:
+            notes.append(f"Allerjiler: {data.allerjiler}")
+        if data.sigara_durumu:
+            notes.append(f"Sigara durumu: {data.sigara_durumu}")
+        if data.karar:
+            notes.append(f"Sonuç / KARAR: {data.karar}")
 
         if not notes:
             return True
 
         text = "\n".join(notes)
-        
+
         # Define a textbox area below the label
         y0 = rect.y1 + 5
         # Allow up to 150 points in height, constrain width
         textbox_rect = fitz.Rect(rect.x0, y0, page.rect.width - 30, y0 + 150)
-        
+
         page.insert_textbox(
             textbox_rect,
             text,
             fontsize=9,
             fontname=fontname,
             color=(0, 0, 0),
-            align=0 # left
+            align=0  # left
         )
         return True
 
@@ -427,7 +432,7 @@ class ConsentFormService:
                 page = doc[page_idx]
                 fontname = self._register_font(page)
                 bold_fontname = self._register_bold_font(page)
-                
+
                 # 1. Sol üst köşede bold olarak sadece ad soyad yaz
                 page.insert_text(
                     fitz.Point(36, 18),
@@ -453,7 +458,7 @@ class ConsentFormService:
                             fontsize=11,
                             color=(0, 0, 0)
                         )
-                    
+
                     # Tarih bul ve doldur (Tarih ve Saat)
                     rects_date = page.search_for("Tarih")
                     if rects_date:
@@ -466,7 +471,7 @@ class ConsentFormService:
                             fontsize=11,
                             color=(0, 0, 0)
                         )
-                
+
                 # 3. Her sayfanın sol alt köşesine Ad Soyad, Tarih ve Saat bilgisi yaz (footer)
                 footer_hasta_bilgi = patient_data.hasta_adi_soyadi
                 if patient_data.tc_kimlik:
@@ -500,7 +505,7 @@ class ConsentFormService:
             hasta_name = patient_data.hasta_adi_soyadi
             if patient_data.dogum_tarihi:
                 hasta_name += f"   D.Tarihi: {patient_data.dogum_tarihi}"
-                
+
             # Fontu büyüttük (11'den 13'e). Eğer çok uzunsa 11'e düşür.
             hasta_fontsize = 11 if len(hasta_name) > 40 else 13
 
@@ -574,15 +579,15 @@ class ConsentFormService:
         for page_idx in range(len(doc)):
             page = doc[page_idx]
             fontname = self._register_font(page)
-            
+
             # Hekim Notlarını doldur
             self._fill_clinical_notes(page, patient_data, fontname)
-            
+
             # Alt bilgi (zaman damgası)
             footer_hasta_bilgi = patient_data.hasta_adi_soyadi
             if patient_data.tc_kimlik:
                 footer_hasta_bilgi += f" (TC: {patient_data.tc_kimlik})"
-                
+
             footer_text = f"Hasta: {footer_hasta_bilgi} | Tarih: {patient_data.tarih} {patient_data.saat}"
             footer_point = fitz.Point(30, page.rect.height - 20)
             page.insert_text(

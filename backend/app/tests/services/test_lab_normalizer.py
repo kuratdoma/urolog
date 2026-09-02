@@ -2,7 +2,6 @@
 Tests for LabNormalizerService.
 Validates test name and unit normalization against known clinical variations.
 """
-import pytest
 from app.services.lab_normalizer_service import (
     normalize_test_name,
     normalize_unit,

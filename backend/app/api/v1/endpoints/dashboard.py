@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc, case, distinct
 from app.api import deps
+from app.core.permissions import Action
 from app.schemas.dashboard import DashboardData, DashboardSummary
 from app.repositories.patient.models import Hasta
 from app.models.appointment import Randevu, AppointmentStatus
@@ -16,11 +17,16 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["dashboard"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("dashboard", Action.READ)
+
 from app.api import deps
 from app.models.user import User
 
 
-@router.get("", response_model=DashboardData)
+@router.get("", response_model=DashboardData, dependencies=[Depends(_read)])
 @cache(expire=60)
 async def get_dashboard_data(
     db: AsyncSession = Depends(deps.get_db),

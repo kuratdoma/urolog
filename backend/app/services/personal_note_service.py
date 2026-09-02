@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.personal_note import (
@@ -16,8 +16,6 @@ from app.models.user import User
 from app.repositories.personal_note_repository import PersonalNoteRepository
 from app.services.audit_service import AuditService
 from app.services.recurrence import compute_next_occurrence
-
-from sqlalchemy import or_, select
 
 CATCH_UP_WINDOW = timedelta(hours=48)
 MAX_OCCURRENCES_PER_NOTE_PER_CALL = 200  # runaway materialization'a karşı savunma sınırı
@@ -46,7 +44,7 @@ class PersonalNoteService:
     async def _resolve_assignee(self, user: User, data: dict) -> tuple[Optional[int], AssignmentStatus]:
         """Resolves target user from explicit assigned_to_id or @mentions in title/content."""
         target_user_id = data.get("assigned_to_id")
-        
+
         # If no explicit ID, try extracting from title or content
         if not target_user_id:
             text_to_search = f"{data.get('title', '')} {data.get('content', '')}"

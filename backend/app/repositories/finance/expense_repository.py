@@ -153,10 +153,9 @@ class ExpenseRepository:
                 kasa = kasa_res.scalar_one()
                 onceki_bakiye = float(kasa.bakiye or 0)
 
-                
                 # Deduct from Kasa (Expense)
                 kasa.bakiye = onceki_bakiye - float(odeme.tutar)
-                
+
                 # Record Movement
                 hareket = KasaHareket(
                     kasa_id=kasa.id,
@@ -177,14 +176,14 @@ class ExpenseRepository:
                 taksit_sayisi = int(odeme.taksit_sayisi)
                 base_tutar = float(odeme.tutar) / taksit_sayisi
                 base_tutar = round(base_tutar, 2)
-                
+
                 # Handling round-off error for the last installment
                 remainder = round(float(odeme.tutar) - (base_tutar * (taksit_sayisi - 1)), 2)
 
                 for i in range(1, taksit_sayisi + 1):
                     vade = odeme.odeme_tarihi + relativedelta(months=i)
                     taksit_tutari = remainder if i == taksit_sayisi else base_tutar
-                    
+
                     taksit = FinansTaksit(
                         odeme_id=odeme.id,
                         taksit_no=i,

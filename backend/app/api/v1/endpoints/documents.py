@@ -11,6 +11,7 @@ import io
 from PIL import Image
 
 from app.api import deps
+from app.core.permissions import Action
 from app.core.download_tokens import create_download_token, validate_download_token_async, store_token_in_redis
 from app.models.documents import HastaDosya
 from app.core.security_helpers import validate_file_path, validate_upload_file
@@ -20,9 +21,17 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["documents"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("documents", Action.READ)
+_create = deps.require_permission("documents", Action.CREATE)
+_update = deps.require_permission("documents", Action.UPDATE)
+
 public_router = APIRouter()
 
-@router.post("/upload", response_model=dict)
+
+@router.post("/upload", response_model=dict, dependencies=[Depends(_create)])
 async def upload_document(
     file: UploadFile = File(...), current_user=Depends(deps.get_current_user)
 ) -> Any:
@@ -117,7 +126,7 @@ async def upload_document(
         raise HTTPException(status_code=500, detail="Dosya yüklenirken bir hata oluştu")
 
 
-@router.get("/patients/{hasta_id}/documents", response_model=List[dict])
+@router.get("/patients/{hasta_id}/documents", response_model=List[dict], dependencies=[Depends(_read)])
 async def read_documents(
     hasta_id: str,
     db: AsyncSession = Depends(deps.get_db),
@@ -150,7 +159,7 @@ async def read_documents(
     ]
 
 
-@router.post("/documents", response_model=dict)
+@router.post("/documents", response_model=dict, dependencies=[Depends(_create)])
 async def create_document(
     data: dict,  # Simplified for now, expecting JSON body
     db: AsyncSession = Depends(deps.get_db),
@@ -187,7 +196,7 @@ async def create_document(
     return {"id": new_doc.id, "status": "success"}
 
 
-@router.put("/documents/{id}", response_model=dict)
+@router.put("/documents/{id}", response_model=dict, dependencies=[Depends(_update)])
 async def update_document(
     id: int,
     data: dict,
@@ -245,7 +254,7 @@ async def update_document(
         )
 
 
-@router.post("/download-token/{id}")
+@router.post("/download-token/{id}", dependencies=[Depends(_create)])
 async def get_download_token(
     id: int,
     db: AsyncSession = Depends(deps.get_db),
@@ -282,7 +291,7 @@ async def download_document(
         await deps.get_current_user_from_token(token=token, db=db)
     else:
         raise HTTPException(status_code=401, detail="Download token gerekli")
-    
+
     result = await db.execute(select(HastaDosya).filter(HastaDosya.id == id))
     doc = result.scalars().first()
     if not doc:
@@ -340,7 +349,7 @@ async def delete_document(
         raise HTTPException(status_code=500, detail="Dosya silinirken bir hata oluştu")
 
 
-@router.post("/download-token-by-path")
+@router.post("/download-token-by-path", dependencies=[Depends(_create)])
 async def get_download_token_by_path(
     path: str,
     db: AsyncSession = Depends(deps.get_db),

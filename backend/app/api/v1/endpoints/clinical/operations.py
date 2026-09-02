@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
+from app.core.permissions import Action
 from app.repositories.clinical.repository import ClinicalRepository
 from app.schemas.clinical import (
     OperasyonCreate,
@@ -14,7 +15,15 @@ from app.models.user import User
 
 router = APIRouter(dependencies=[Depends(deps.get_current_user)])
 
-@router.get("/operasyonlar/report", response_model=List[OperasyonResponse])
+# RBAC: yetkiler PERMISSION_MATRIX["operations"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("operations", Action.READ)
+_create = deps.require_permission("operations", Action.CREATE)
+_update = deps.require_permission("operations", Action.UPDATE)
+
+
+@router.get("/operasyonlar/report", response_model=List[OperasyonResponse], dependencies=[Depends(_read)])
 async def read_operasyonlar_report(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -27,7 +36,7 @@ async def read_operasyonlar_report(
     )
 
 
-@router.get("/patients/{hasta_id}/operasyonlar", response_model=List[OperasyonResponse])
+@router.get("/patients/{hasta_id}/operasyonlar", response_model=List[OperasyonResponse], dependencies=[Depends(_read)])
 async def read_operasyonlar(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -46,7 +55,7 @@ async def read_operasyonlar(
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.get("/operasyonlar/{id}", response_model=OperasyonResponse)
+@router.get("/operasyonlar/{id}", response_model=OperasyonResponse, dependencies=[Depends(_read)])
 async def read_operasyon(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     try:
         from app.controllers.legacy_adapters.clinical_adapter import (
@@ -66,7 +75,7 @@ async def read_operasyon(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.post("/operasyonlar", response_model=OperasyonResponse)
+@router.post("/operasyonlar", response_model=OperasyonResponse, dependencies=[Depends(_create)])
 async def create_operasyon(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -105,7 +114,7 @@ async def create_operasyon(
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.put("/operasyonlar/{id}", response_model=OperasyonResponse)
+@router.put("/operasyonlar/{id}", response_model=OperasyonResponse, dependencies=[Depends(_update)])
 async def update_operasyon(
     *,
     db: AsyncSession = Depends(deps.get_db),

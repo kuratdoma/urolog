@@ -3,13 +3,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_cache.decorator import cache
 from app.api import deps
+from app.core.permissions import Action
 from app.core.cache_invalidation import CacheNS, invalidate
 from app.models.user import User
 from app.repositories.definition_repository import DefinitionRepository
 from app.repositories.system_repository import SystemRepository
 from app.schemas.definition import (
-    Definition,
-    DefinitionCreate,
     BiyopsiSablonu,
     BiyopsiSablonuCreate,
     TetkikTanim,
@@ -22,6 +21,16 @@ from app.schemas.definition import (
 
 router = APIRouter()
 
+# RBAC: yetkiler PERMISSION_MATRIX["definitions"] üzerinden işlem bazında uygulanır.
+# OKUMA kasıtlı olarak kapısız: tanımlar PHI değil, uygulama genelinde açılır
+# listeleri besleyen referans veridir. Matriste FRONTDESK/TECHNICIAN'ın
+# "definitions" okuma hakkı yok; kapı konsaydı randevu oluşturabilen FRONTDESK
+# randevu türlerini okuyamayıp 403 alırdı. Yazma uçları matrise bağlıdır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_create = deps.require_permission("definitions", Action.CREATE)
+_update = deps.require_permission("definitions", Action.UPDATE)
+
 
 # Biyopsi
 @router.get("/biyopsi-sablonlari", response_model=List[BiyopsiSablonu])
@@ -30,7 +39,7 @@ async def get_biyopsi_sablonlari(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_biyopsi_sablonlari()
 
 
-@router.post("/biyopsi-sablonlari", response_model=BiyopsiSablonu)
+@router.post("/biyopsi-sablonlari", response_model=BiyopsiSablonu, dependencies=[Depends(_create)])
 async def create_biyopsi_sablonu(
     obj_in: BiyopsiSablonuCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -40,7 +49,7 @@ async def create_biyopsi_sablonu(
     )
 
 
-@router.put("/biyopsi-sablonlari/{id}", response_model=BiyopsiSablonu)
+@router.put("/biyopsi-sablonlari/{id}", response_model=BiyopsiSablonu, dependencies=[Depends(_update)])
 async def update_biyopsi_sablonu(
     id: int, obj_in: BiyopsiSablonuCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -68,7 +77,7 @@ async def get_tetkikler(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_tetkikler()
 
 
-@router.post("/tetkikler", response_model=TetkikTanim)
+@router.post("/tetkikler", response_model=TetkikTanim, dependencies=[Depends(_create)])
 async def create_tetkik(
     obj_in: TetkikTanimCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -83,7 +92,7 @@ async def create_tetkik(
     )
 
 
-@router.put("/tetkikler/{id}", response_model=TetkikTanim)
+@router.put("/tetkikler/{id}", response_model=TetkikTanim, dependencies=[Depends(_update)])
 async def update_tetkik(
     id: int, obj_in: TetkikTanimCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -118,7 +127,7 @@ async def get_recete_sablonlari(db: AsyncSession = Depends(deps.get_db)):
     return await repo.get_recete_sablonlari()
 
 
-@router.post("/recete-sablonlari", response_model=ReceteSablonu)
+@router.post("/recete-sablonlari", response_model=ReceteSablonu, dependencies=[Depends(_create)])
 async def create_recete_sablonu(
     obj_in: ReceteSablonuCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -133,7 +142,7 @@ async def create_recete_sablonu(
     return result
 
 
-@router.put("/recete-sablonlari/{id}", response_model=ReceteSablonu)
+@router.put("/recete-sablonlari/{id}", response_model=ReceteSablonu, dependencies=[Depends(_update)])
 async def update_recete_sablonu(
     id: int, obj_in: ReceteSablonuCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -172,7 +181,7 @@ async def get_sablonlar(
     return await repo.get_sablonlar(grup=target_group)
 
 
-@router.post("/sablonlar", response_model=SablonTanim)
+@router.post("/sablonlar", response_model=SablonTanim, dependencies=[Depends(_create)])
 async def create_sablon(
     obj_in: SablonTanimCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -185,7 +194,7 @@ async def create_sablon(
     )
 
 
-@router.put("/sablonlar/{id}", response_model=SablonTanim)
+@router.put("/sablonlar/{id}", response_model=SablonTanim, dependencies=[Depends(_update)])
 async def update_sablon(
     id: int, obj_in: SablonTanimCreate, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -244,7 +253,7 @@ async def lookup_icd_code(
     return {"code": code, "name": name, "found": name is not None}
 
 
-@router.post("/icd-lookup-batch")
+@router.post("/icd-lookup-batch", dependencies=[Depends(_create)])
 async def lookup_icd_codes_batch(
     codes: List[str],
     db: AsyncSession = Depends(deps.get_db)

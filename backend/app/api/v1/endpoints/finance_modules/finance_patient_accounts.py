@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.core.permissions import Action
 from app.repositories.finance.income_repository import IncomeRepository
 from app.services.orchestrators.finance_orchestrator import FinanceOrchestrator
 from app.schemas.finance import (
@@ -21,12 +22,19 @@ from app.core.user_context import UserContext
 
 router = APIRouter()
 
+# RBAC: yetkiler PERMISSION_MATRIX["finance"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("finance", Action.READ)
+_create = deps.require_permission("finance", Action.CREATE)
+
 
 # =============================================================================
 # HASTA CARİ
 # =============================================================================
 @router.get(
-    "/patients/{hasta_id}/transactions", response_model=List[FinansIslemResponse]
+    "/patients/{hasta_id}/transactions", response_model=List[FinansIslemResponse],
+    dependencies=[Depends(_read)],
 )
 async def get_hasta_islemler(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -35,14 +43,14 @@ async def get_hasta_islemler(
     return await repo.get_patient_transactions(UUID(hasta_id))
 
 
-@router.get("/patients/{hasta_id}/balance", response_model=HastaCariResponse)
+@router.get("/patients/{hasta_id}/balance", response_model=HastaCariResponse, dependencies=[Depends(_read)])
 async def get_hasta_cari(hasta_id: str, db: AsyncSession = Depends(deps.get_db)) -> Any:
     repo = IncomeRepository(db)
     cari = await repo.get_patient_balance(UUID(hasta_id))
     return HastaCariResponse(**cari)
 
 
-@router.get("/patients/{hasta_id}/statement", response_model=HastaEkstreResponse)
+@router.get("/patients/{hasta_id}/statement", response_model=HastaEkstreResponse, dependencies=[Depends(_read)])
 async def get_hasta_ekstre(
     hasta_id: str,
     start_date: Optional[date] = Query(None),
@@ -61,7 +69,8 @@ async def get_hasta_ekstre(
 
 
 @router.get(
-    "/patients/{hasta_id}/open-transactions", response_model=List[AcikIslemResponse]
+    "/patients/{hasta_id}/open-transactions", response_model=List[AcikIslemResponse],
+    dependencies=[Depends(_read)],
 )
 async def get_hasta_acik_islemler(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
@@ -71,7 +80,7 @@ async def get_hasta_acik_islemler(
     return await repo.get_open_transactions(UUID(hasta_id))
 
 
-@router.post("/patients/{hasta_id}/collect", response_model=TopluTahsilatResponse)
+@router.post("/patients/{hasta_id}/collect", response_model=TopluTahsilatResponse, dependencies=[Depends(_create)])
 async def toplu_tahsilat(
     hasta_id: str,
     *,
@@ -110,7 +119,7 @@ async def toplu_tahsilat(
     return sonuc
 
 
-@router.get("/patients/debtors", response_model=List[HastaCariResponse])
+@router.get("/patients/debtors", response_model=List[HastaCariResponse], dependencies=[Depends(_read)])
 async def get_borclu_hastalar(
     min_borc: float = Query(0, ge=0),
     skip: int = Query(0, ge=0),

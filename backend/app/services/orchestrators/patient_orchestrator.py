@@ -1,4 +1,3 @@
-import asyncio
 import traceback
 from datetime import datetime
 from typing import List, Optional
@@ -87,7 +86,7 @@ class PatientOrchestrator:
             profile.son_muayene = MuayeneResponse.model_validate(
                 son_muayene
             ).model_dump()
-        
+
         return profile
 
     async def get_multi(

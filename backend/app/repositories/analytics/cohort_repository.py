@@ -8,6 +8,7 @@ from app.repositories.clinical.models import Muayene, KlinikNot
 from app.models.appointment import Randevu
 from app.schemas.report import HeatmapData, CohortRow, ChartDataPoint
 
+
 class CohortRepository:
     @staticmethod
     async def get_heatmap_data(
@@ -306,4 +307,3 @@ class CohortRepository:
         res = await db.execute(query)
         rows = res.all()
         return [{"id": str(row[0]), "ad": row[1], "soyad": row[2]} for row in rows]
-

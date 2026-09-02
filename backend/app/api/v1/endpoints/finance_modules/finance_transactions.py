@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.core.permissions import UserRole
+from app.core.permissions import UserRole, Action
 from app.repositories.finance.income_repository import IncomeRepository
 from app.services.orchestrators.finance_orchestrator import FinanceOrchestrator
 from app.schemas.finance import (
@@ -23,11 +23,19 @@ from app.core.user_context import UserContext
 
 router = APIRouter()
 
+# RBAC: yetkiler PERMISSION_MATRIX["finance"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("finance", Action.READ)
+_create = deps.require_permission("finance", Action.CREATE)
+_update = deps.require_permission("finance", Action.UPDATE)
+_delete = deps.require_permission("finance", Action.DELETE)
+
 
 # =============================================================================
 # FİNANS İŞLEMLERİ
 # =============================================================================
-@router.get("/transactions", response_model=FinansIslemPaginationResponse)
+@router.get("/transactions", response_model=FinansIslemPaginationResponse, dependencies=[Depends(_read)])
 async def get_islemler(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
@@ -68,7 +76,7 @@ async def get_islemler(
     return {"items": items, "total": total, "skip": skip, "limit": limit}
 
 
-@router.get("/transactions/{islem_id}", response_model=FinansIslemResponse)
+@router.get("/transactions/{islem_id}", response_model=FinansIslemResponse, dependencies=[Depends(_read)])
 async def get_islem(islem_id: int, db: AsyncSession = Depends(deps.get_db)) -> Any:
     """İşlem detayını getir"""
     repo = IncomeRepository(db)
@@ -78,7 +86,7 @@ async def get_islem(islem_id: int, db: AsyncSession = Depends(deps.get_db)) -> A
     return islem
 
 
-@router.post("/transactions", response_model=FinansIslemResponse)
+@router.post("/transactions", response_model=FinansIslemResponse, dependencies=[Depends(_create)])
 async def create_islem(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -108,7 +116,8 @@ async def create_islem(
 
 
 @router.post(
-    "/transactions/{islem_id}/payments", response_model=FinansIslemResponse
+    "/transactions/{islem_id}/payments", response_model=FinansIslemResponse,
+    dependencies=[Depends(_create)],
 )
 async def add_islem_odeme(
     islem_id: int,
@@ -143,7 +152,8 @@ async def add_islem_odeme(
 
 
 @router.delete(
-    "/transactions/{islem_id}/payments/{odeme_id}", response_model=FinansIslemResponse
+    "/transactions/{islem_id}/payments/{odeme_id}", response_model=FinansIslemResponse,
+    dependencies=[Depends(_delete)],
 )
 async def delete_islem_odeme(
     islem_id: int,
@@ -178,7 +188,7 @@ async def delete_islem_odeme(
     return await repo.get_transaction(islem_id)
 
 
-@router.post("/installments/{taksit_id}/collect", response_model=FinansTaksitResponse)
+@router.post("/installments/{taksit_id}/collect", response_model=FinansTaksitResponse, dependencies=[Depends(_create)])
 async def tahsil_et_taksit(
     taksit_id: int,
     tahsil_tarihi: Optional[date] = Query(None, description="Boş bırakılırsa bugün"),
@@ -207,7 +217,7 @@ async def tahsil_et_taksit(
     return taksit
 
 
-@router.post("/installments/{taksit_id}/uncollect", response_model=FinansTaksitResponse)
+@router.post("/installments/{taksit_id}/uncollect", response_model=FinansTaksitResponse, dependencies=[Depends(_create)])
 async def tahsilat_geri_al_taksit(
     taksit_id: int,
     db: AsyncSession = Depends(deps.get_db),
@@ -230,7 +240,7 @@ async def tahsilat_geri_al_taksit(
     return taksit
 
 
-@router.put("/transactions/{islem_id}", response_model=FinansIslemResponse)
+@router.put("/transactions/{islem_id}", response_model=FinansIslemResponse, dependencies=[Depends(_update)])
 async def update_islem(
     islem_id: int,
     *,
@@ -268,7 +278,7 @@ async def update_islem(
     return islem
 
 
-@router.post("/transactions/{islem_id}/cancel", response_model=FinansIslemResponse)
+@router.post("/transactions/{islem_id}/cancel", response_model=FinansIslemResponse, dependencies=[Depends(_create)])
 async def cancel_islem(
     islem_id: int,
     *,

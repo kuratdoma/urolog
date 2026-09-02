@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 from app.api import deps
+from app.core.permissions import Action
 from app.repositories.appointment_repository import AppointmentRepository
 from app.schemas.appointment import RandevuCreate, RandevuUpdate, RandevuResponse
 from app.models.user import User
@@ -14,13 +15,20 @@ router = APIRouter(
     redirect_slashes=False
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["appointments"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("appointments", Action.READ)
+_create = deps.require_permission("appointments", Action.CREATE)
+_update = deps.require_permission("appointments", Action.UPDATE)
+_delete = deps.require_permission("appointments", Action.DELETE)
+
 
 async def background_google_sync(appointment_id: int, user_id: int, action: str = "sync"):
     from app.db.session import SessionLocal
     from app.services.google_calendar_service import GoogleCalendarService
     from app.repositories.appointment_repository import AppointmentRepository
-    import asyncio
-    
+
     # Kendi oturumunu açıp işlemleri burada yapacak, ana akışı tıkamayacak
     async with SessionLocal() as session:
         repo = AppointmentRepository(session)
@@ -36,7 +44,7 @@ async def background_google_sync(appointment_id: int, user_id: int, action: str 
 
             if not creds:
                 return
-                
+
             if action == "sync":
                 await calendar_service.sync_appointment(appointment, user_id)
             elif action == "delete":
@@ -45,7 +53,7 @@ async def background_google_sync(appointment_id: int, user_id: int, action: str 
             print(f"Background Google Calendar {action} hatası: {e}")
 
 
-@router.get("", response_model=List[RandevuResponse])
+@router.get("", response_model=List[RandevuResponse], dependencies=[Depends(_read)])
 async def get_appointments(
     start: Optional[str] = Query(None, description="Start datetime ISO string"),
     end: Optional[str] = Query(None, description="End datetime ISO string"),
@@ -77,7 +85,7 @@ async def get_appointments(
     return appointments
 
 
-@router.get("/{randevu_id}", response_model=RandevuResponse)
+@router.get("/{randevu_id}", response_model=RandevuResponse, dependencies=[Depends(_read)])
 async def get_appointment(randevu_id: int, db: AsyncSession = Depends(deps.get_db)):
     """Get a specific appointment by ID."""
     repo = AppointmentRepository(db)
@@ -87,7 +95,7 @@ async def get_appointment(randevu_id: int, db: AsyncSession = Depends(deps.get_d
     return appointment
 
 
-@router.get("/patient/{hasta_id}", response_model=List[RandevuResponse])
+@router.get("/patient/{hasta_id}", response_model=List[RandevuResponse], dependencies=[Depends(_read)])
 async def get_patient_appointments(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -97,7 +105,7 @@ async def get_patient_appointments(
     return appointments
 
 
-@router.post("", response_model=RandevuResponse)
+@router.post("", response_model=RandevuResponse, dependencies=[Depends(_create)])
 async def create_appointment(
     randevu_in: RandevuCreate,
     background_tasks: BackgroundTasks,
@@ -107,14 +115,14 @@ async def create_appointment(
     """Create a new appointment."""
     repo = AppointmentRepository(db)
     appointment = await repo.create(randevu_in, user_id=current_user.id, user_name=current_user.full_name)
-    
+
     # Otomatik Google Calendar Senkronizasyonu (Arka Planda)
     background_tasks.add_task(background_google_sync, appointment.id, current_user.id, "sync")
-        
+
     return appointment
 
 
-@router.put("/{randevu_id}", response_model=RandevuResponse)
+@router.put("/{randevu_id}", response_model=RandevuResponse, dependencies=[Depends(_update)])
 async def update_appointment(
     randevu_id: int,
     randevu_in: RandevuUpdate,
@@ -127,14 +135,14 @@ async def update_appointment(
     appointment = await repo.update(randevu_id, randevu_in, user_id=current_user.id, user_name=current_user.full_name)
     if not appointment:
         raise HTTPException(status_code=404, detail="Randevu bulunamadı")
-        
+
     # Otomatik Google Calendar Senkronizasyonu (Arka Planda)
     background_tasks.add_task(background_google_sync, appointment.id, current_user.id, "sync")
-        
+
     return appointment
 
 
-@router.delete("/{randevu_id}")
+@router.delete("/{randevu_id}", dependencies=[Depends(_delete)])
 async def delete_appointment(
     randevu_id: int,
     background_tasks: BackgroundTasks,
@@ -144,16 +152,16 @@ async def delete_appointment(
 ):
     """Delete an appointment."""
     repo = AppointmentRepository(db)
-    
+
     # Silmeden önce Google Calendar ID / Event ID bilgisini almak için randevuyu çekelim
     appointment = await repo.get_by_id(randevu_id)
     if not appointment:
         raise HTTPException(status_code=404, detail="Randevu bulunamadı")
-        
+
     # Otomatik Google Calendar Silme (Arka Planda)
     if appointment.google_event_id:
         background_tasks.add_task(background_google_sync, appointment.id, current_user.id, "delete")
-            
+
     success = await repo.delete(randevu_id, reason=reason, user_id=current_user.id, user_name=current_user.full_name)
     if not success:
         raise HTTPException(status_code=404, detail="Randevu bulunamadı")
@@ -163,9 +171,9 @@ async def delete_appointment(
 # === CALENDAR INTEGRATION ENDPOINTS ===
 
 
-@router.post("/{randevu_id}/sync")
+@router.post("/{randevu_id}/sync", dependencies=[Depends(_create)])
 async def sync_to_google(
-    randevu_id: int, 
+    randevu_id: int,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
@@ -197,9 +205,9 @@ async def sync_to_google(
     return {"message": message, "google_event_id": appointment.google_event_id}
 
 
-@router.delete("/{randevu_id}/sync")
+@router.delete("/{randevu_id}/sync", dependencies=[Depends(_delete)])
 async def remove_from_google(
-    randevu_id: int, 
+    randevu_id: int,
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
@@ -230,7 +238,7 @@ async def remove_from_google(
     return {"message": message}
 
 
-@router.get("/{randevu_id}/ics")
+@router.get("/{randevu_id}/ics", dependencies=[Depends(_read)])
 async def download_ics(randevu_id: int, db: AsyncSession = Depends(deps.get_db)):
     """
     Download iCal (.ics) file for an appointment.

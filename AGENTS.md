@@ -77,9 +77,14 @@ paylaşılan uygulama durumu (rate-limit sayaçları, dependency override'ları)
 ayrı geçip birlikte düşen testler var — bkz. `backend/conftest.py` ve
 `.github/workflows/ci.yml`.
 
-**`npm run lint` bilinçli olarak zorunlu değil:** depoda ~440 birikmiş ESLint hatası var.
-CI yalnızca **değişen** dosyalara eslint koşar. Birikmiş borcu temizlemek ayrı iştir; yeni
-borç ekleme.
+**`npm run lint` bilinçli olarak zorunlu değil:** frontend'de ~600 birikmiş ESLint
+sorunu var (2026-09-02 ölçümü). Bunun ~425'i `@typescript-eslint/no-explicit-any`,
+~100'ü React hook kuralları — ikisi de mekanik düzeltmeye uygun değil (`strict: false`
+altında tip yazmak ayrı iş; hook kurallarını mekanik düzeltmek çalışma zamanı davranışını
+değiştirir). CI yalnızca **değişen** dosyalara eslint koşar; yeni borç ekleme.
+
+**Backend lint borcu yoktur:** `cd backend && python -m flake8 app/` **0** vermelidir.
+Bu sıfırlandı; kırmızıya dönerse eklenen satır temizlenmeden birleştirilmemeli.
 
 **`npm run generate-types` çalışan bir backend konteyneri ister** (içeride
 `scripts/generate_ts.py` çalıştırır). `frontend/types/api-models.ts` **elle düzenlenmez.**
@@ -88,7 +93,9 @@ borç ekleme.
 
 ## 4. Değiştirilemez kurallar
 
-1. **Yetki her uçta açıkça verilir.** `app/api/deps.py`:
+1. **Yetki her uçta açıkça verilir.** 316 uçtan 292'si kapılıdır; kapısız kalan 24 uç
+   bilinçlidir (`auth` public/self-scoped uçları, `setup` bootstrap'ı, `personal_notes`
+   satır bazlı yetkilendirmesi). Yeni uç eklerken kapıyı da ekle — `app/api/deps.py`:
    - `require_role(*roles)` — kaba rol kapısı,
    - `require_permission(module, action)` — `app/core/permissions.py` içindeki
      `PERMISSION_MATRIX`'e bakan CRUD kapısı. Modül adları (`patients`, `clinical`,

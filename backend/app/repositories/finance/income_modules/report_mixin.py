@@ -320,10 +320,6 @@ class IncomeReportMixin:
         )
 
         vade_col = func.coalesce(FinansIslem.vade_tarihi, FinansIslem.tarih)
-        gecikme_gun = func.cast(
-            func.extract("day", func.cast(today, func.DateTime()) - func.cast(vade_col, func.DateTime())),
-            func.Integer,
-        )
 
         kalan_expr = FinansIslem.net_tutar - func.coalesce(paid_subq.c.odenen, 0)
 

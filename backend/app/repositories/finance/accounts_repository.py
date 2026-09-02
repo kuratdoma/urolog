@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, delete, update, and_, func
+from sqlalchemy import select, delete, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.finance.models import (
     FinansKategori,
@@ -7,7 +7,6 @@ from app.repositories.finance.models import (
     Kasa,
     KasaHareket,
     FinansIslem,
-    FinansOdeme,
 )
 from app.schemas.finance import (
     FinansKategoriCreate,
@@ -231,7 +230,7 @@ class AccountsRepository:
             select(Kasa).where(Kasa.id == kasa_id).with_for_update()
         )
         kasa = kasa_res.scalar_one_or_none()
-        
+
         if not kasa:
             return None
 

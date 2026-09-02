@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.api import deps
+from app.core.permissions import Action
 from app.models.user import User
 from app.models.documents import HastaDosya
 from app.models.appointment import Randevu
@@ -26,7 +27,13 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
-@router.get("/prefill", response_model=InsuranceProvisionDTO)
+# RBAC: yetkiler PERMISSION_MATRIX["clinical"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("clinical", Action.READ)
+
+
+@router.get("/prefill", response_model=InsuranceProvisionDTO, dependencies=[Depends(_read)])
 async def get_insurance_provision_prefill(
     hasta_id: Optional[UUID] = Query(None),
     appointment_id: Optional[int] = Query(None),
@@ -202,7 +209,8 @@ async def get_insurance_provision_prefill(
 
     return dto
 
-@router.post("/generate")
+
+@router.post("/generate", dependencies=[Depends(_read)])
 async def generate_insurance_provision_pdf(
     dto: InsuranceProvisionDTO,
     db: AsyncSession = Depends(deps.get_db),

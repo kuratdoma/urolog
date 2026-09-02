@@ -6,6 +6,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.api import deps
+from app.core.permissions import Action
 from app.repositories.clinical.repository import ClinicalRepository
 from app.repositories.clinical.models import (
     FotografArsivi,
@@ -23,16 +24,24 @@ from app.core.security_helpers import validate_file_path
 from app.models.user import User
 
 router = APIRouter(dependencies=[Depends(deps.get_current_user)])
+
+# RBAC: yetkiler PERMISSION_MATRIX["imaging"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("imaging", Action.READ)
+_create = deps.require_permission("imaging", Action.CREATE)
+_update = deps.require_permission("imaging", Action.UPDATE)
 public_router = APIRouter()
 
+
 # --- FOTOĞRAF ARŞİVİ ---
-@router.get("/patients/{hasta_id}/photos", response_model=List[FotografResponse])
+@router.get("/patients/{hasta_id}/photos", response_model=List[FotografResponse], dependencies=[Depends(_read)])
 async def read_photos(hasta_id: str, db: AsyncSession = Depends(deps.get_db)) -> Any:
     repo = ClinicalRepository(db)
     return await repo.get_photos_by_patient(hasta_id)
 
 
-@router.post("/photos", response_model=FotografResponse)
+@router.post("/photos", response_model=FotografResponse, dependencies=[Depends(_create)])
 async def create_photo(
     *, db: AsyncSession = Depends(deps.get_db), photo_in: FotografCreate
 ) -> Any:
@@ -40,7 +49,7 @@ async def create_photo(
     return await repo.create_photo(photo_in)
 
 
-@router.put("/photos/{id}", response_model=FotografResponse)
+@router.put("/photos/{id}", response_model=FotografResponse, dependencies=[Depends(_update)])
 async def update_photo(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID, photo_in: FotografUpdate
 ) -> Any:
@@ -101,13 +110,13 @@ async def delete_photo(*, db: AsyncSession = Depends(deps.get_db), id: UUID, cur
 
 
 # --- GÖRÜNTÜLEME (TetkikSonuc - Goruntuleme) ---
-@router.get("/patients/{hasta_id}/imagings", response_model=List[TetkikSonucResponse])
+@router.get("/patients/{hasta_id}/imagings", response_model=List[TetkikSonucResponse], dependencies=[Depends(_read)])
 async def read_imagings(hasta_id: str, db: AsyncSession = Depends(deps.get_db)) -> Any:
     repo = ClinicalRepository(db)
     return await repo.get_tetkik_sonuclari_by_patient(hasta_id, kategori="Goruntuleme")
 
 
-@router.get("/imagings/{id}", response_model=TetkikSonucResponse)
+@router.get("/imagings/{id}", response_model=TetkikSonucResponse, dependencies=[Depends(_read)])
 async def read_imaging(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     repo = ClinicalRepository(db)
     result = await repo.get_tetkik_sonuc(id)
@@ -116,7 +125,7 @@ async def read_imaging(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> 
     return result
 
 
-@router.post("/imagings", response_model=TetkikSonucResponse)
+@router.post("/imagings", response_model=TetkikSonucResponse, dependencies=[Depends(_create)])
 async def create_imaging(
     *, db: AsyncSession = Depends(deps.get_db), imaging_in: TetkikSonucCreate
 ) -> Any:
@@ -125,7 +134,7 @@ async def create_imaging(
     return await repo.create_tetkik_sonuc(imaging_in)
 
 
-@router.put("/imagings/{id}", response_model=TetkikSonucResponse)
+@router.put("/imagings/{id}", response_model=TetkikSonucResponse, dependencies=[Depends(_update)])
 async def update_imaging(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID, imaging_in: TetkikSonucUpdate
 ) -> Any:
@@ -165,13 +174,15 @@ async def delete_imaging(*, db: AsyncSession = Depends(deps.get_db), id: UUID, c
         raise HTTPException(status_code=404, detail="Imaging result not found")
     return {"status": "success", "id": id}
 
+
 # --- LABORATUVAR ---
-@router.get("/patients/{hasta_id}/labs", response_model=List[TetkikSonucResponse])
+@router.get("/patients/{hasta_id}/labs", response_model=List[TetkikSonucResponse], dependencies=[Depends(_read)])
 async def read_labs(hasta_id: str, db: AsyncSession = Depends(deps.get_db)) -> Any:
     repo = ClinicalRepository(db)
     return await repo.get_tetkik_sonuclari_by_patient(hasta_id, kategori="Laboratuvar")
 
-@router.get("/labs/{id}", response_model=TetkikSonucResponse)
+
+@router.get("/labs/{id}", response_model=TetkikSonucResponse, dependencies=[Depends(_read)])
 async def read_lab(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     repo = ClinicalRepository(db)
     result = await repo.get_tetkik_sonuc(id)

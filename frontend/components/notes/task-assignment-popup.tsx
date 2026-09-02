@@ -206,7 +206,7 @@ export function TaskAssignmentPopup() {
                     </DialogHeader>
                     <div className="space-y-3 py-2">
                         <p className="text-sm text-muted-foreground">
-                            "{activeNote.title}" görevini reddetmek üzeresiniz. Dilerseniz atayan kişiye iletilmek üzere gerekçe belirtebilirsiniz.
+                            &quot;{activeNote.title}&quot; görevini reddetmek üzeresiniz. Dilerseniz atayan kişiye iletilmek üzere gerekçe belirtebilirsiniz.
                         </p>
                         <Textarea
                             placeholder="Reddetme gerekçesi (opsiyonel)..."

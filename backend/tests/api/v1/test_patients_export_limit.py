@@ -9,12 +9,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 from app.main import app
 from app.api import deps
+from app.core.permissions import UserRole
 from app.api.v1.endpoints.patients import EXPORT_MAX_ROWS
 
 
 class _FakeUser:
     id = 1
     username = "tester"
+    # RBAC kapısı rolü okuyor; gerçek User daima bir role taşır.
+    role = UserRole.ADMIN
 
 
 def _override_current_user():

@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
+from app.core.permissions import Action
 from app.repositories.clinical.repository import ClinicalRepository
 from app.schemas.clinical.lipus import (
     LipusDetailsCreate,
@@ -15,7 +16,15 @@ from app.models.user import User
 
 router = APIRouter(prefix="/lipus", tags=["lipus"], dependencies=[Depends(deps.get_current_user)])
 
-@router.get("/patients/{hasta_id}/dashboard", response_model=List[LipusDashboardItem])
+# RBAC: yetkiler PERMISSION_MATRIX["clinical"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("clinical", Action.READ)
+_create = deps.require_permission("clinical", Action.CREATE)
+_update = deps.require_permission("clinical", Action.UPDATE)
+
+
+@router.get("/patients/{hasta_id}/dashboard", response_model=List[LipusDashboardItem], dependencies=[Depends(_read)])
 async def read_lipus_dashboard(
     hasta_id: UUID, db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -25,7 +34,8 @@ async def read_lipus_dashboard(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/muayene/{muayene_id}", response_model=LipusDetailsResponse)
+
+@router.get("/muayene/{muayene_id}", response_model=LipusDetailsResponse, dependencies=[Depends(_read)])
 async def read_lipus_details(
     muayene_id: UUID, db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -35,7 +45,8 @@ async def read_lipus_details(
         raise HTTPException(status_code=404, detail="Lipus details not found for this examination")
     return details
 
-@router.post("", response_model=LipusDetailsResponse)
+
+@router.post("", response_model=LipusDetailsResponse, dependencies=[Depends(_create)])
 async def create_lipus_details(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -48,14 +59,14 @@ async def create_lipus_details(
     muayene = await repo.get_examination(lipus_in.muayene_id)
     if not muayene:
         raise HTTPException(status_code=404, detail="Associated examination not found")
-    
+
     # Check if details already exist
     existing = await repo.get_lipus_details(lipus_in.muayene_id)
     if existing:
-         raise HTTPException(status_code=400, detail="Lipus details already exist for this examination")
+        raise HTTPException(status_code=400, detail="Lipus details already exist for this examination")
 
     result = await repo.create_lipus_details(lipus_in.model_dump())
-    
+
     await AuditService.log(
         db=db,
         action="LIPUS_DETAILS_CREATE",
@@ -66,7 +77,8 @@ async def create_lipus_details(
     )
     return result
 
-@router.put("/{id}", response_model=LipusDetailsResponse)
+
+@router.put("/{id}", response_model=LipusDetailsResponse, dependencies=[Depends(_update)])
 async def update_lipus_details(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -79,7 +91,7 @@ async def update_lipus_details(
     updated = await repo.update_lipus_details(id, lipus_in.model_dump(exclude_unset=True))
     if not updated:
         raise HTTPException(status_code=404, detail="Lipus details not found")
-    
+
     await AuditService.log(
         db=db,
         action="LIPUS_DETAILS_UPDATE",
@@ -89,6 +101,7 @@ async def update_lipus_details(
         details={},
     )
     return updated
+
 
 @router.delete("/{id}")
 async def delete_lipus_details(
@@ -101,7 +114,7 @@ async def delete_lipus_details(
     success = await repo.delete_lipus_details(id)
     if not success:
         raise HTTPException(status_code=404, detail="Lipus details not found")
-    
+
     await AuditService.log(
         db=db,
         action="LIPUS_DETAILS_DELETE",

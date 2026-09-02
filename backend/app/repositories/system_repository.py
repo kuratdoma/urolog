@@ -227,7 +227,6 @@ class SystemRepository:
 
     async def import_drugs_from_file(self, file_path: str) -> int:
         import pandas as pd
-        import io
         import os
 
         # Check extension

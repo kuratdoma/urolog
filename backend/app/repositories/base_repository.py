@@ -9,7 +9,7 @@ Complexity: O(1) for all single-record operations (PK lookup).
 """
 from typing import TypeVar, Generic, Type, Optional, List, Any
 from uuid import UUID
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 from sqlalchemy import select, and_, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -71,7 +71,7 @@ class BaseRepository(Generic[ModelType]):
         # Coerce date → datetime for non-nullable tarih
         tarih = valid.get("tarih")
         if tarih is None and hasattr(self.model, "tarih"):
-            valid["tarih"] = datetime.now()
+            valid["tarih"] = datetime.now(timezone.utc)
         elif isinstance(tarih, date) and not isinstance(tarih, datetime):
             valid["tarih"] = datetime.combine(tarih, datetime.min.time())
 
@@ -109,7 +109,7 @@ class BaseRepository(Generic[ModelType]):
 
             tarih = valid.get("tarih")
             if tarih is None and hasattr(self.model, "tarih"):
-                valid["tarih"] = datetime.now()
+                valid["tarih"] = datetime.now(timezone.utc)
             elif isinstance(tarih, date) and not isinstance(tarih, datetime):
                 valid["tarih"] = datetime.combine(tarih, datetime.min.time())
 

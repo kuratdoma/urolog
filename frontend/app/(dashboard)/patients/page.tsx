@@ -103,7 +103,7 @@ export default function PatientsPage() {
     // Sort patients
     const sortedPatients = useMemo(() => {
         if (!patients) return [];
-        let sorted = [...patients];
+        const sorted = [...patients];
 
         if (nameSortOrder !== 'none') {
             sorted.sort((a, b) => {

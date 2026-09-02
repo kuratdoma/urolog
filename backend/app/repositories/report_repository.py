@@ -17,6 +17,7 @@ from app.repositories.analytics.kpi_repository import KPIRepository
 from app.repositories.analytics.cohort_repository import CohortRepository
 from app.repositories.analytics.demographics_analytics_repository import DemographicsAnalyticsRepository
 
+
 class ReportRepository:
     """
     Facade class that routes analytical queries to the domain-specific repositories.
@@ -52,7 +53,7 @@ class ReportRepository:
         db: AsyncSession, months_back: int = 6
     ) -> List[CohortRow]:
         return await CohortRepository.get_cohort_analysis(db, months_back)
-        
+
     @staticmethod
     async def get_weekly_new_patients(
         db: AsyncSession,
@@ -149,5 +150,6 @@ class ReportRepository:
         end_date: Optional[date] = None,
     ) -> List[ChartDataPoint]:
         return await DemographicsAnalyticsRepository.get_cancellation_stats(db, start_date, end_date)
+
 
 report_repository = ReportRepository()

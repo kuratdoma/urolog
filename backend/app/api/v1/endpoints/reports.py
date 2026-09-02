@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.api import deps
+from app.core.permissions import Action
 from app.models.user import User
 from app.schemas.report import (
     ExtendedReportStats,
@@ -21,8 +22,13 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["reports"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("reports", Action.READ)
 
-@router.get("/stats", response_model=ExtendedReportStats)
+
+@router.get("/stats", response_model=ExtendedReportStats, dependencies=[Depends(_read)])
 async def get_report_stats(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
@@ -71,7 +77,7 @@ async def get_report_stats(
     )
 
 
-@router.get("/cohort", response_model=List[CohortRow])
+@router.get("/cohort", response_model=List[CohortRow], dependencies=[Depends(_read)])
 async def get_cohort_analysis(
     months_back: int = Query(default=6, ge=1, le=12),
     db: AsyncSession = Depends(get_db),
@@ -83,7 +89,7 @@ async def get_cohort_analysis(
     return await report_repository.get_cohort_analysis(db, months_back)
 
 
-@router.get("/diagnosis", response_model=DiagnosisStats)
+@router.get("/diagnosis", response_model=DiagnosisStats, dependencies=[Depends(_read)])
 async def get_diagnosis_stats(
     icd_code: Optional[str] = None,
     diagnosis_text: Optional[str] = None,
@@ -101,7 +107,7 @@ async def get_diagnosis_stats(
     )
 
 
-@router.get("/heatmap", response_model=List[HeatmapData])
+@router.get("/heatmap", response_model=List[HeatmapData], dependencies=[Depends(_read)])
 async def get_heatmap(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
@@ -114,7 +120,7 @@ async def get_heatmap(
     return await report_repository.get_heatmap_data(db, start_date, end_date)
 
 
-@router.get("/reference-categories", response_model=List[ReferenceCategory])
+@router.get("/reference-categories", response_model=List[ReferenceCategory], dependencies=[Depends(_read)])
 async def get_reference_categories(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
@@ -127,7 +133,7 @@ async def get_reference_categories(
     return await report_repository.get_reference_categories(db, start_date, end_date)
 
 
-@router.get("/service-distribution", response_model=List[ServiceDistribution])
+@router.get("/service-distribution", response_model=List[ServiceDistribution], dependencies=[Depends(_read)])
 async def get_service_distribution(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
@@ -140,7 +146,7 @@ async def get_service_distribution(
     return await report_repository.get_service_distribution(db, start_date, end_date)
 
 
-@router.get("/drilldown-patients", response_model=List[Any])
+@router.get("/drilldown-patients", response_model=List[Any], dependencies=[Depends(_read)])
 async def get_drilldown_patients(
     type: str,  # 'weekly', 'monthly', 'reference'
     value: str,  # label from chart
@@ -164,7 +170,7 @@ async def get_drilldown_patients(
     return []
 
 
-@router.get("/reference-patients", response_model=List[Any])
+@router.get("/reference-patients", response_model=List[Any], dependencies=[Depends(_read)])
 async def get_reference_patients(
     referans: str,
     start_date: Optional[date] = None,

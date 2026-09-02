@@ -8,6 +8,7 @@ from typing import Optional, List
 import logging
 
 from app.api import deps
+from app.core.permissions import Action
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.schemas.ai_scribe import (
@@ -24,10 +25,15 @@ router = APIRouter(
     # SEC-09: Router seviyesinde kimlik doğrulama
     dependencies=[Depends(deps.get_current_user)]
 )
+
+# RBAC: yetkiler PERMISSION_MATRIX["ai-scribe"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("ai-scribe", Action.READ)
 logger = logging.getLogger(__name__)
 
 
-@router.get("/status", response_model=AIScribeStatusResponse)
+@router.get("/status", response_model=AIScribeStatusResponse, dependencies=[Depends(_read)])
 async def get_ai_scribe_status():
     """
     AI Scribe servis durumunu döndür.
@@ -44,7 +50,7 @@ async def get_ai_scribe_status():
     )
 
 
-@router.get("/templates", response_model=List[AIScribeTemplateInfo])
+@router.get("/templates", response_model=List[AIScribeTemplateInfo], dependencies=[Depends(_read)])
 async def get_templates():
     """
     Kullanılabilir şablon listesini döndür.
@@ -53,7 +59,7 @@ async def get_templates():
     return service.get_available_templates()
 
 
-@router.post("/analyze", response_model=AIScribeResponse)
+@router.post("/analyze", response_model=AIScribeResponse, dependencies=[Depends(_read)])
 @limiter.limit("10/minute")
 async def analyze_audio(
     request: Request,
@@ -152,7 +158,7 @@ async def analyze_audio(
         logger.error(f"Audio analysis error: {e}", exc_info=True)
         err_msg = str(e)
         underlying = None
-        
+
         # Extract underlying exception from Tenacity RetryError if possible
         if hasattr(e, "last_attempt") and e.last_attempt and e.last_attempt.failed:
             underlying = e.last_attempt.exception()
@@ -175,7 +181,7 @@ async def analyze_audio(
         raise HTTPException(status_code=500, detail=detail_msg)
 
 
-@router.post("/analyze-text", response_model=AIScribeResponse)
+@router.post("/analyze-text", response_model=AIScribeResponse, dependencies=[Depends(_read)])
 @limiter.limit("20/minute")
 async def analyze_text(
     request: Request,

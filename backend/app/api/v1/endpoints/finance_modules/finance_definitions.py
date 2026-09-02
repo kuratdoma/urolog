@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
-from app.core.permissions import UserRole
+from app.core.permissions import UserRole, Action
 from app.repositories.finance.accounts_repository import AccountsRepository
 from app.repositories.finance.expense_repository import ExpenseRepository
 from app.schemas.finance import (
@@ -28,11 +28,18 @@ from app.models.user import User
 
 router = APIRouter()
 
+# RBAC: yetkiler PERMISSION_MATRIX["finance"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("finance", Action.READ)
+_create = deps.require_permission("finance", Action.CREATE)
+_update = deps.require_permission("finance", Action.UPDATE)
+
 
 # =============================================================================
 # KATEGORİLER
 # =============================================================================
-@router.get("/categories", response_model=List[FinansKategoriResponse])
+@router.get("/categories", response_model=List[FinansKategoriResponse], dependencies=[Depends(_read)])
 async def get_kategoriler(
     tip: Optional[str] = Query(None, description="'gelir' veya 'gider'"),
     db: AsyncSession = Depends(deps.get_db),
@@ -42,7 +49,7 @@ async def get_kategoriler(
     return await repo.get_categories(tip=tip)
 
 
-@router.get("/categories/{kategori_id}", response_model=FinansKategoriResponse)
+@router.get("/categories/{kategori_id}", response_model=FinansKategoriResponse, dependencies=[Depends(_read)])
 async def get_kategori(
     kategori_id: int, db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -54,7 +61,7 @@ async def get_kategori(
     return kategori
 
 
-@router.post("/categories", response_model=FinansKategoriResponse)
+@router.post("/categories", response_model=FinansKategoriResponse, dependencies=[Depends(_create)])
 async def create_kategori(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -77,7 +84,7 @@ async def create_kategori(
     return kategori
 
 
-@router.put("/categories/{kategori_id}", response_model=FinansKategoriResponse)
+@router.put("/categories/{kategori_id}", response_model=FinansKategoriResponse, dependencies=[Depends(_update)])
 async def update_kategori(
     kategori_id: int,
     *,
@@ -121,7 +128,7 @@ async def delete_kategori(
 # =============================================================================
 # HİZMETLER
 # =============================================================================
-@router.get("/services", response_model=List[FinansHizmetResponse])
+@router.get("/services", response_model=List[FinansHizmetResponse], dependencies=[Depends(_read)])
 async def get_hizmetler(
     aktif_only: bool = Query(True), db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -130,7 +137,7 @@ async def get_hizmetler(
     return await repo.get_services(aktif_only=aktif_only)
 
 
-@router.get("/services/{hizmet_id}", response_model=FinansHizmetResponse)
+@router.get("/services/{hizmet_id}", response_model=FinansHizmetResponse, dependencies=[Depends(_read)])
 async def get_hizmet(hizmet_id: int, db: AsyncSession = Depends(deps.get_db)) -> Any:
     """Hizmet detayını getir"""
     repo = AccountsRepository(db)
@@ -140,7 +147,7 @@ async def get_hizmet(hizmet_id: int, db: AsyncSession = Depends(deps.get_db)) ->
     return hizmet
 
 
-@router.post("/services", response_model=FinansHizmetResponse)
+@router.post("/services", response_model=FinansHizmetResponse, dependencies=[Depends(_create)])
 async def create_hizmet(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -163,7 +170,7 @@ async def create_hizmet(
     return hizmet
 
 
-@router.put("/services/{hizmet_id}", response_model=FinansHizmetResponse)
+@router.put("/services/{hizmet_id}", response_model=FinansHizmetResponse, dependencies=[Depends(_update)])
 async def update_hizmet(
     hizmet_id: int,
     *,
@@ -205,7 +212,7 @@ async def delete_hizmet(hizmet_id: int, db: AsyncSession = Depends(deps.get_db),
 # =============================================================================
 # KASALAR
 # =============================================================================
-@router.get("/accounts", response_model=List[KasaResponse])
+@router.get("/accounts", response_model=List[KasaResponse], dependencies=[Depends(_read)])
 async def get_kasalar(
     aktif_only: bool = Query(True), db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -214,7 +221,7 @@ async def get_kasalar(
     return await repo.get_accounts(aktif_only=aktif_only)
 
 
-@router.get("/accounts/{kasa_id}", response_model=KasaResponse)
+@router.get("/accounts/{kasa_id}", response_model=KasaResponse, dependencies=[Depends(_read)])
 async def get_kasa(kasa_id: int, db: AsyncSession = Depends(deps.get_db)) -> Any:
     """Kasa detayını getir"""
     repo = AccountsRepository(db)
@@ -224,7 +231,7 @@ async def get_kasa(kasa_id: int, db: AsyncSession = Depends(deps.get_db)) -> Any
     return kasa
 
 
-@router.get("/accounts/{kasa_id}/balance")
+@router.get("/accounts/{kasa_id}/balance", dependencies=[Depends(_read)])
 async def get_kasa_bakiye(kasa_id: int, db: AsyncSession = Depends(deps.get_db)) -> Any:
     """Kasa anlık bakiyesini getir"""
     repo = AccountsRepository(db)
@@ -234,7 +241,7 @@ async def get_kasa_bakiye(kasa_id: int, db: AsyncSession = Depends(deps.get_db))
     return {"kasa_id": kasa_id, "ad": kasa.ad, "bakiye": float(kasa.bakiye or 0)}
 
 
-@router.get("/accounts/{kasa_id}/movements", response_model=List[KasaHareketResponse])
+@router.get("/accounts/{kasa_id}/movements", response_model=List[KasaHareketResponse], dependencies=[Depends(_read)])
 async def get_kasa_hareketleri(
     kasa_id: int,
     skip: int = Query(0, ge=0),
@@ -250,7 +257,7 @@ async def get_kasa_hareketleri(
     )
 
 
-@router.post("/accounts", response_model=KasaResponse)
+@router.post("/accounts", response_model=KasaResponse, dependencies=[Depends(_create)])
 async def create_kasa(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -273,7 +280,7 @@ async def create_kasa(
     return kasa
 
 
-@router.put("/accounts/{kasa_id}", response_model=KasaResponse)
+@router.put("/accounts/{kasa_id}", response_model=KasaResponse, dependencies=[Depends(_update)])
 async def update_kasa(
     kasa_id: int,
     *,
@@ -312,7 +319,7 @@ async def delete_kasa(kasa_id: int, db: AsyncSession = Depends(deps.get_db), cur
     return {"success": True}
 
 
-@router.post("/accounts/transfer")
+@router.post("/accounts/transfer", dependencies=[Depends(_create)])
 async def transfer_between_accounts(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -348,21 +355,21 @@ async def transfer_between_accounts(
 # =============================================================================
 # FİRMALAR
 # =============================================================================
-@router.get("/companies", response_model=List[FirmaResponse])
+@router.get("/companies", response_model=List[FirmaResponse], dependencies=[Depends(_read)])
 async def get_firmalar(db: AsyncSession = Depends(deps.get_db)) -> Any:
     """Firma listesini getir"""
     repo = ExpenseRepository(db)
     return await repo.get_firms()
 
 
-@router.get("/companies/debts")
+@router.get("/companies/debts", dependencies=[Depends(_read)])
 async def get_firma_borclar(db: AsyncSession = Depends(deps.get_db)) -> Any:
     """Tüm firma borçlarını listele"""
     repo = ExpenseRepository(db)
     return await repo.get_firm_debt_list()
 
 
-@router.get("/companies/{firma_id}", response_model=FirmaResponse)
+@router.get("/companies/{firma_id}", response_model=FirmaResponse, dependencies=[Depends(_read)])
 async def get_firma(firma_id: int, db: AsyncSession = Depends(deps.get_db)) -> Any:
     """Firma detayını ve borç durumunu getir"""
     repo = ExpenseRepository(db)
@@ -376,7 +383,7 @@ async def get_firma(firma_id: int, db: AsyncSession = Depends(deps.get_db)) -> A
     return response
 
 
-@router.post("/companies", response_model=FirmaResponse)
+@router.post("/companies", response_model=FirmaResponse, dependencies=[Depends(_create)])
 async def create_firma(
     *, db: AsyncSession = Depends(deps.get_db), firma_in: FirmaCreate
 ) -> Any:
@@ -385,7 +392,7 @@ async def create_firma(
     return await repo.create_firm(firma_in)
 
 
-@router.put("/companies/{firma_id}", response_model=FirmaResponse)
+@router.put("/companies/{firma_id}", response_model=FirmaResponse, dependencies=[Depends(_update)])
 async def update_firma(
     firma_id: int, *, db: AsyncSession = Depends(deps.get_db), firma_in: FirmaUpdate
 ) -> Any:

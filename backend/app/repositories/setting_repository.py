@@ -23,12 +23,12 @@ class SettingRepository:
     ) -> SystemSetting:
         # Check if exists
         db_obj = await self.get(key)
-        
+
         # Encrypt API Key before saving
         if key in ["google_api_key", "google_client_id", "google_client_secret"] and value and value != "••••••••••••••••":
             from app.core.security import encrypt_value
             value = encrypt_value(value)
-            
+
         if db_obj:
             db_obj.value = value
             if description:

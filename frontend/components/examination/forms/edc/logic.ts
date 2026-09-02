@@ -3,7 +3,7 @@ import { EDCData } from './schema';
 export const generateNarrative = (data: EDCData): string | null => {
     let narrative = "\n[ ANDROLOJİ DEĞERLENDİRME (ED FORMU) ]\n";
     const q = (id: keyof EDCData) => data[id];
-    let sentences: string[] = [];
+    const sentences: string[] = [];
 
     // 1. Cinsel Öykü
     if (q("c_q1") || q("c_q2")) {

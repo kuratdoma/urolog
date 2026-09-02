@@ -5,7 +5,7 @@ Aggregated report combining data from Patient, Clinical, and Finance shards.
 Designed for graceful degradation - each section is optional with warnings.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional, List, Any
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
@@ -105,7 +105,7 @@ class PatientReportDTO(BaseModel):
 
     # Metadata
     warnings: List[str] = Field(default_factory=list)
-    generated_at: datetime = Field(default_factory=datetime.now)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
     def has_warnings(self) -> bool:

@@ -9,11 +9,18 @@ from typing import Optional
 
 from app.core.config import settings
 from app.api import deps
+from app.core.permissions import Action
 from app.models.user_oauth import UserOAuth
 from app.models.user import User
 from sqlalchemy.future import select
 
 router = APIRouter()
+
+# RBAC: yetkiler PERMISSION_MATRIX["settings"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("settings", Action.READ)
+_delete = deps.require_permission("settings", Action.DELETE)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar"]
 
@@ -22,30 +29,30 @@ async def _get_google_client_credentials(db: AsyncSession):
     """Google OAuth Client ID ve Secret değerlerini DB'den (şifreli) veya fallback olarak env'den okur."""
     from app.repositories.setting_repository import SettingRepository
     from app.core.security import decrypt_value
-    
+
     repo = SettingRepository(db)
     client_id_setting = await repo.get("google_client_id")
     client_secret_setting = await repo.get("google_client_secret")
-    
+
     client_id = settings.GOOGLE_CLIENT_ID
     client_secret = settings.GOOGLE_CLIENT_SECRET
-    
+
     if client_id_setting and client_id_setting.value:
         try:
             client_id = decrypt_value(client_id_setting.value)
         except Exception:
             client_id = client_id_setting.value
-            
+
     if client_secret_setting and client_secret_setting.value:
         try:
             client_secret = decrypt_value(client_secret_setting.value)
         except Exception:
             client_secret = client_secret_setting.value
-            
+
     return client_id, client_secret
 
 
-@router.get("/google/config-status")
+@router.get("/google/config-status", dependencies=[Depends(_read)])
 async def get_google_config_status(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
@@ -54,7 +61,7 @@ async def get_google_config_status(
     client_id, client_secret = await _get_google_client_credentials(db)
     has_client_id = bool(client_id)
     has_client_secret = bool(client_secret)
-    
+
     return {
         "configured": has_client_id and has_client_secret,
         "has_client_id": has_client_id,
@@ -62,7 +69,7 @@ async def get_google_config_status(
     }
 
 
-@router.get("/google/auth-url")
+@router.get("/google/auth-url", dependencies=[Depends(_read)])
 async def get_google_auth_url(
     target_user_id: Optional[int] = Query(None, description="Admin tarafından başka bir kullanıcı adına bağlanmak için user ID"),
     db: AsyncSession = Depends(deps.get_db),
@@ -100,10 +107,10 @@ async def get_google_auth_url(
     import hmac
     import hashlib
     import secrets
-    
+
     code_verifier = secrets.token_urlsafe(64)
     flow.code_verifier = code_verifier
-    
+
     state_payload = {
         "user_id": bind_user_id,
         "timestamp": int(time.time()),
@@ -128,7 +135,7 @@ async def get_google_auth_url(
     return {"url": authorization_url, "state": state}
 
 
-@router.get("/google/callback")
+@router.get("/google/callback", dependencies=[Depends(_read)])
 async def google_callback(
     code: str, state: str, db: AsyncSession = Depends(deps.get_db)
 ):
@@ -141,7 +148,7 @@ async def google_callback(
         state_obj = json.loads(state)
         payload = state_obj.get("payload", {})
         received_sig = state_obj.get("sig", "")
-        
+
         # İmza doğrulaması (IDOR koruması)
         expected_json = json.dumps(payload, separators=(',', ':'), sort_keys=True)
         expected_sig = hmac.new(
@@ -149,13 +156,13 @@ async def google_callback(
             expected_json.encode(),
             hashlib.sha256
         ).hexdigest()
-        
+
         if not hmac.compare_digest(received_sig, expected_sig):
             raise HTTPException(status_code=400, detail="Geçersiz state imzası")
-        
+
         if int(time.time()) - payload.get("timestamp", 0) > 300:
             raise HTTPException(status_code=400, detail="State süresi dolmuş")
-            
+
         user_id = payload.get("user_id")
         code_verifier = payload.get("code_verifier")
     except (json.JSONDecodeError, KeyError, Exception):
@@ -195,13 +202,13 @@ async def google_callback(
     )
     db_oauth = result.scalars().first()
 
-    expiry = datetime.now(timezone.utc) + timedelta(
-        seconds=(
-            credentials.expiry.timestamp() - datetime.now().timestamp()
-            if credentials.expiry
-            else 3600
-        )
-    )
+    # google-auth `credentials.expiry`'yi NAIVE UTC verir. Naive bir datetime'da
+    # .timestamp() değeri YEREL saat sanır; sunucu UTC+3 ise süre ofset kadar kayardı.
+    # Bu yüzden tzinfo açıkça UTC olarak işaretlenip aware aritmetiğe geçiliyor.
+    if credentials.expiry:
+        expiry = credentials.expiry.replace(tzinfo=timezone.utc)
+    else:
+        expiry = datetime.now(timezone.utc) + timedelta(seconds=3600)
 
     if db_oauth:
         db_oauth.access_token = credentials.token
@@ -225,7 +232,7 @@ async def google_callback(
     return RedirectResponse(url=f"{settings.FRONTEND_URL}/settings?google_sync=success")
 
 
-@router.get("/google/status")
+@router.get("/google/status", dependencies=[Depends(_read)])
 async def get_google_status(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
@@ -255,17 +262,17 @@ async def get_all_users_google_status(
 ):
     """Tüm kullanıcıların Google bağlantı durumunu döner (Admin)."""
     from app.models.user import User as UserModel
-    
+
     users_result = await db.execute(
         select(UserModel).filter(UserModel.is_active == True).order_by(UserModel.full_name)
     )
     users = users_result.scalars().all()
-    
+
     oauth_result = await db.execute(
         select(UserOAuth).filter(UserOAuth.provider == "google")
     )
     oauth_records = {r.user_id: r for r in oauth_result.scalars().all()}
-    
+
     now = datetime.now(timezone.utc)
     return [
         {
@@ -280,7 +287,7 @@ async def get_all_users_google_status(
     ]
 
 
-@router.delete("/google/disconnect")
+@router.delete("/google/disconnect", dependencies=[Depends(_delete)])
 async def disconnect_google(
     target_user_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(deps.get_db),
@@ -292,7 +299,7 @@ async def disconnect_google(
         if not current_user.is_superuser and not getattr(current_user, 'is_admin', False):
             raise HTTPException(status_code=403, detail="Başka kullanıcının bağlantısını kesme yetkiniz yok")
         user_id_to_disconnect = target_user_id
-    
+
     result = await db.execute(
         select(UserOAuth).filter(
             UserOAuth.user_id == user_id_to_disconnect, UserOAuth.provider == "google"
@@ -301,7 +308,7 @@ async def disconnect_google(
     db_oauth = result.scalars().first()
     if not db_oauth:
         raise HTTPException(status_code=404, detail="Bağlantı bulunamadı")
-    
+
     await db.delete(db_oauth)
     await db.commit()
     return {"status": "ok"}

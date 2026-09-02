@@ -9,6 +9,7 @@ from app.repositories.finance.models import FinansIslem
 from app.models.appointment import Randevu
 from app.schemas.report import DashboardKPI, PerformanceKPI
 
+
 class KPIRepository:
     @staticmethod
     async def get_kpis(

@@ -293,7 +293,6 @@ class ClinicalRepository:
             )
         return await self._tetkik.create(obj_in)
 
-
     async def update_tetkik_sonuc(self, id: UUID, obj_in: Any) -> Optional[TetkikSonuc]:
         return await self._tetkik.update(id, obj_in)
 
@@ -374,10 +373,10 @@ class ClinicalRepository:
         note = await self._kisisel.get_by_id(id)
         if not note:
             return False
-        
+
         hasta_id = note.hasta_id
         success = await self._kisisel.soft_delete(id)
-        
+
         if success:
             # Re-evaluate if any private notes remain for this patient
             res = await self.session.execute(
@@ -386,14 +385,14 @@ class ClinicalRepository:
                 )
             )
             any_remaining = res.scalars().first() is not None
-            
+
             await self.session.execute(
                 update(Hasta)
                 .where(Hasta.id == hasta_id)
                 .values(has_private_notes=any_remaining)
             )
             await self.session.flush()
-            
+
         return success
 
     # ─── Reports (Rest, Consultation, Status, Medical, Biopsy) ───────────
@@ -534,7 +533,7 @@ class ClinicalRepository:
                     )
                 )
                 await self.session.execute(stmt)
-            
+
             # Special case: LipusDetails is linked via muayene_id, not hasta_id
             elif model == LipusDetails:
                 # Subquery to find all muayene IDs for this patient
@@ -548,7 +547,7 @@ class ClinicalRepository:
                     )
                 )
                 await self.session.execute(stmt)
-        
+
         await self.session.flush()
         # Removal of internal commit to allow orchestrator to manage the transaction
         return True

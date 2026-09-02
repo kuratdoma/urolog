@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
+from app.core.permissions import Action
 from app.repositories.clinical.repository import ClinicalRepository
 from app.schemas.clinical import (
     MuayeneCreate,
@@ -14,7 +15,15 @@ from app.models.user import User
 
 router = APIRouter(dependencies=[Depends(deps.get_current_user)])
 
-@router.get("/muayeneler/report", response_model=List[MuayeneResponse])
+# RBAC: yetkiler PERMISSION_MATRIX["clinical"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("clinical", Action.READ)
+_create = deps.require_permission("clinical", Action.CREATE)
+_update = deps.require_permission("clinical", Action.UPDATE)
+
+
+@router.get("/muayeneler/report", response_model=List[MuayeneResponse], dependencies=[Depends(_read)])
 async def read_muayeneler_report(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -27,7 +36,7 @@ async def read_muayeneler_report(
     )
 
 
-@router.get("/patients/{hasta_id}/muayeneler", response_model=List[MuayeneResponse])
+@router.get("/patients/{hasta_id}/muayeneler", response_model=List[MuayeneResponse], dependencies=[Depends(_read)])
 async def read_muayeneler(
     hasta_id: str, db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -44,7 +53,7 @@ async def read_muayeneler(
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.get("/muayeneler/{id}", response_model=MuayeneResponse)
+@router.get("/muayeneler/{id}", response_model=MuayeneResponse, dependencies=[Depends(_read)])
 async def read_muayene(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> Any:
     try:
         from app.controllers.legacy_adapters.clinical_adapter import (
@@ -64,7 +73,7 @@ async def read_muayene(*, db: AsyncSession = Depends(deps.get_db), id: UUID) -> 
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.post("/muayeneler", response_model=MuayeneResponse)
+@router.post("/muayeneler", response_model=MuayeneResponse, dependencies=[Depends(_create)])
 async def create_muayene(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -103,7 +112,7 @@ async def create_muayene(
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.put("/muayeneler/{id}", response_model=MuayeneResponse)
+@router.put("/muayeneler/{id}", response_model=MuayeneResponse, dependencies=[Depends(_update)])
 async def update_muayene(
     *,
     db: AsyncSession = Depends(deps.get_db),

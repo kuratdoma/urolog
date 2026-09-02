@@ -90,7 +90,9 @@ def _resolve_role(user: User) -> UserRole:
     Safely convert the user's role string to UserRole enum.
     Falls back to most restrictive role if value is unknown.
     """
-    raw = user.role
+    # getattr: role alanı hiç bulunmayan bir nesne AttributeError ile 500'e
+    # yol açıyordu; docstring "bilinmeyen değerde en kısıtlayıcıya düş" diyor.
+    raw = getattr(user, "role", None)
     if isinstance(raw, UserRole):
         return raw
     try:

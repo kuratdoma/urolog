@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
@@ -114,4 +114,3 @@ class LipusDashboardItem(LipusDetailsBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
-

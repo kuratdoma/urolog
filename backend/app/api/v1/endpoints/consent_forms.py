@@ -15,12 +15,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.api import deps
+from app.core.permissions import Action
 from app.models.system import Doktor
 from app.repositories.patient.models import Hasta
 from app.repositories.clinical.models import Muayene
 from app.services.consent_form_service import ConsentFormService, PatientConsentData
 
 router = APIRouter(dependencies=[Depends(deps.get_current_user)])
+
+# RBAC: yetkiler PERMISSION_MATRIX["definitions"] üzerinden işlem bazında uygulanır.
+# OKUMA kasıtlı olarak kapısız: tanımlar PHI değil, uygulama genelinde açılır
+# listeleri besleyen referans veridir. Matriste FRONTDESK/TECHNICIAN'ın
+# "definitions" okuma hakkı yok; kapı konsaydı randevu oluşturabilen FRONTDESK
+# randevu türlerini okuyamayıp 403 alırdı. Yazma uçları matrise bağlıdır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_create = deps.require_permission("definitions", Action.CREATE)
+_update = deps.require_permission("definitions", Action.UPDATE)
+_delete = deps.require_permission("definitions", Action.DELETE)
 
 # Singleton servis instance
 _service = ConsentFormService()
@@ -37,7 +49,8 @@ async def list_consent_forms(
     forms = _service.list_forms()
     return forms
 
-@router.post("/consent-forms")
+
+@router.post("/consent-forms", dependencies=[Depends(_create)])
 async def upload_consent_form(
     file: UploadFile = File(...),
     display_name: str = Form(...),
@@ -47,29 +60,33 @@ async def upload_consent_form(
     """Yeni onam formu yükler."""
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Sadece PDF dosyaları yüklenebilir")
-        
+
     content = await file.read()
-    
+
     # Güvenli dosya adı oluştur (Directory traversal önlemi)
     safe_filename = os.path.basename(file.filename)
     filename = safe_filename.replace(" ", "_")
-    
+
     result = _service.add_form(content, filename, display_name, category)
     return result
 
+
 from pydantic import BaseModel
+
 
 class ConsentFormUpdate(BaseModel):
     display_name: str
     category: str
 
+
 class ConsentFormOrder(BaseModel):
     id: str
     order_index: int
 
+
 # IMPORTANT: /reorder must be defined BEFORE /{form_id} routes
 # to prevent FastAPI matching 'reorder' as a form_id path param.
-@router.put("/consent-forms/reorder")
+@router.put("/consent-forms/reorder", dependencies=[Depends(_update)])
 async def reorder_consent_forms(
     orders: List[ConsentFormOrder] = Body(...),
     current_user=Depends(deps.get_current_user),
@@ -80,7 +97,8 @@ async def reorder_consent_forms(
         raise HTTPException(status_code=400, detail="Sıralama güncellenemedi")
     return {"status": "ok"}
 
-@router.delete("/consent-forms/{form_id}")
+
+@router.delete("/consent-forms/{form_id}", dependencies=[Depends(_delete)])
 async def delete_consent_form(
     form_id: str,
     current_user=Depends(deps.get_current_user),
@@ -91,7 +109,8 @@ async def delete_consent_form(
         raise HTTPException(status_code=404, detail="Onam formu bulunamadı")
     return {"status": "ok"}
 
-@router.put("/consent-forms/{form_id}")
+
+@router.put("/consent-forms/{form_id}", dependencies=[Depends(_update)])
 async def update_consent_form(
     form_id: str,
     data: ConsentFormUpdate,
@@ -102,7 +121,6 @@ async def update_consent_form(
     if not result:
         raise HTTPException(status_code=404, detail="Onam formu bulunamadı")
     return result
-
 
 
 @router.get("/consent-forms/{form_id}/preview/{hasta_id}")
@@ -211,7 +229,7 @@ async def preview_consent_form(
             break
 
     filename = f"Onam_{hasta_adi_soyadi}_{form_name}.pdf".replace(" ", "_")
-    
+
     from urllib.parse import quote
     filename_encoded = quote(filename)
 
@@ -225,7 +243,7 @@ async def preview_consent_form(
         unique_filename = f"{uuid.uuid4()}.pdf"
         os.makedirs("static/documents", exist_ok=True)
         file_path = f"static/documents/{unique_filename}"
-        
+
         with open(file_path, "wb") as f:
             f.write(pdf_bytes)
 
@@ -260,7 +278,7 @@ async def preview_consent_form(
                 kaynak="SISTEM"
             )
             db.add(new_doc)
-        
+
         await db.commit()
 
     return StreamingResponse(

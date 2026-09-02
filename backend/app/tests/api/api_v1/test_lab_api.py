@@ -1,6 +1,5 @@
-import pytest
-from datetime import datetime
-from unittest.mock import patch, MagicMock
+from datetime import date, datetime
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -13,8 +12,10 @@ from app.schemas.lab_analysis import LabTrendResponse, LabDataPoint
 
 client = TestClient(app)
 
+
 def override_get_current_user():
     return User(id=1, email="doctor@urolog.com", username="dr_test", is_active=True, is_superuser=True, role=UserRole.ADMIN)
+
 
 app.dependency_overrides[deps.get_current_user] = override_get_current_user
 
@@ -102,3 +103,45 @@ def test_get_lab_trends_success(mock_trends):
     assert data[0]["test_name"] == "Total PSA"
     assert data[0]["current_value"] == 1.5
     assert len(data[0]["history"]) == 2
+
+
+@patch("app.repositories.clinical.repository.ClinicalRepository.create_tetkik_sonuc_batch")
+def test_genel_batch_accepts_rows_without_tarih(mock_batch):
+    """REGRESYON: `tarih` göndermeyen satır 500 veriyordu.
+
+    Şema `date` bekliyor; uç eksik tarihi `datetime.now()` ile dolduruyordu ve
+    Pydantic saat bileşeni taşıyan datetime'ı date'e çeviremeyip
+    date_from_datetime_inexact hatası veriyordu. Hata endpoint gövdesinde
+    oluştuğu için istemci temiz 422 değil 500 alıyordu.
+    """
+    mock_batch.return_value = []
+
+    response = client.post(
+        "/api/v1/lab/genel/batch",
+        json=[{
+            "hasta_id": "11111111-1111-1111-1111-111111111111",
+            "tetkik_adi": "Hemoglobin",
+            "sonuc": "13.5",
+        }],
+    )
+
+    assert response.status_code == 200
+    objs = mock_batch.call_args.args[0]
+    assert objs[0].tarih == date.today()
+
+
+@patch("app.repositories.clinical.repository.ClinicalRepository.create_tetkik_sonuc_batch")
+def test_genel_batch_keeps_explicit_tarih(mock_batch):
+    mock_batch.return_value = []
+
+    response = client.post(
+        "/api/v1/lab/genel/batch",
+        json=[{
+            "hasta_id": "11111111-1111-1111-1111-111111111111",
+            "tetkik_adi": "PSA",
+            "tarih": "2026-03-10",
+        }],
+    )
+
+    assert response.status_code == 200
+    assert mock_batch.call_args.args[0][0].tarih == date(2026, 3, 10)

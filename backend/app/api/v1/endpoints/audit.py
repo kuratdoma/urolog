@@ -1,10 +1,9 @@
 from typing import Any, List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.api import deps
-from app.core.permissions import UserRole
 from app.models.audit import AuditLog
 from app.models.user import User
 from app.schemas.audit import AuditLog as AuditLogSchema

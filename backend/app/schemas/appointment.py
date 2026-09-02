@@ -78,7 +78,7 @@ class RandevuResponse(RandevuBase):
     cancel_reason: Optional[str] = None
     delete_reason: Optional[str] = None
     hasta: Optional[HastaBasic] = None
-    payment_status: Optional[str] = None # 'paid', 'unpaid', 'partial'
+    payment_status: Optional[str] = None  # 'paid', 'unpaid', 'partial'
     has_lab_results: Optional[bool] = False
     clinical_brief: Optional[ClinicalBriefSchema] = None
 

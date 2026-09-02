@@ -10,9 +10,9 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.responses import StreamingResponse
 import csv
 import io
-import asyncio
 
 from app.api import deps
+from app.core.permissions import Action
 from app.schemas.patient import PatientResponse, PatientCreate, PatientUpdate
 from app.schemas.patient.legacy import PatientLegacyResponse
 from app.schemas.patient.demographics import (
@@ -33,6 +33,13 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["patients"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("patients", Action.READ)
+_create = deps.require_permission("patients", Action.CREATE)
+_update = deps.require_permission("patients", Action.UPDATE)
+
 # PERF: /advanced-search/export için üst sınır — filtre çok geniş/boş
 # bırakılırsa tüm hasta tablosunun sınırsız export edilmesini engeller.
 EXPORT_MAX_ROWS = 20_000
@@ -41,14 +48,14 @@ EXPORT_MAX_ROWS = 20_000
 # MUST BE DEFINED BEFORE GENERIC PATH PARAMETERS /{id}
 
 
-@router.get("/references")
+@router.get("/references", dependencies=[Depends(_read)])
 async def get_references(db: AsyncSession = Depends(deps.get_db)) -> List[str]:
     """Get all unique references."""
     controller = PatientController(db)
     return await controller.get_unique_references()
 
 
-@router.get("/advanced-search")
+@router.get("/advanced-search", dependencies=[Depends(_read)])
 @limiter.limit("60/minute")
 async def advanced_search(
     request: Request,
@@ -183,12 +190,12 @@ async def advanced_search(
         import traceback
         import logging
         logger = logging.getLogger(__name__)
-        
+
         logger.error(f"advanced_search error: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.get("/advanced-search/export")
+@router.get("/advanced-search/export", dependencies=[Depends(_read)])
 @limiter.limit("5/minute")
 async def export_advanced_search(
     request: Request,
@@ -252,7 +259,7 @@ async def export_advanced_search(
         try:
             # [BIG-O] O(K) memory per yield instead of O(N) buffer
             result = await db.execute(base_stmt)
-            
+
             output = io.StringIO()
             writer = csv.writer(output)
             output.write("\ufeff")
@@ -279,9 +286,9 @@ async def export_advanced_search(
                 rows = result.fetchmany(100)
                 if not rows:
                     break
-                
+
                 patient_ids = [row[0] for row in rows]
-                
+
                 p_task = await db.execute(
                     select(Hasta)
                     .where(Hasta.id.in_(patient_ids))
@@ -323,7 +330,7 @@ async def export_advanced_search(
 # --- COLLECTION ROUTES ---
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(_read)])
 @limiter.limit("100/minute")
 @cache(expire=30)
 async def read_patients(
@@ -353,7 +360,7 @@ async def read_patients(
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.post("", response_model=PatientResponse)
+@router.post("", response_model=PatientResponse, dependencies=[Depends(_create)])
 async def create_patient(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -406,8 +413,6 @@ async def create_patient(
 # FastAPI path parametrelerini sırayla eşleştirir.
 # ---------------------------------------------------------------------------
 from pydantic import BaseModel as _BM
-from app.schemas.clinical import MuayeneResponse
-from app.schemas.appointment import RandevuResponse
 from app.repositories.appointment_repository import AppointmentRepository
 from app.controllers.legacy_adapters.clinical_adapter import ClinicalLegacyAdapter
 
@@ -422,7 +427,7 @@ class PatientBootstrapResponse(_BM):
     timeline: List[Any]
 
 
-@router.get("/{id}/bootstrap", response_model=PatientBootstrapResponse)
+@router.get("/{id}/bootstrap", response_model=PatientBootstrapResponse, dependencies=[Depends(_read)])
 async def get_patient_bootstrap(
     *,
     request: Request,
@@ -478,7 +483,7 @@ async def get_patient_bootstrap(
     )
 
 
-@router.get("/{id}/timeline")
+@router.get("/{id}/timeline", dependencies=[Depends(_read)])
 @cache(expire=30)
 async def get_patient_timeline(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
@@ -488,8 +493,7 @@ async def get_patient_timeline(
     return await controller.get_timeline(id)
 
 
-
-@router.get("/{id}", response_model=PatientLegacyResponse)
+@router.get("/{id}", response_model=PatientLegacyResponse, dependencies=[Depends(_read)])
 async def read_patient(
     *, request: Request, db: AsyncSession = Depends(deps.get_db), id: UUID
 ) -> Any:
@@ -514,7 +518,7 @@ async def read_patient(
         raise HTTPException(status_code=500, detail="İşlem sırasında bir hata oluştu")
 
 
-@router.get("/{id}/counts")
+@router.get("/{id}/counts", dependencies=[Depends(_read)])
 @cache(expire=60)
 async def get_patient_counts(
     *, db: AsyncSession = Depends(deps.get_db), id: UUID
@@ -524,7 +528,7 @@ async def get_patient_counts(
     return await controller.get_counts(id)
 
 
-@router.put("/{id}", response_model=PatientResponse)
+@router.put("/{id}", response_model=PatientResponse, dependencies=[Depends(_update)])
 async def update_patient(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -745,4 +749,3 @@ def _build_advanced_search_query(
         )
 
     return base_stmt
-

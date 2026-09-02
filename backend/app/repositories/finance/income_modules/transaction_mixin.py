@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import select, func, and_, update, delete
+from sqlalchemy import select, func, and_, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.finance.models import (

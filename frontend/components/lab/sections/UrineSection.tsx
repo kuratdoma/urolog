@@ -144,7 +144,7 @@ export const UrineSection = React.memo(({ values, onChange, historyData, sortCon
         const iList = Object.entries(newState).filter(([_, st]) => st === 'I').map(([a]) => a);
         const rList = Object.entries(newState).filter(([_, st]) => st === 'R').map(([a]) => a);
 
-        let textParts = [];
+        const textParts = [];
         if (sList.length > 0) textParts.push(`Duyarlı: ${sList.join(', ')}`);
         if (iList.length > 0) textParts.push(`Orta: ${iList.join(', ')}`);
         if (rList.length > 0) textParts.push(`Dirençli: ${rList.join(', ')}`);

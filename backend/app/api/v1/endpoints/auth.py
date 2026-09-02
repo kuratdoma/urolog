@@ -1,3 +1,4 @@
+import logging
 from typing import Any, List, Optional
 from datetime import datetime, timedelta, timezone
 import secrets
@@ -20,6 +21,9 @@ import traceback
 from app.services.audit_service import AuditService
 from app.services.email_service import send_password_reset_email, send_username_reminder
 from app.core.security_helpers import validate_password
+from app.core.pii_scrubber import mask_identifiers
+
+logger = logging.getLogger("urolog_backend")
 
 router = APIRouter()
 
@@ -42,6 +46,7 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
         path=_REFRESH_COOKIE_PATH,
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
+
 
 from app.schemas.user import UserCreate, UserUpdate, User as UserSchema
 
@@ -93,9 +98,13 @@ async def login(
         )
         raise e
     except Exception as e:
-        error_msg = traceback.format_exc()
-        # SEC-13: Sadece sunucu stdout'a logla, dosyaya yazma
-        print(f"\n[LOGIN ERROR] {datetime.now()}:\n{error_msg}")
+        # SEC-13: dosyaya yazma, yalnız sunucu log'una. print() yerine
+        # yapılandırılmış logger kullanılıyor ki satır formatlayıcıdan geçsin;
+        # traceback frame'leri gönderilen kimlik bilgisini taşıyabildiği için
+        # AGENTS.md §4.5 gereği pii_scrubber'dan geçiriliyor.
+        logger.exception(
+            "[LOGIN ERROR] %s", mask_identifiers(traceback.format_exc())
+        )
         raise e
 
 
@@ -232,7 +241,7 @@ async def get_my_permissions(current_user: User = Depends(deps.get_current_user)
     Returns the current user's accessible modules and their allowed CRUD actions.
     Frontend uses this to filter sidebar items and control UI element visibility.
     """
-    from app.core.permissions import PERMISSION_MATRIX, get_accessible_modules, Action
+    from app.core.permissions import PERMISSION_MATRIX, get_accessible_modules
 
     role = deps._resolve_role(current_user)
     accessible = get_accessible_modules(role)
@@ -607,7 +616,7 @@ async def update_user(
         target_role = deps._resolve_role(user)
         if target_role == UserRole.ADMIN and caller_role != UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="ADMIN kullanıcılarını sadece başka bir ADMIN düzenleyebilir.")
-            
+
         if user_in.is_active is not None:
             user.is_active = user_in.is_active
         if user_in.role is not None:

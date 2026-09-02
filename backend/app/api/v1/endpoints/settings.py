@@ -1,8 +1,8 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_user, require_role
+from app.api.deps import get_db, require_role
 from app.core.permissions import UserRole
 from app.repositories.setting_repository import SettingRepository
 from app.schemas.setting import SystemSetting, SystemSettingCreate
@@ -53,7 +53,7 @@ async def create_or_update_setting(
     Create or update a system system setting.
     """
     repo = SettingRepository(db)
-    
+
     if setting_in.key in ["google_api_key", "google_client_id", "google_client_secret"] and (not setting_in.value or setting_in.value == "••••••••••••••••"):
         existing = await repo.get(setting_in.key)
         if existing:
@@ -86,7 +86,7 @@ async def batch_update_settings(
     for s in settings_in:
         if s.key == "google_api_key":
             logger.info(f"Received google_api_key to save: length={len(s.value) if s.value else 0}, value_prefix={s.value[:4] if s.value else 'None'}")
-        
+
         if s.key in ["google_api_key", "google_client_id", "google_client_secret"] and (not s.value or s.value == "••••••••••••••••"):
             existing = await repo.get(s.key)
             if existing:
@@ -94,7 +94,7 @@ async def batch_update_settings(
                 existing.value = "••••••••••••••••"
                 results.append(existing)
             continue
-            
+
         res = await repo.create_or_update(
             key=s.key, value=s.value, description=s.description
         )

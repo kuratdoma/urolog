@@ -194,7 +194,7 @@ class FinanceOrchestrator:
         tx = await self.income_repo.get_transaction(tx_id)
         if not tx:
             raise ValueError("Transaction not found")
-        
+
         hasta_id_str = str(tx.hasta_id) if tx.hasta_id else None
 
         # Update transaction status
@@ -202,7 +202,7 @@ class FinanceOrchestrator:
             update(FinansIslem)
             .where(FinansIslem.id == tx_id)
             .values(
-                durum="iptal", 
+                durum="iptal",
                 iptal_nedeni=reason,
                 updated_by=self.context.user_id if self.context else None
             )
@@ -218,7 +218,7 @@ class FinanceOrchestrator:
                 # Select with FOR UPDATE
                 kasa_res = await self.db.execute(select(Kasa).where(Kasa.id == odeme.kasa_id).with_for_update())
                 kasa_obj = kasa_res.scalar_one_or_none()
-                
+
                 if kasa_obj:
                     kasa_ids_affected.append(kasa_obj.id)
                     amount_rolled_back += float(odeme.tutar)
@@ -259,7 +259,7 @@ class FinanceOrchestrator:
         tx = await self.income_repo.get_transaction(tx_id)
         if not tx:
             return False
-            
+
         hasta_id_str = str(tx.hasta_id) if tx.hasta_id else None
 
         amount_rolled_back = 0
@@ -272,7 +272,7 @@ class FinanceOrchestrator:
                 if odeme.kasa_id:
                     kasa_res = await self.db.execute(select(Kasa).where(Kasa.id == odeme.kasa_id).with_for_update())
                     kasa_obj = kasa_res.scalar_one_or_none()
-                    
+
                     if kasa_obj:
                         kasa_ids_affected.append(kasa_obj.id)
                         amount_rolled_back += float(odeme.tutar)

@@ -20,15 +20,19 @@ logger = logging.getLogger(__name__)
 update_lock = asyncio.Lock()
 is_update_running = False
 
+
 class SuperuserAuthRequest(BaseModel):
     username: str
     password: str
 
+
 class SetupSuperuserRequest(BaseModel):
     password: str
 
+
 import httpx
 from app.core.config import settings
+
 
 @router.get("/status")
 async def get_system_update_status(
@@ -57,11 +61,11 @@ async def get_system_update_status(
             timeout=15,
             env=git_env
         )
-        
+
         remote_sha = ""
         if ls_remote_proc.returncode == 0 and ls_remote_proc.stdout.strip():
             remote_sha = ls_remote_proc.stdout.strip().split()[0][:7]
-        
+
         # 2b. Remote güncellemeleri yerel veritabanına çek (fetch)
         fetch_proc = subprocess.run(
             ["git", "fetch", "origin", "main:refs/remotes/origin/main"],
@@ -164,7 +168,7 @@ async def get_system_update_status(
                     latest_commit = commits[0]
                     remote_sha = latest_commit["sha"][:7]
                     remote_msg = latest_commit["commit"]["message"].split("\n")[0]
-                    
+
                     update_available = (current_sha != remote_sha and current_sha != "latest")
                     changelog = []
                     for c in commits:
@@ -173,7 +177,7 @@ async def get_system_update_status(
                             break
                         msg = c["commit"]["message"].split("\n")[0]
                         changelog.append(f"{c_sha} {msg}")
-                        
+
                     return {
                         "update_available": update_available,
                         "current_version": {
@@ -201,6 +205,7 @@ async def get_system_update_status(
         "has_superuser": has_superuser
     }
 
+
 @router.post("/setup-superuser")
 async def setup_superuser(
     setup_data: SetupSuperuserRequest,
@@ -213,13 +218,13 @@ async def setup_superuser(
     """
     result = await db.execute(select(User).filter(User.username == "superuser"))
     existing_user = result.scalars().first()
-    
+
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Superuser hesabı zaten oluşturulmuş!"
         )
-    
+
     # Yeni superuser oluştur
     hashed_password = get_password_hash(setup_data.password)
     new_superuser = User(
@@ -231,11 +236,12 @@ async def setup_superuser(
         is_active=True,
         skip_audit=True
     )
-    
+
     db.add(new_superuser)
     await db.commit()
-    
+
     return {"message": "Superuser hesabı başarıyla oluşturuldu."}
+
 
 @router.post("/update")
 async def trigger_system_update(
@@ -246,40 +252,39 @@ async def trigger_system_update(
     """
     Superuser doğrulaması yapar ve güncelleme işlemini başlatır.
     """
-    global is_update_running
-    
     # 1. Superuser doğrulama (Veritabanından)
     if auth_data.username != "superuser":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Yalnızca 'superuser' hesabı ile güncelleme yapılabilir!"
         )
-        
+
     result = await db.execute(select(User).filter(User.username == "superuser"))
     superuser = result.scalars().first()
-    
+
     if not superuser or not superuser.hashed_password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Superuser hesabı bulunamadı. Lütfen önce kurulumu tamamlayın."
         )
-        
+
     if not verify_password(auth_data.password, superuser.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Geçersiz Süper Kullanıcı (superuser) parolası!"
         )
-    
+
     if is_update_running:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Zaten devam eden bir güncelleme işlemi var!"
         )
-    
+
     return {
         "status": "authorized",
         "message": "Süper kullanıcı doğrulaması başarılı. Güncelleme WebSocket üzerinden takip edilebilir."
     }
+
 
 @router.websocket("/ws-logs")
 async def websocket_update_logs(websocket: WebSocket):
@@ -288,17 +293,17 @@ async def websocket_update_logs(websocket: WebSocket):
     WebSocket bağlantısı JWT token doğrulaması gerektirir (query param: ?token=...).
     """
     global is_update_running
-    
+
     # 1. Önce bağlantıyı kabul et (Nginx handshake için zorunlu)
     await websocket.accept()
-    
+
     # 2. Token doğrulama
     token = websocket.query_params.get("token")
     if not token:
         await websocket.send_text("❌ [Hata] Oturum anahtarı (token) bulunamadı.\n")
         await websocket.close(code=4001)
         return
-    
+
     try:
         from app.db.session import SessionLocal
         async with SessionLocal() as db:
@@ -311,28 +316,28 @@ async def websocket_update_logs(websocket: WebSocket):
         await websocket.send_text(f"❌ [Hata] Geçersiz veya süresi dolmuş token: {str(e)}\n")
         await websocket.close(code=4001)
         return
-    
+
     if is_update_running:
         await websocket.send_text("⚠️ UYARI: Zaten devam eden bir güncelleme işlemi var!\n")
         await websocket.close()
         return
-    
+
     project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
     script_path = os.path.join(project_dir, "update_scripts/system_update.sh")
     if not os.path.exists(script_path):
         script_path = os.path.join(project_dir, "scripts/system_update.sh")
-    
+
     if not os.path.exists(script_path):
         await websocket.send_text(f"❌ HATA: Güncelleme script'i bulunamadı: {script_path}\n")
         await websocket.close()
         return
-    
+
     async with update_lock:
         is_update_running = True
         try:
             await websocket.send_text("🚀 [Sistem] Güncelleme işlemi başlatılıyor...\n")
             await websocket.send_text(f"📁 Çalıştırma Dizini: {project_dir}\n\n")
-            
+
             # Script'i subprocess olarak çalıştır
             process = await asyncio.create_subprocess_exec(
                 "bash", script_path,
@@ -340,7 +345,7 @@ async def websocket_update_logs(websocket: WebSocket):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT
             )
-            
+
             # Subprocess çıktısını satır satır okuyup websocket'e fırlat
             while True:
                 line = await process.stdout.readline()
@@ -348,15 +353,15 @@ async def websocket_update_logs(websocket: WebSocket):
                     break
                 decoded_line = line.decode('utf-8', errors='replace')
                 await websocket.send_text(decoded_line)
-                await asyncio.sleep(0.01) # Event loop rahatlatma
-                
+                await asyncio.sleep(0.01)  # Event loop rahatlatma
+
             await process.wait()
-            
+
             if process.returncode == 0:
                 await websocket.send_text("\n🎉 [Sistem] Güncelleme başarıyla tamamlandı! Servisler yeniden başlatılıyor...\n")
             else:
                 await websocket.send_text(f"\n❌ [Sistem] Güncelleme hatayla sonlandı! Exit Code: {process.returncode}\n")
-                
+
         except WebSocketDisconnect:
             logger.info("WebSocket istemci bağlantısı kesildi.")
         except Exception as e:
@@ -372,6 +377,7 @@ async def websocket_update_logs(websocket: WebSocket):
             except Exception:
                 pass
 
+
 @router.get("/setup-readme")
 async def get_setup_readme(
     current_user: User = Depends(deps.require_role(UserRole.ADMIN)),
@@ -381,11 +387,11 @@ async def get_setup_readme(
     """
     project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
     readme_path = os.path.join(project_dir, "DEPLOYMENT_SETUP.md")
-    
+
     if not os.path.exists(readme_path):
         return {"content": "Rehber dökümanı bulunamadı."}
-    
+
     with open(readme_path, "r", encoding="utf-8") as f:
         content = f.read()
-        
+
     return {"content": content}

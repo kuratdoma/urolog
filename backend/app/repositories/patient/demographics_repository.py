@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple, Any
 from uuid import UUID
-from sqlalchemy import select, and_, or_, text
+from sqlalchemy import select, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.patient.models import Hasta
 from app.schemas.patient.demographics import (
@@ -70,7 +70,7 @@ class DemographicsRepository:
             ORDER BY la.son_islem_tarihi DESC
             OFFSET :skip LIMIT :limit
         )
-        SELECT 
+        SELECT
             h.id,
             rp.son_islem_tarihi,
             CASE

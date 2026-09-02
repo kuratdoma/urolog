@@ -95,6 +95,7 @@ class ClinicalOrchestrator:
             exams.append(self._promote_note_to_exam(note))
 
         from datetime import datetime
+
         def safe_sort_key(x):
             val = getattr(x, "tarih", None) if not isinstance(x, dict) else x.get("tarih", None)
             return val if val is not None else datetime.min
@@ -108,8 +109,9 @@ class ClinicalOrchestrator:
         """
         ops = await self.clinical_repo.get_operations_by_patient(patient_id)
         # Assuming no notes need to be promoted to operations currently
-        
+
         from datetime import datetime
+
         def safe_sort_key(x):
             val = getattr(x, "tarih", None) if not isinstance(x, dict) else x.get("tarih", None)
             return val if val is not None else datetime.min

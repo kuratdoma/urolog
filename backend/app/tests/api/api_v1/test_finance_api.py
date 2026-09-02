@@ -1,6 +1,4 @@
-import pytest
-from datetime import date
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -10,8 +8,10 @@ from app.core.permissions import UserRole
 
 client = TestClient(app)
 
+
 def override_get_current_user():
     return User(id=1, email="doctor@urolog.com", username="dr_test", is_active=True, is_superuser=True, role=UserRole.ADMIN)
+
 
 app.dependency_overrides[deps.get_current_user] = override_get_current_user
 

@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from uuid import UUID
 
+
 class InsuranceProvisionDTO(BaseModel):
     # System identifiers
     hasta_id: Optional[UUID] = None

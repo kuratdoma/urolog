@@ -16,7 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.core.config import settings
 from app.core.exceptions import AppError, app_error_handler
-import app.db.base
+# Model kayıt yan etkisi: tüm modeller Base.metadata'ya yüklensin diye import edilir.
+# `import app.db.base` biçimi `app` adını bağlayıp aşağıdaki `app = FastAPI(...)`
+# ile çakışıyordu; bu biçim yalnızca modülü yükler.
+from app.db import base as _model_registry  # noqa: F401
 
 from app.api.v1.endpoints import (
     auth,
@@ -44,7 +47,6 @@ from app.api.v1.endpoints import (
     setup,
     personal_notes,
 )
-import app.db.base
 
 # ... (omitted headers)
 
@@ -65,6 +67,7 @@ from contextlib import asynccontextmanager
 
 
 from app.db.session import SessionLocal
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -122,10 +125,10 @@ app = FastAPI(
 async def global_exception_handler(request: Request, exc: Exception):
     error_msg = traceback.format_exc()
     req_id = request_id_ctx_var.get()
-    
+
     # ContextVar automatically injects request_id into JSON log
     logger.critical(f"CRITICAL ERROR at {request.url}\n{error_msg}")
-    
+
     # SEC-03: Traceback'ler ASLA istemciye dönmez — sadece sunucu loglarına yazılır
     # OBS-CRIT-01: Fakat Request ID istemciye dönmeli ki debug edilebilsin
     return JSONResponse(
@@ -280,6 +283,7 @@ app.include_router(
     tags=["setup"],
 )
 
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check(db: AsyncSession = Depends(deps.get_db)):
     db_status = "unknown"
@@ -296,7 +300,6 @@ async def health_check(db: AsyncSession = Depends(deps.get_db)):
 
     # 2. Check Redis
     try:
-        from fastapi import Request
         # Getting the request in endpoint if passed, or we just rely on the global app instance
         if hasattr(app.state, 'redis') and app.state.redis:
             await app.state.redis.ping()
@@ -323,6 +326,7 @@ async def health_check(db: AsyncSession = Depends(deps.get_db)):
         )
 
     return health_response
+
 
 # Ensure static directory exists
 os.makedirs("static/documents", exist_ok=True)

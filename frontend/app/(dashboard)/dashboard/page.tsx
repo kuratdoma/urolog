@@ -727,7 +727,7 @@ export default function DashboardPage() {
                                                 <div>
                                                     <span className="text-[10px] font-semibold text-slate-400 block mb-0.5">Şikayet / Başvuru</span>
                                                     <p className="text-xs text-slate-700 font-medium italic bg-slate-50 p-2.5 rounded-lg border border-slate-100/80">
-                                                        "{briefAppointment.clinical_brief.son_muayene_sikayet}"
+                                                        &quot;{briefAppointment.clinical_brief.son_muayene_sikayet}&quot;
                                                     </p>
                                                 </div>
                                             )}

@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime, date
 
-from sqlalchemy import text, union_all, select, literal, cast, String, func
+from sqlalchemy import union_all, select, literal, cast, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.clinical.models import (
@@ -34,13 +34,11 @@ class PatientTimelineRepository:
     async def get_timeline(self, patient_id: UUID) -> List[Dict[str, Any]]:
         """
         Aggregates and sorts all patient events into a unified timeline.
-        
+
         Uses a single UNION ALL query combining all 7 event sources,
         reducing DB round-trips from 7 to 1.
         """
         # Build individual SELECT statements with uniform columns
-        pid = str(patient_id)
-
         # 1. Randevular (Appointments)
         q_appt = (
             select(

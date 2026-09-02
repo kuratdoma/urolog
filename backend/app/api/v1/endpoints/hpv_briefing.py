@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.core.permissions import Action
 from app.schemas.hpv_briefing import HPVBriefingResponse
 from app.services.hpv_briefing_service import HPVBriefingService
 
@@ -15,10 +16,15 @@ router = APIRouter(
     # SEC-09: Router seviyesinde kimlik doğrulama
     dependencies=[Depends(deps.get_current_user)]
 )
+
+# RBAC: yetkiler PERMISSION_MATRIX["clinical"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("clinical", Action.READ)
 logger = logging.getLogger(__name__)
 
 
-@router.get("/{patient_id}", response_model=HPVBriefingResponse)
+@router.get("/{patient_id}", response_model=HPVBriefingResponse, dependencies=[Depends(_read)])
 async def get_hpv_briefing(
     patient_id: str,
     force_refresh: bool = False,

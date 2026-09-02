@@ -35,26 +35,26 @@ class GoogleCalendarService:
         """Google OAuth Client ID ve Secret değerlerini DB'den (şifreli) veya fallback olarak env'den okur."""
         from app.repositories.setting_repository import SettingRepository
         from app.core.security import decrypt_value
-        
+
         repo = SettingRepository(self.db)
         client_id_setting = await repo.get("google_client_id")
         client_secret_setting = await repo.get("google_client_secret")
-        
+
         client_id = settings.GOOGLE_CLIENT_ID
         client_secret = settings.GOOGLE_CLIENT_SECRET
-        
+
         if client_id_setting and client_id_setting.value:
             try:
                 client_id = decrypt_value(client_id_setting.value)
             except Exception:
                 client_id = client_id_setting.value
-                
+
         if client_secret_setting and client_secret_setting.value:
             try:
                 client_secret = decrypt_value(client_secret_setting.value)
             except Exception:
                 client_secret = client_secret_setting.value
-                
+
         return client_id, client_secret
 
     async def get_credentials(self, user_id: int) -> Optional[Credentials]:
@@ -262,9 +262,10 @@ class GoogleCalendarService:
         from zoneinfo import ZoneInfo
         from datetime import timezone
         tz = ZoneInfo("Europe/Istanbul")
-        
+
         def to_ist(dt):
-            if not dt: return None
+            if not dt:
+                return None
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt.astimezone(tz)

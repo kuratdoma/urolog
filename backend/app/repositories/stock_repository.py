@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
-from typing import List, Optional, Tuple, Any, Dict
-from datetime import datetime
+from typing import List, Optional, Any, Dict
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from app.models.stock import StokUrun, StokAlim, StokHareket, HareketTipi
@@ -222,7 +222,9 @@ class StockRepository:
             kaynak="Satın Alım",
             kaynak_ref=db_obj.fatura_no,
             notlar=f"Firma ID: {obj_in.firma_id or '-'}",
-            islem_tarihi=obj_in.alim_tarihi or datetime.now(),
+            # Kolon DateTime(timezone=True): naive yerel saat yazılırsa hareket
+            # diğer damgalarla sunucu ofseti kadar kayar (AGENTS.md §4.4 — UTC saklanır).
+            islem_tarihi=obj_in.alim_tarihi or datetime.now(timezone.utc),
         )
         self.db.add(hareket)
 

@@ -1,6 +1,6 @@
-import pytest
 from app.schemas.insurance_provision import InsuranceProvisionDTO
 from app.services.pdf.pdf_provision_service import PDFProvisionFormService
+
 
 def test_pdf_provision_form_service_generate():
     dto = InsuranceProvisionDTO(
@@ -38,6 +38,7 @@ def test_pdf_provision_form_service_generate():
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF")
 
+
 def test_pdf_provision_female_patient_and_separate_fields():
     dto = InsuranceProvisionDTO(
         sigorta_sirketi="Axa Sigorta",
@@ -57,6 +58,7 @@ def test_pdf_provision_female_patient_and_separate_fields():
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF")
 
+
 def test_pdf_provision_turkish_characters_and_empty_fields():
     dto = InsuranceProvisionDTO(
         sigorta_sirketi="Bupa Acıbadem Sigorta A.Ş. ĞÜŞİÖÇğüşiöç",
@@ -71,6 +73,7 @@ def test_pdf_provision_turkish_characters_and_empty_fields():
 
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF")
+
 
 def test_pdf_provision_multiline_sikayet_oyku():
     dto = InsuranceProvisionDTO(
@@ -89,4 +92,3 @@ def test_pdf_provision_multiline_sikayet_oyku():
 
     assert len(pdf_bytes) > 0
     assert pdf_bytes.startswith(b"%PDF")
-

@@ -2,7 +2,6 @@
 
 POST /api/v1/clinical/consultation-reports/polish-letter
 """
-import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
 

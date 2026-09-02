@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
 
@@ -6,13 +5,14 @@ from app.main import app
 from app.api import deps
 from app.models.user import User
 from app.core.permissions import UserRole
-from app.core.config import settings
 from app.schemas.ai_scribe import AIScribeResponse
 
 client = TestClient(app)
 
+
 def override_get_current_user():
     return User(id=1, email="doctor@urolog.com", username="dr_test", is_active=True, is_superuser=True, role=UserRole.ADMIN)
+
 
 app.dependency_overrides[deps.get_current_user] = override_get_current_user
 

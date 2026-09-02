@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import date
 from typing import Any, List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.core.permissions import Action
 from app.services.lab_parser_service import LabParserService, LabParserResponse
 from app.services.pdf_lab_parser_service import (
     PDFLabParserService,
@@ -26,8 +27,15 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["lab"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("lab", Action.READ)
+_create = deps.require_permission("lab", Action.CREATE)
+_delete = deps.require_permission("lab", Action.DELETE)
 
-@router.post("/parse", response_model=LabParserResponse)
+
+@router.post("/parse", response_model=LabParserResponse, dependencies=[Depends(_read)])
 async def parse_lab_text(
     *,
     text_in: LabTextCreate,
@@ -36,7 +44,7 @@ async def parse_lab_text(
     return LabParserService.parse_text(text_in.text)
 
 
-@router.post("/parse-pdf", response_model=PDFLabParserResponse)
+@router.post("/parse-pdf", response_model=PDFLabParserResponse, dependencies=[Depends(_read)])
 async def parse_lab_pdf(file: UploadFile = File(...)) -> Any:
     """Parse lab results from uploaded PDF file."""
     if not file.filename or not file.filename.lower().endswith(".pdf"):
@@ -52,7 +60,7 @@ async def parse_lab_pdf(file: UploadFile = File(...)) -> Any:
         raise HTTPException(status_code=500, detail="PDF işlenirken hata oluştu")
 
 
-@router.post("/analyze", response_model=LabAnalysisResponse)
+@router.post("/analyze", response_model=LabAnalysisResponse, dependencies=[Depends(_read)])
 async def analyze_lab_file(file: UploadFile = File(...)) -> Any:
     """
     Analyze uploaded lab report (PDF or Image) using AI to extract structured data.
@@ -66,13 +74,13 @@ async def analyze_lab_file(file: UploadFile = File(...)) -> Any:
 
     try:
         content = await file.read()
-        
+
         # Bypass Gemini for PDFs and use local parser
         if file.content_type == "application/pdf":
             parsed = PDFLabParserService.parse_pdf(content)
             if not parsed.success:
                 raise ValueError("Geçersiz dosya formatı")
-            
+
             # Map PDFLabResult to expected UI format
             results_mapped = []
             for item in parsed.results:
@@ -82,10 +90,10 @@ async def analyze_lab_file(file: UploadFile = File(...)) -> Any:
                     "unit": item.unit,
                     "reference_range": item.reference,
                     "is_abnormal": False,
-                    "category": "Laboratuvar", 
+                    "category": "Laboratuvar",
                     "report_date": parsed.report_date
                 })
-                
+
             return LabAnalysisResponse(
                 patient_name="Bilinmiyor",
                 report_date=parsed.report_date,
@@ -106,7 +114,7 @@ async def analyze_lab_file(file: UploadFile = File(...)) -> Any:
 # --- CUSTOM FRONTEND ENDPOINTS FOR UNIFIED REPO (TetkikSonuc) ---
 
 
-@router.post("/urine", response_model=bool)
+@router.post("/urine", response_model=bool, dependencies=[Depends(_create)])
 async def create_urine(
     *, db: AsyncSession = Depends(deps.get_db), payload: dict = Body(...)
 ) -> Any:
@@ -165,7 +173,7 @@ async def create_urine(
     return True
 
 
-@router.post("/hemogram", response_model=bool)
+@router.post("/hemogram", response_model=bool, dependencies=[Depends(_create)])
 async def create_hemogram(
     *, db: AsyncSession = Depends(deps.get_db), payload: dict = Body(...)
 ) -> Any:
@@ -196,7 +204,7 @@ async def create_hemogram(
     return True
 
 
-@router.post("/spermiogram", response_model=bool)
+@router.post("/spermiogram", response_model=bool, dependencies=[Depends(_create)])
 async def create_spermiogram_custom(
     *, db: AsyncSession = Depends(deps.get_db), payload: dict = Body(...)
 ) -> Any:
@@ -270,7 +278,7 @@ async def create_spermiogram_custom(
     return True
 
 
-@router.post("/trus_biopsy", response_model=bool)
+@router.post("/trus_biopsy", response_model=bool, dependencies=[Depends(_create)])
 async def create_trus_biopsy(
     *, db: AsyncSession = Depends(deps.get_db), payload: dict = Body(...)
 ) -> Any:
@@ -321,7 +329,7 @@ async def create_trus_biopsy(
     return True
 
 
-@router.post("/uroflowmetri", response_model=bool)
+@router.post("/uroflowmetri", response_model=bool, dependencies=[Depends(_create)])
 async def create_uroflowmetri(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -355,7 +363,7 @@ async def create_uroflowmetri(
     return True
 
 
-@router.post("/genel/batch", response_model=List[TetkikSonucResponse])
+@router.post("/genel/batch", response_model=List[TetkikSonucResponse], dependencies=[Depends(_create)])
 async def create_genel_lab_batch(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -369,7 +377,9 @@ async def create_genel_lab_batch(
     objs = [
         TetkikSonucCreate(
             hasta_id=item.get("hasta_id"),
-            tarih=item.get("tarih") or datetime.now(),
+            # Şema `date` bekliyor: datetime.now() saat bileşeni taşıdığı için
+            # Pydantic'te date_from_datetime_inexact hatası veriyordu (500).
+            tarih=item.get("tarih") or date.today(),
             tetkik_adi=item.get("tetkik_adi"),
             sonuc=item.get("sonuc"),
             birim=item.get("birim"),
@@ -383,7 +393,7 @@ async def create_genel_lab_batch(
     return await repo.create_tetkik_sonuc_batch(objs)
 
 
-@router.delete("/genel/batch", response_model=bool)
+@router.delete("/genel/batch", response_model=bool, dependencies=[Depends(_delete)])
 async def delete_genel_lab_batch(
     *,
     db: AsyncSession = Depends(deps.get_db),

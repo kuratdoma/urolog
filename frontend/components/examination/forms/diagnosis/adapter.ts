@@ -10,7 +10,7 @@ export const diagnosisAdapter = {
         const diagnosisCount = (formData as any)._diagnosisCount as number | undefined;
 
         for (let i = 1; i <= 5; i++) {
-            let name = formData[`tani${i}`] as string;
+            const name = formData[`tani${i}`] as string;
             const code = formData[`tani${i}_kodu`] as string;
 
             // The async code->name resolution is now handled by the UI Combobox directly.

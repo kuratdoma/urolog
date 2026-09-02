@@ -5,6 +5,7 @@ from app.core.limiter import limiter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
+from app.core.permissions import Action
 from app.core.cache_invalidation import CacheNS, invalidate
 from fastapi_cache.decorator import cache
 from app.repositories.system_repository import SystemRepository
@@ -19,6 +20,11 @@ router = APIRouter(
     # SEC-09: Router seviyesinde kimlik doğrulama
     dependencies=[Depends(deps.get_current_user)]
 )
+
+# RBAC: yetkiler PERMISSION_MATRIX["settings"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("settings", Action.READ)
 
 
 @router.get("/backups", response_model=List[BackupResponse])
@@ -36,14 +42,14 @@ async def list_backups(
         if not os.path.exists(path):
             logger.warning(f"Bakım dizini bulunamadı: {path}")
             return []
-            
+
         for f in os.listdir(path):
             if f.startswith("."):
                 continue
             full_path = os.path.join(path, f)
             if not os.path.isfile(full_path):
                 continue
-                
+
             stats = os.stat(full_path)
             backups.append(
                 {
@@ -62,7 +68,7 @@ async def list_backups(
     return backups
 
 
-@router.get("/icd", response_model=List[ICDTaniResponse])
+@router.get("/icd", response_model=List[ICDTaniResponse], dependencies=[Depends(_read)])
 @limiter.limit("30/minute")
 @cache(expire=3600, namespace=CacheNS.ICD)
 async def get_icds(
@@ -79,7 +85,7 @@ async def get_icds(
     return await repo.search_icd(q, skip, limit)
 
 
-@router.get("/icd/{code}", response_model=ICDTaniResponse)
+@router.get("/icd/{code}", response_model=ICDTaniResponse, dependencies=[Depends(_read)])
 async def get_icd_by_code(
     code: str, db: AsyncSession = Depends(deps.get_db)
 ) -> Any:
@@ -129,7 +135,7 @@ async def batch_delete_icd(
 # --- Drugs (İlaçlar) ---
 
 
-@router.get("/drugs", response_model=List[IlacResponse])
+@router.get("/drugs", response_model=List[IlacResponse], dependencies=[Depends(_read)])
 @limiter.limit("60/minute")
 @cache(expire=300, namespace=CacheNS.DRUGS)
 async def get_drugs(

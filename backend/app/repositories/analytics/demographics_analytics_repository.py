@@ -46,6 +46,7 @@ SERVICE_MAPPINGS = {
     "Ürodinamik": ["N31", "N32", "N39.3", "N39.4", "inkontinans", "aşırı aktif", "nörojenik", "ürodinami"],
 }
 
+
 class DemographicsAnalyticsRepository:
     @staticmethod
     async def get_diagnosis_stats(

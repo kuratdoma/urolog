@@ -28,7 +28,7 @@ export function DiagnosisFilterSection({
                             <Search className="h-4 w-4 text-indigo-500" /> Tanı Bazlı Hasta Filtresi
                         </CardTitle>
                         <CardDescription className="text-xs mt-1">
-                            "Son 2 yılda C67 (Mesane Tümörü) tanılı hastaların listesini çıkar"
+                            &quot;Son 2 yılda C67 (Mesane Tümörü) tanılı hastaların listesini çıkar&quot;
                         </CardDescription>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">

@@ -7,6 +7,7 @@ from app.schemas.insurance_provision import InsuranceProvisionDTO
 
 logger = logging.getLogger(__name__)
 
+
 class PDFProvisionFormService:
     """
     Generates 'Özel Sağlık Sigortası Hasta Bilgi Formu' PDF matching exact template.
@@ -24,7 +25,7 @@ class PDFProvisionFormService:
             os.path.join(current_dir, "../../assets/branding")
         )
         self.font_path, self.bold_font_path = self._discover_fonts()
-        
+
         # Register Fonts
         if self.font_path:
             self.page.insert_font(fontname="tr", fontfile=self.font_path)
@@ -112,7 +113,7 @@ class PDFProvisionFormService:
         self._draw_rect(header1_rect)
         self._insert_text((margin_l + 8, 70), "Sigorta Şirketi", bold=True, fontsize=8.5)
         self._insert_text((margin_l + 95, 70), f": {self.data.sigorta_sirketi or ''}", fontsize=8.5)
-        
+
         self._insert_text((350, 70), "Provizyon No", bold=True, fontsize=8.5)
         self._insert_text((425, 70), f": {self.data.provizyon_no or ''}", fontsize=8.5)
 
@@ -137,7 +138,7 @@ class PDFProvisionFormService:
         # Row 1: Sağlık Kuruluşu Adı | Kurum Kodu | Telefon No | Faks No
         self._insert_text((content1_l + 5, 96), "Sağlık Kuruluşu Adı", bold=True, fontsize=8)
         self._insert_textbox(fitz.Rect(content1_l + 5, 98, content1_l + 200, 110), self.data.saglik_kurulusu_adi or "PROF. DR. TAYYAR ALP ÖZKAN", fontsize=8.5, bold=True)
-        
+
         self._draw_line((250, 82), (250, 112))
         self._insert_text((255, 100), "Kurum Kodu", bold=True, fontsize=8)
         self._insert_text((315, 100), f": {self.data.kurum_kodu or ''}", fontsize=8.5)
@@ -244,10 +245,10 @@ class PDFProvisionFormService:
         cb_acil = "[X]" if "acil" in gt else "[  ]"
         cb_dahili = "[X]" if "dahili" in gt else "[  ]"
 
-        self._insert_text((455, 508), f"{cb_poli} Poliklinik", bold="poli" in gt, color=(0.8,0,0) if "poli" in gt else (0,0,0), fontsize=8)
-        self._insert_text((455, 520), f"{cb_cerrahi} Cerrahi Yatış", bold="cerrahi" in gt, color=(0.8,0,0) if "cerrahi" in gt else (0,0,0), fontsize=8)
-        self._insert_text((455, 532), f"{cb_acil} Acil", bold="acil" in gt, color=(0.8,0,0) if "acil" in gt else (0,0,0), fontsize=8)
-        self._insert_text((455, 544), f"{cb_dahili} Dahili Yatış", bold="dahili" in gt, color=(0.8,0,0) if "dahili" in gt else (0,0,0), fontsize=8)
+        self._insert_text((455, 508), f"{cb_poli} Poliklinik", bold="poli" in gt, color=(0.8, 0, 0) if "poli" in gt else (0, 0, 0), fontsize=8)
+        self._insert_text((455, 520), f"{cb_cerrahi} Cerrahi Yatış", bold="cerrahi" in gt, color=(0.8, 0, 0) if "cerrahi" in gt else (0, 0, 0), fontsize=8)
+        self._insert_text((455, 532), f"{cb_acil} Acil", bold="acil" in gt, color=(0.8, 0, 0) if "acil" in gt else (0, 0, 0), fontsize=8)
+        self._insert_text((455, 544), f"{cb_dahili} Dahili Yatış", bold="dahili" in gt, color=(0.8, 0, 0) if "dahili" in gt else (0, 0, 0), fontsize=8)
 
         # Row 6: Ön Tanı / Tanı | ICD 10 (556 -> 600)
         self._insert_text((content2_l + 5, 568), "Ön Tanı / Tanı", bold=True)

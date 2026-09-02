@@ -371,4 +371,3 @@ class HPVBriefingKaydi(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     created_by = Column(Integer, nullable=True)
     updated_by = Column(Integer, nullable=True)
-

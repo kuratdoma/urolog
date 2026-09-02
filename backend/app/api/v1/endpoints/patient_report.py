@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.api import deps
+from app.core.permissions import Action
 from app.models.user import User
 from app.core.user_context import UserContext
 from app.schemas.patient_report import PatientReportDTO
@@ -23,8 +24,13 @@ router = APIRouter(
     dependencies=[Depends(deps.get_current_user)]
 )
 
+# RBAC: yetkiler PERMISSION_MATRIX["reports"] üzerinden işlem bazında uygulanır.
+# Router seviyesinde tek rol listesi kullanmak salt-okunur rollerin de
+# yazma uçlarına erişmesine yol açardı.
+_read = deps.require_permission("reports", Action.READ)
 
-@router.get("/{patient_id}", response_model=PatientReportDTO)
+
+@router.get("/{patient_id}", response_model=PatientReportDTO, dependencies=[Depends(_read)])
 async def get_patient_report(
     patient_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -47,7 +53,7 @@ async def get_patient_report(
     return await orchestrator.get_patient_report(patient_id)
 
 
-@router.get("/{patient_id}/pdf")
+@router.get("/{patient_id}/pdf", dependencies=[Depends(_read)])
 async def get_patient_report_pdf(
     patient_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -75,7 +81,7 @@ async def get_patient_report_pdf(
     )
 
 
-@router.get("/{patient_id}/status")
+@router.get("/{patient_id}/status", dependencies=[Depends(_read)])
 async def get_report_status(
     patient_id: UUID,
     db: AsyncSession = Depends(get_db),

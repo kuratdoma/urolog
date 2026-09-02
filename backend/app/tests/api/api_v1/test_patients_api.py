@@ -1,7 +1,7 @@
 import pytest
 from uuid import uuid4, UUID
 from datetime import datetime, date
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
@@ -19,6 +19,7 @@ except Exception:
     pass
 
 client = TestClient(app)
+
 
 @pytest.fixture(autouse=True)
 def setup_auth_overrides():
