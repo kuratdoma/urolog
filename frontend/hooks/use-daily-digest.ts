@@ -14,7 +14,8 @@ export const useDailyDigest = () => {
 
     const notesQuery = useQuery({
         queryKey: ['personal-notes', 'list'],
-        queryFn: () => api.personalNotes.list(false),
+        // Varsayılan liste zaten tamamlananları (arşivi) hariç tutar.
+        queryFn: () => api.personalNotes.list(),
         enabled,
     });
 

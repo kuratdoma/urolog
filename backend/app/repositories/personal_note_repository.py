@@ -15,6 +15,8 @@ from app.models.personal_note import (
 )
 
 NOTE_SORT_OPTIONS = ("due_date", "created_at", "importance")
+NOTE_SCOPE_OPTIONS = ("all", "my_notes", "assigned_to_me", "assigned_by_me", "archive")
+ARCHIVE_SCOPE = "archive"
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
@@ -26,6 +28,10 @@ def sort_notes(notes: List[PersonalNote], sort_by: str) -> List[PersonalNote]:
         return sorted(notes, key=lambda n: n.created_at or _EPOCH, reverse=True)
     if sort_by == "importance":
         return sorted(notes, key=lambda n: NOTE_COLOR_PRIORITY.get(NoteColor(n.color), 0), reverse=True)
+    if sort_by == "completed_at":
+        # Arşiv: en son tamamlanan en üstte. completed_at'i olmayan eski kayıtlar
+        # (migration öncesi tamamlananlar) en alta düşer.
+        return sorted(notes, key=lambda n: n.completed_at or _EPOCH, reverse=True)
     return sorted(notes, key=lambda n: n.starts_at)
 
 
@@ -36,35 +42,41 @@ class PersonalNoteRepository:
     async def list_notes(
         self,
         user_id: int,
-        include_done: bool = True,
         sort_by: str = "due_date",
         scope: str = "all",
     ) -> List[PersonalNote]:
+        """Tamamlanan işler aktif görünümlerden çıkarılır; yalnızca "archive"
+        scope'u onları (silinmemiş olanları) geri getirir."""
+        visible_to_user = or_(
+            PersonalNote.user_id == user_id,
+            PersonalNote.assigned_to_id == user_id,
+        )
         conditions = [PersonalNote.is_deleted == False]
-        if not include_done:
-            conditions.append(PersonalNote.is_done == False)
 
-        if scope == "my_notes":
-            scope_cond = and_(
-                PersonalNote.user_id == user_id,
-                or_(PersonalNote.assigned_to_id.is_(None), PersonalNote.assigned_to_id == user_id),
-            )
-        elif scope == "assigned_to_me":
-            scope_cond = and_(
-                PersonalNote.assigned_to_id == user_id,
-                PersonalNote.user_id != user_id,
-            )
-        elif scope == "assigned_by_me":
-            scope_cond = and_(
-                PersonalNote.user_id == user_id,
-                PersonalNote.assigned_to_id.is_not(None),
-                PersonalNote.assigned_to_id != user_id,
-            )
-        else:  # "all"
-            scope_cond = or_(
-                PersonalNote.user_id == user_id,
-                PersonalNote.assigned_to_id == user_id,
-            )
+        if scope == ARCHIVE_SCOPE:
+            conditions.append(PersonalNote.is_done == True)
+            scope_cond = visible_to_user
+            sort_by = "completed_at"
+        else:
+            conditions.append(PersonalNote.is_done == False)
+            if scope == "my_notes":
+                scope_cond = and_(
+                    PersonalNote.user_id == user_id,
+                    or_(PersonalNote.assigned_to_id.is_(None), PersonalNote.assigned_to_id == user_id),
+                )
+            elif scope == "assigned_to_me":
+                scope_cond = and_(
+                    PersonalNote.assigned_to_id == user_id,
+                    PersonalNote.user_id != user_id,
+                )
+            elif scope == "assigned_by_me":
+                scope_cond = and_(
+                    PersonalNote.user_id == user_id,
+                    PersonalNote.assigned_to_id.is_not(None),
+                    PersonalNote.assigned_to_id != user_id,
+                )
+            else:  # "all"
+                scope_cond = visible_to_user
 
         conditions.append(scope_cond)
         query = select(PersonalNote).where(and_(*conditions))

@@ -79,13 +79,10 @@ class PersonalNoteService:
     async def list_notes(
         self,
         user_id: int,
-        include_done: bool = True,
         sort_by: str = "due_date",
         scope: str = "all",
     ) -> List[PersonalNote]:
-        return await self.repo.list_notes(
-            user_id, include_done=include_done, sort_by=sort_by, scope=scope
-        )
+        return await self.repo.list_notes(user_id, sort_by=sort_by, scope=scope)
 
     async def create_note(self, user: User, data: dict) -> PersonalNote:
         target_id, assign_status = await self._resolve_assignee(user, data)
@@ -125,6 +122,10 @@ class PersonalNoteService:
                     data["popup_shown"] = False
                     data["rejection_reason"] = None
                     data["responded_at"] = None
+
+        if "is_done" in data and bool(data["is_done"]) != bool(note.is_done):
+            # Arşive giriş/çıkış anını damgala; geri alınan not tarihsiz kalsın.
+            data["completed_at"] = datetime.now(timezone.utc) if data["is_done"] else None
 
         for key, value in data.items():
             setattr(note, key, value)
@@ -194,7 +195,7 @@ class PersonalNoteService:
         if not user.is_active:
             return
 
-        notes = await self.repo.list_notes(user.id, include_done=False)
+        notes = await self.repo.list_notes(user.id)
         rows_to_insert = []
 
         for note in notes:
@@ -250,8 +251,9 @@ class PersonalNoteService:
         occurrence.acknowledged_at = now
 
         note = await self.repo.get_note(occurrence.note_id, user.id)
-        if note and note.recurrence_type == RecurrenceType.once:
+        if note and note.recurrence_type == RecurrenceType.once and not note.is_done:
             note.is_done = True
+            note.completed_at = now
 
         await self.db.flush()
         return occurrence

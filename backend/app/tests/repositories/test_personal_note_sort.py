@@ -6,7 +6,7 @@ from app.repositories.personal_note_repository import sort_notes
 UTC = timezone.utc
 
 
-def _note(id, color=NoteColor.default, created_at=None, starts_at=None):
+def _note(id, color=NoteColor.default, created_at=None, starts_at=None, completed_at=None):
     return PersonalNote(
         id=id,
         user_id=1,
@@ -16,6 +16,7 @@ def _note(id, color=NoteColor.default, created_at=None, starts_at=None):
         interval=1,
         starts_at=starts_at or datetime(2026, 3, 10, 9, 0, tzinfo=UTC),
         created_at=created_at or datetime(2026, 3, 1, tzinfo=UTC),
+        completed_at=completed_at,
     )
 
 
@@ -56,5 +57,25 @@ def test_unknown_sort_by_falls_back_to_due_date():
     b = _note(2, starts_at=datetime(2026, 3, 10, tzinfo=UTC))
 
     result = sort_notes([a, b], "not-a-real-option")
+
+    assert [n.id for n in result] == [2, 1]
+
+
+def test_archive_sort_puts_most_recently_completed_first():
+    a = _note(1, completed_at=datetime(2026, 3, 1, tzinfo=UTC))
+    b = _note(2, completed_at=datetime(2026, 3, 20, tzinfo=UTC))
+    c = _note(3, completed_at=datetime(2026, 3, 10, tzinfo=UTC))
+
+    result = sort_notes([a, b, c], "completed_at")
+
+    assert [n.id for n in result] == [2, 3, 1]
+
+
+def test_archive_sort_pushes_undated_legacy_notes_to_the_bottom():
+    """Migration öncesi tamamlanan notların completed_at'i yok — en alta düşmeli."""
+    legacy = _note(1, completed_at=None)
+    recent = _note(2, completed_at=datetime(2026, 3, 20, tzinfo=UTC))
+
+    result = sort_notes([legacy, recent], "completed_at")
 
     assert [n.id for n in result] == [2, 1]

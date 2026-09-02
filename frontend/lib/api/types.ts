@@ -1663,7 +1663,7 @@ export type ReminderOccurrenceStatus = 'pending' | 'fired' | 'acknowledged' | 's
 export type NoteColor = 'default' | 'green' | 'blue' | 'yellow' | 'red';
 export type NoteSortBy = 'due_date' | 'created_at' | 'importance';
 export type AssignmentStatus = 'none' | 'pending' | 'accepted' | 'rejected';
-export type NoteScope = 'all' | 'my_notes' | 'assigned_to_me' | 'assigned_by_me';
+export type NoteScope = 'all' | 'my_notes' | 'assigned_to_me' | 'assigned_by_me' | 'archive';
 
 export interface UserMini {
     id: number;
@@ -1691,6 +1691,7 @@ export interface PersonalNote {
     starts_at: string;
     ends_at?: string;
     is_done: boolean;
+    completed_at?: string;
     created_at: string;
     updated_at?: string;
     creator?: UserMini;

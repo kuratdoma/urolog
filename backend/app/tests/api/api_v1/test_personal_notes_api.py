@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.api import deps
 from app.models.user import User
-from app.models.personal_note import NoteColor, PersonalNote, RecurrenceType
+from app.models.personal_note import AssignmentStatus, NoteColor, PersonalNote, RecurrenceType
 from app.core.permissions import UserRole
 
 client = TestClient(app)
@@ -25,19 +25,25 @@ def setup_auth_override():
     app.dependency_overrides.pop(deps.get_current_user, None)
 
 
-def _note(note_id=5, user_id=1):
+def _note(note_id=5, user_id=1, is_done=False, completed_at=None):
+    # SQLAlchemy sütun default'ları yalnızca flush'ta uygulanır; bellekte kurulan
+    # nesnede assignment_status/popup_shown açıkça verilmezse response_model None
+    # görüp doğrulama hatası verir.
     return PersonalNote(
         id=note_id,
         user_id=user_id,
         title="Reçete yenile",
         content=None,
         color=NoteColor.default,
+        assignment_status=AssignmentStatus.none,
+        popup_shown=False,
         recurrence_type=RecurrenceType.once,
         interval=1,
         time_of_day=time(9, 0),
         starts_at=datetime(2026, 3, 10, 9, 0, tzinfo=UTC),
         ends_at=None,
-        is_done=False,
+        is_done=is_done,
+        completed_at=completed_at,
         created_at=datetime(2026, 3, 1, tzinfo=UTC),
         updated_at=None,
     )
@@ -50,10 +56,10 @@ def test_list_notes_returns_only_current_user_notes(mock_list_notes):
     response = client.get("/api/v1/notes")
 
     assert response.status_code == 200
-    mock_list_notes.assert_awaited_once_with(1, include_done=True, sort_by="due_date", scope="all")
+    mock_list_notes.assert_awaited_once_with(1, sort_by="due_date", scope="all")
 
 
-@pytest.mark.parametrize("scope", ["all", "my_notes", "assigned_to_me", "assigned_by_me"])
+@pytest.mark.parametrize("scope", ["all", "my_notes", "assigned_to_me", "assigned_by_me", "archive"])
 @patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.list_notes")
 def test_list_notes_with_different_scopes(mock_list_notes, scope):
     mock_list_notes.return_value = [_note(user_id=1)]
@@ -61,7 +67,33 @@ def test_list_notes_with_different_scopes(mock_list_notes, scope):
     response = client.get(f"/api/v1/notes?scope={scope}")
 
     assert response.status_code == 200
-    mock_list_notes.assert_awaited_once_with(1, include_done=True, sort_by="due_date", scope=scope)
+    mock_list_notes.assert_awaited_once_with(1, sort_by="due_date", scope=scope)
+
+
+@patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.list_notes")
+def test_archive_scope_exposes_completion_timestamp(mock_list_notes):
+    """Arşiv kartında "Tamamlandı: ..." gösterilebilmesi completed_at'in
+    response'ta dönmesine bağlı."""
+    completed = datetime(2026, 3, 12, 14, 30, tzinfo=UTC)
+    mock_list_notes.return_value = [_note(is_done=True, completed_at=completed)]
+
+    response = client.get("/api/v1/notes?scope=archive")
+
+    assert response.status_code == 200
+    body = response.json()[0]
+    assert body["is_done"] is True
+    assert body["completed_at"] is not None
+
+
+@patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.update_note")
+def test_note_can_be_restored_from_archive(mock_update):
+    mock_update.return_value = _note(is_done=False, completed_at=None)
+
+    response = client.patch("/api/v1/notes/5", json={"is_done": False})
+
+    assert response.status_code == 200
+    assert response.json()["is_done"] is False
+    assert response.json()["completed_at"] is None
 
 
 @patch("app.api.v1.endpoints.personal_notes.PersonalNoteService.list_colleagues")

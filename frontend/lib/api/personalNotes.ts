@@ -5,8 +5,9 @@ import {
 
 export const personalNotesApi = {
 
-    list: (includeDone: boolean = true, sortBy: NoteSortBy = 'due_date', scope: NoteScope = 'all') =>
-        apiFetch<PersonalNote[]>(`/api/v1/notes?include_done=${includeDone}&sort_by=${sortBy}&scope=${scope}`),
+    // Aktif scope'lar yalnızca tamamlanmamış işleri döner; tamamlananlar 'archive' scope'unda.
+    list: (sortBy: NoteSortBy = 'due_date', scope: NoteScope = 'all') =>
+        apiFetch<PersonalNote[]>(`/api/v1/notes?sort_by=${sortBy}&scope=${scope}`),
 
     listColleagues: () =>
         apiFetch<UserMini[]>('/api/v1/notes/colleagues'),

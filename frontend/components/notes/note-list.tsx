@@ -14,7 +14,7 @@ import {
 import {
     Tabs, TabsList, TabsTrigger,
 } from '@/components/ui/tabs';
-import { Check, X, User, Send, Clock, CheckCircle2, XCircle, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, X, User, Send, Clock, CheckCircle2, XCircle, Plus, ChevronDown, ChevronUp, Archive, RotateCcw } from 'lucide-react';
 import { api, PersonalNote, PersonalNoteCreate, RecurrenceType, NoteSortBy, NoteScope } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,16 @@ const SORT_LABELS: Record<NoteSortBy, string> = {
     created_at: 'Oluşturma tarihine göre',
     importance: 'Öneme göre',
 };
+
+const SCOPE_LABELS: Record<NoteScope, string> = {
+    all: 'Tümü',
+    my_notes: 'Kişisel',
+    assigned_to_me: 'Gelen',
+    assigned_by_me: 'Giden',
+    archive: 'Arşiv',
+};
+
+const SCOPE_ORDER: NoteScope[] = ['all', 'my_notes', 'assigned_to_me', 'assigned_by_me', 'archive'];
 
 export function ExpandableNoteContent({ content, isDone }: { content: string; isDone: boolean }) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -84,7 +94,7 @@ export function NoteList() {
 
     const notesQuery = useQuery({
         queryKey: ['personal-notes', 'list', sortBy, scope],
-        queryFn: () => api.personalNotes.list(true, sortBy, scope),
+        queryFn: () => api.personalNotes.list(sortBy, scope),
     });
 
     const invalidate = () => queryClient.invalidateQueries({ queryKey: ['personal-notes'] });
@@ -127,9 +137,12 @@ export function NoteList() {
         }
     };
 
+    // Tamamlama işaretlemesi kaydı arşive taşır; arşivde işaret kaldırılınca
+    // not aktif listelere geri döner.
     const handleToggleDone = async (note: PersonalNote, checked: boolean) => {
         try {
             await api.personalNotes.update(note.id, { is_done: checked });
+            toast.success(checked ? `"${note.title}" arşive taşındı.` : `"${note.title}" arşivden geri alındı.`);
             invalidate();
         } catch (e: unknown) {
             const err = e as { message?: string };
@@ -166,6 +179,7 @@ export function NoteList() {
     };
 
     const notes = notesQuery.data ?? [];
+    const isArchive = scope === 'archive';
 
     return (
         <div className="space-y-4">
@@ -174,19 +188,23 @@ export function NoteList() {
                     <h2 className="text-xl font-bold tracking-tight">İş & Not Takip Listesi</h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         Kişisel notlarınızı yönetin veya klinik personeli ile ortak görev paylaşımı yapın.
+                        Tamamlandı olarak işaretlediğiniz işler Arşiv sekmesinde saklanır.
                     </p>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as NoteSortBy)}>
-                        <SelectTrigger className="w-44">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {(Object.keys(SORT_LABELS) as NoteSortBy[]).map((s) => (
-                                <SelectItem key={s} value={s}>{SORT_LABELS[s]}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    {/* Arşiv daima en son tamamlanandan geriye sıralanır, sıralama seçimi anlamsız. */}
+                    {!isArchive && (
+                        <Select value={sortBy} onValueChange={(v) => setSortBy(v as NoteSortBy)}>
+                            <SelectTrigger className="w-44">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(Object.keys(SORT_LABELS) as NoteSortBy[]).map((s) => (
+                                    <SelectItem key={s} value={s}>{SORT_LABELS[s]}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
                     <Button onClick={handleCreate} className="gap-1 shadow-sm">
                         <Plus className="h-4 w-4" />
                         Yeni İş / Not
@@ -194,13 +212,15 @@ export function NoteList() {
                 </div>
             </div>
 
-            {/* Scope Tabs */}
+            {/* Scope Tabs — Gelen: bana atananlar, Giden: benim atadıklarım, Arşiv: tamamlananlar */}
             <Tabs value={scope} onValueChange={(v) => setScope(v as NoteScope)} className="w-full">
-                <TabsList className="grid grid-cols-4 w-full sm:w-[500px]">
-                    <TabsTrigger value="all">Tümü</TabsTrigger>
-                    <TabsTrigger value="my_notes">Kişisel</TabsTrigger>
-                    <TabsTrigger value="assigned_to_me">Bana Atananlar</TabsTrigger>
-                    <TabsTrigger value="assigned_by_me">Başkalarına Atanan</TabsTrigger>
+                <TabsList className="grid grid-cols-5 w-full sm:w-[560px]">
+                    {SCOPE_ORDER.map((value) => (
+                        <TabsTrigger key={value} value={value} className="gap-1">
+                            {value === 'archive' && <Archive className="h-3.5 w-3.5" />}
+                            {SCOPE_LABELS[value]}
+                        </TabsTrigger>
+                    ))}
                 </TabsList>
             </Tabs>
 
@@ -208,7 +228,9 @@ export function NoteList() {
 
             {!notesQuery.isLoading && notes.length === 0 && (
                 <div className="text-sm text-muted-foreground text-center py-12 border border-dashed rounded-lg">
-                    Bu görünümde henüz bir iş veya not bulunmuyor.
+                    {isArchive
+                        ? 'Arşiv boş. Tamamlandı olarak işaretlediğiniz işler burada saklanır.'
+                        : 'Bu görünümde henüz bir iş veya not bulunmuyor.'}
                 </div>
             )}
 
@@ -225,7 +247,9 @@ export function NoteList() {
                             key={note.id}
                             className={cn(
                                 'border rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start gap-3 transition-shadow hover:shadow-sm',
-                                NOTE_COLOR_CARD_BG[note.color]
+                                NOTE_COLOR_CARD_BG[note.color],
+                                // Arşivlenmiş kayıtlar aktif işlerden görsel olarak geride dursun.
+                                isArchive && 'opacity-75 hover:opacity-100'
                             )}
                         >
                             <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -242,6 +266,13 @@ export function NoteList() {
                                         <Badge variant="secondary" className="text-[11px]">
                                             {RECURRENCE_LABELS[note.recurrence_type]}
                                         </Badge>
+
+                                        {isArchive && (
+                                            <Badge variant="outline" className="text-[11px] gap-1 bg-background/80 text-muted-foreground">
+                                                <Archive className="h-3 w-3" />
+                                                Arşivlendi
+                                            </Badge>
+                                        )}
 
                                         {/* Collaborative Assignment Badges */}
                                         {hasAssignment && note.creator && (
@@ -286,13 +317,28 @@ export function NoteList() {
 
                                     <p className="text-xs text-muted-foreground">
                                         Planlanan: {format(new Date(note.starts_at), 'd MMMM yyyy HH:mm', { locale: tr })}
+                                        {isArchive && note.completed_at && (
+                                            <> · Tamamlandı: {format(new Date(note.completed_at), 'd MMMM yyyy HH:mm', { locale: tr })}</>
+                                        )}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0 self-end sm:self-start">
+                                {isArchive && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs gap-1"
+                                        onClick={() => handleToggleDone(note, false)}
+                                    >
+                                        <RotateCcw className="h-3.5 w-3.5" />
+                                        Geri Al
+                                    </Button>
+                                )}
+
                                 {/* Inline Accept/Reject for pending assigned tasks */}
-                                {isPendingForMe && (
+                                {!isArchive && isPendingForMe && (
                                     <>
                                         <Button
                                             size="sm"
@@ -317,9 +363,11 @@ export function NoteList() {
                                     </>
                                 )}
 
-                                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleEdit(note)}>
-                                    Düzenle
-                                </Button>
+                                {!isArchive && (
+                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleEdit(note)}>
+                                        Düzenle
+                                    </Button>
+                                )}
                                 <Button size="sm" variant="destructive" className="h-8 text-xs" onClick={() => handleDelete(note)}>
                                     Sil
                                 </Button>
